@@ -34,8 +34,11 @@ export const useWorkoutProgram = () => {
           sessions: week.sessions.map((session) => {
             if (session.id !== sessionId) return session;
 
+            const isFirstSet = session.exercises.every((ex) => ex.sets.length === 0);
+
             return {
               ...session,
+              startedAt: session.startedAt || (isFirstSet ? new Date().toISOString() : undefined),
               exercises: session.exercises.map((exercise) => {
                 if (exercise.id !== exerciseId) return exercise;
 
@@ -136,6 +139,7 @@ export const useWorkoutProgram = () => {
 
             return {
               ...session,
+              startedAt: session.startedAt || new Date().toISOString(),
             };
           }),
         };
