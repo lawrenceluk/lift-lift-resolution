@@ -11,18 +11,12 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useWorkoutProgram } from '@/hooks/useWorkoutProgram';
 import { SessionView } from '@/components/SessionView';
-import { exportWorkoutProgram, importWorkoutProgram } from '@/utils/localStorage';
+import { exportWeeks, importWeeks } from '@/utils/localStorage';
 import { useToast } from '@/hooks/use-toast';
 
 export const WorkoutTrackerApp = (): JSX.Element => {
-  const {
-    program,
-    updateSet,
-    toggleExerciseComplete,
-    startSession,
-    completeSession,
-    importProgram,
-  } = useWorkoutProgram();
+  const { weeks, addSet, updateSet, deleteSet, startSession, completeSession, importWeeks: importWeeksHook } =
+    useWorkoutProgram();
   const { toast } = useToast();
   const [activeSession, setActiveSession] = useState<{
     weekId: string;
@@ -30,7 +24,7 @@ export const WorkoutTrackerApp = (): JSX.Element => {
   } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  if (!program) {
+  if (!weeks) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -41,7 +35,7 @@ export const WorkoutTrackerApp = (): JSX.Element => {
     );
   }
 
-  const currentWeek = program.weeks[0];
+  const currentWeek = weeks[0];
 
   const handleStartSession = (weekId: string, sessionId: string) => {
     startSession(weekId, sessionId);
@@ -49,7 +43,7 @@ export const WorkoutTrackerApp = (): JSX.Element => {
   };
 
   const handleExport = () => {
-    exportWorkoutProgram(program);
+    exportWeeks(weeks);
     toast({
       title: 'Program exported',
       description: 'Your workout program has been downloaded as JSON.',
@@ -61,8 +55,8 @@ export const WorkoutTrackerApp = (): JSX.Element => {
     if (!file) return;
 
     try {
-      const importedProgram = await importWorkoutProgram(file);
-      importProgram(importedProgram);
+      const importedWeeks = await importWeeks(file);
+      importWeeksHook(importedWeeks);
       toast({
         title: 'Program imported',
         description: 'Your workout program has been loaded successfully.',
@@ -80,7 +74,7 @@ export const WorkoutTrackerApp = (): JSX.Element => {
   };
 
   if (activeSession) {
-    const week = program.weeks.find((w) => w.id === activeSession.weekId);
+    const week = weeks.find((w) => w.id === activeSession.weekId);
     const session = week?.sessions.find((s) => s.id === activeSession.sessionId);
 
     if (!week || !session) {
@@ -91,12 +85,13 @@ export const WorkoutTrackerApp = (): JSX.Element => {
     return (
       <SessionView
         session={session}
-        weekNumber={week.number}
-        onSetUpdate={(exerciseId, setId, updates) =>
-          updateSet(week.id, session.id, exerciseId, setId, updates)
+        weekNumber={week.weekNumber}
+        onAddSet={(exerciseId, set) => addSet(week.id, session.id, exerciseId, set)}
+        onUpdateSet={(exerciseId, setNumber, updates) =>
+          updateSet(week.id, session.id, exerciseId, setNumber, updates)
         }
-        onToggleExerciseComplete={(exerciseId) =>
-          toggleExerciseComplete(week.id, session.id, exerciseId)
+        onDeleteSet={(exerciseId, setNumber) =>
+          deleteSet(week.id, session.id, exerciseId, setNumber)
         }
         onBack={() => setActiveSession(null)}
         onCompleteSession={() => {
@@ -139,7 +134,7 @@ export const WorkoutTrackerApp = (): JSX.Element => {
           <div className="flex items-center gap-3">
             <DumbbellIcon className="w-8 h-8" />
             <h1 className="[font-family:'Inter',Helvetica] font-normal text-neutral-950 text-base tracking-[-0.31px] leading-6 whitespace-nowrap">
-              {program.name}
+              Workout Program
             </h1>
           </div>
           <DropdownMenu>
@@ -170,7 +165,7 @@ export const WorkoutTrackerApp = (): JSX.Element => {
                 <div className="flex flex-col items-start gap-[3.99px]">
                   <div className="flex items-center gap-[7.99px]">
                     <span className="[font-family:'Inter',Helvetica] font-normal text-neutral-950 text-base tracking-[-0.31px] leading-6">
-                      Week {currentWeek.number}
+                      Week {currentWeek.weekNumber}
                     </span>
                     <Badge
                       variant="outline"
@@ -208,7 +203,7 @@ export const WorkoutTrackerApp = (): JSX.Element => {
               {currentWeek.sessions.map((session) => {
                 const totalExercises = session.exercises.length;
                 const cardioText = session.cardio
-                  ? `${session.cardio.duration} min ${session.cardio.type || 'cardio'}`
+                  ? `${session.cardio.duration} min ${session.cardio.modality || 'cardio'}`
                   : null;
 
                 return (
@@ -219,7 +214,7 @@ export const WorkoutTrackerApp = (): JSX.Element => {
                     <div className="flex flex-col items-start gap-[3.99px] flex-1">
                       <div className="flex items-center gap-[7.99px]">
                         <h3 className="[font-family:'Inter',Helvetica] font-normal text-neutral-950 text-base tracking-[-0.31px] leading-6">
-                          {session.title}
+                          {session.name}
                         </h3>
                         {session.completed && (
                           <Badge
@@ -233,7 +228,8 @@ export const WorkoutTrackerApp = (): JSX.Element => {
                         )}
                       </div>
                       <p className="[font-family:'Inter',Helvetica] font-normal text-[#717182] text-sm tracking-[-0.15px] leading-5">
-                        {getDayName(session.date)} • {formatDate(session.date)}
+                        {session.dayOfWeek && `${session.dayOfWeek} • `}
+                        {session.scheduledDate && formatDate(session.scheduledDate)}
                       </p>
                       <div className="flex flex-col gap-0">
                         <div className="flex items-center gap-2">
@@ -253,7 +249,7 @@ export const WorkoutTrackerApp = (): JSX.Element => {
                       className="h-12 px-6 py-2 bg-[#030213] rounded-lg touch-manipulation active:scale-95 transition-transform"
                     >
                       <span className="[font-family:'Inter',Helvetica] font-medium text-white text-sm tracking-[-0.15px] leading-5">
-                        {session.startedAt ? 'Continue' : 'Start'}
+                        Start
                       </span>
                     </Button>
                   </div>
