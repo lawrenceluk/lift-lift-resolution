@@ -13,6 +13,7 @@ import { useWorkoutProgram } from '@/hooks/useWorkoutProgram';
 import { SessionView } from '@/components/SessionView';
 import { exportWeeks, importWeeks } from '@/utils/localStorage';
 import { useToast } from '@/hooks/use-toast';
+import { getWorkoutStatus } from '@/utils/idHelpers';
 
 export const WorkoutTrackerApp = (): JSX.Element => {
   const { weeks, addSet, updateSet, deleteSet, startSession, completeSession, importWeeks: importWeeksHook } =
@@ -114,9 +115,51 @@ export const WorkoutTrackerApp = (): JSX.Element => {
     return `${formatDate(start)} - ${formatDate(end)}`;
   };
 
-  const getDayName = (dateStr: string) => {
+  const formatDateTime = (dateStr: string) => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { weekday: 'long' });
+    const today = new Date();
+    const isToday = date.toDateString() === today.toDateString();
+    
+    if (isToday) {
+      return 'Today';
+    }
+    
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (date.toDateString() === yesterday.toDateString()) {
+      return 'Yesterday';
+    }
+    
+    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  };
+
+  const getStatusBadge = (status: 'planned' | 'in-progress' | 'completed') => {
+    switch (status) {
+      case 'completed':
+        return (
+          <Badge className="bg-green-500 hover:bg-green-600">
+            <span className="[font-family:'Inter',Helvetica] font-medium text-white text-xs tracking-[0] leading-4">
+              Completed
+            </span>
+          </Badge>
+        );
+      case 'in-progress':
+        return (
+          <Badge className="bg-orange-500 hover:bg-orange-600">
+            <span className="[font-family:'Inter',Helvetica] font-medium text-white text-xs tracking-[0] leading-4">
+              In Progress
+            </span>
+          </Badge>
+        );
+      case 'planned':
+        return (
+          <Badge variant="outline" className="border-gray-300">
+            <span className="[font-family:'Inter',Helvetica] font-medium text-gray-600 text-xs tracking-[0] leading-4">
+              Planned
+            </span>
+          </Badge>
+        );
+    }
   };
 
   return (
@@ -205,6 +248,7 @@ export const WorkoutTrackerApp = (): JSX.Element => {
                 const cardioText = session.cardio
                   ? `${session.cardio.duration} min ${session.cardio.modality || 'cardio'}`
                   : null;
+                const status = getWorkoutStatus(session);
 
                 return (
                   <div
@@ -216,21 +260,16 @@ export const WorkoutTrackerApp = (): JSX.Element => {
                         <h3 className="[font-family:'Inter',Helvetica] font-normal text-neutral-950 text-base tracking-[-0.31px] leading-6">
                           {session.name}
                         </h3>
-                        {session.completed && (
-                          <Badge
-                            variant="outline"
-                            className="h-[21.08px] px-2 py-0.5 rounded-lg border-[0.55px] border-solid border-green-500 bg-green-50"
-                          >
-                            <span className="[font-family:'Inter',Helvetica] font-medium text-green-700 text-xs tracking-[0] leading-4">
-                              Completed
-                            </span>
-                          </Badge>
-                        )}
+                        {getStatusBadge(status)}
                       </div>
-                      <p className="[font-family:'Inter',Helvetica] font-normal text-[#717182] text-sm tracking-[-0.15px] leading-5">
-                        {session.dayOfWeek && `${session.dayOfWeek} • `}
-                        {session.scheduledDate && formatDate(session.scheduledDate)}
-                      </p>
+                      {(session.startedAt || session.completedDate) && (
+                        <p className="[font-family:'Inter',Helvetica] font-normal text-[#717182] text-sm tracking-[-0.15px] leading-5">
+                          {session.completedDate 
+                            ? `Completed ${formatDateTime(session.completedDate)}`
+                            : `Started ${formatDateTime(session.startedAt!)}`
+                          }
+                        </p>
+                      )}
                       <div className="flex flex-col gap-0">
                         <div className="flex items-center gap-2">
                           <span className="[font-family:'Inter',Helvetica] font-normal text-[#717182] text-xs tracking-[0] leading-4">
@@ -249,7 +288,7 @@ export const WorkoutTrackerApp = (): JSX.Element => {
                       className="h-12 px-6 py-2 bg-[#030213] rounded-lg touch-manipulation active:scale-95 transition-transform"
                     >
                       <span className="[font-family:'Inter',Helvetica] font-medium text-white text-sm tracking-[-0.15px] leading-5">
-                        Start
+                        {status === 'planned' ? 'Start' : 'Continue'}
                       </span>
                     </Button>
                   </div>
