@@ -41,11 +41,14 @@ export interface WorkoutSession {
   exercises: Exercise[];
   cardio?: CardioBlock;
   notes?: string;
+  startedAt?: string;
   completed: boolean;
   completedDate?: string;
   duration?: number;
   rating?: number;
 }
+
+export type WorkoutStatus = 'planned' | 'in-progress' | 'completed';
 
 export interface Week {
   id: string;

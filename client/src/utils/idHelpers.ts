@@ -1,4 +1,4 @@
-import { Week, WorkoutSession, Exercise } from '@/types/workout';
+import { Week, WorkoutSession, Exercise, WorkoutStatus } from '@/types/workout';
 
 export const createWeekId = (weekNumber: number): string => `week-${weekNumber}`;
 
@@ -80,4 +80,10 @@ export const sessionCompletionRate = (session: WorkoutSession): number => {
   );
   const totalSets = session.exercises.reduce((sum, ex) => sum + ex.workingSets, 0);
   return totalSets > 0 ? (completedSets / totalSets) * 100 : 0;
+};
+
+export const getWorkoutStatus = (session: WorkoutSession): WorkoutStatus => {
+  if (session.completed) return 'completed';
+  if (session.startedAt) return 'in-progress';
+  return 'planned';
 };
