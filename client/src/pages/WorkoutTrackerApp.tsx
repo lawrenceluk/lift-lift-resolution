@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { CalendarIcon, Anvil, MoreVerticalIcon, Upload, Download } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useWorkoutProgram } from '@/hooks/useWorkoutProgram';
 import { SessionView } from '@/components/SessionView';
-import { exportWeeks, importWeeks } from '@/utils/localStorage';
+import { exportWeeks, importWeeks, loadCurrentWeekIndex, saveCurrentWeekIndex } from '@/utils/localStorage';
 import { useToast } from '@/hooks/use-toast';
 import { getWorkoutStatus } from '@/utils/idHelpers';
 
@@ -23,8 +23,29 @@ export const WorkoutTrackerApp = (): JSX.Element => {
     weekId: string;
     sessionId: string;
   } | null>(null);
-  const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
+  const [currentWeekIndex, setCurrentWeekIndex] = useState(() => {
+    // Load cached week index from localStorage
+    return loadCurrentWeekIndex();
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Save current week index to localStorage whenever it changes
+  useEffect(() => {
+    saveCurrentWeekIndex(currentWeekIndex);
+  }, [currentWeekIndex]);
+
+  // Ensure current week index is valid when weeks are loaded
+  useEffect(() => {
+    if (weeks && currentWeekIndex >= weeks.length) {
+      setCurrentWeekIndex(0);
+    }
+  }, [weeks, currentWeekIndex]);
+
+  const updateCurrentWeekIndex = (newIndex: number) => {
+    if (weeks && newIndex >= 0 && newIndex < weeks.length) {
+      setCurrentWeekIndex(newIndex);
+    }
+  };
 
   if (!weeks) {
     return (
@@ -203,7 +224,7 @@ export const WorkoutTrackerApp = (): JSX.Element => {
             {currentWeekIndex > 0 && (
               <Button
                 variant="outline"
-                onClick={() => setCurrentWeekIndex((prev) => Math.max(0, prev - 1))}
+                onClick={() => updateCurrentWeekIndex(currentWeekIndex - 1)}
                 className="h-9 absolute left-0"
               >
                 ← Previous
@@ -215,7 +236,7 @@ export const WorkoutTrackerApp = (): JSX.Element => {
             {currentWeekIndex < weeks.length - 1 && (
               <Button
                 variant="outline"
-                onClick={() => setCurrentWeekIndex((prev) => Math.min(weeks.length - 1, prev + 1))}
+                onClick={() => updateCurrentWeekIndex(currentWeekIndex + 1)}
                 className="h-9 absolute right-0"
               >
                 Next →

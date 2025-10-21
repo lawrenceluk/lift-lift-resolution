@@ -1,6 +1,7 @@
 import { Week } from '@/types/workout';
 
 const STORAGE_KEY = 'workout_weeks';
+const CURRENT_WEEK_KEY = 'current_week_index';
 
 export const saveWeeks = (weeks: Week[]): void => {
   try {
@@ -64,4 +65,22 @@ export const importWeeks = (file: File): Promise<Week[]> => {
     reader.onerror = () => reject(new Error('Error reading file'));
     reader.readAsText(file);
   });
+};
+
+export const saveCurrentWeekIndex = (weekIndex: number): void => {
+  try {
+    localStorage.setItem(CURRENT_WEEK_KEY, weekIndex.toString());
+  } catch (error) {
+    console.error('Error saving current week index:', error);
+  }
+};
+
+export const loadCurrentWeekIndex = (): number => {
+  try {
+    const cached = localStorage.getItem(CURRENT_WEEK_KEY);
+    return cached ? parseInt(cached, 10) : 0;
+  } catch (error) {
+    console.error('Error loading current week index:', error);
+    return 0;
+  }
 };

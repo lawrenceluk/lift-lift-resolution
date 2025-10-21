@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { SetResult, Exercise } from '@/types/workout';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { CheckCircle2, Circle, X } from 'lucide-react';
+import { CheckCircle2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface SetLoggerProps {
@@ -75,7 +75,7 @@ export const SetLogger: React.FC<SetLoggerProps> = ({
 
       {exercise.sets.map((set) => (
         <Card key={set.setNumber} className="p-3 bg-green-50 border-green-200">
-          <div className="flex items-start justify-between mb-2">
+          <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-5 h-5 text-green-600" />
               <span className="text-sm font-semibold">Set {set.setNumber}</span>
@@ -114,7 +114,7 @@ export const SetLogger: React.FC<SetLoggerProps> = ({
       {exercise.sets.length < exercise.workingSets && (
         <Card className="p-4 border-2 border-dashed border-gray-300 bg-gray-50">
           <p className="text-sm font-semibold mb-3">
-            Log Set {exercise.sets.length + 1}/{exercise.workingSets}
+            Set {exercise.sets.length + 1}/{exercise.workingSets}
           </p>
           <div className="grid grid-cols-3 gap-2 mb-3">
             <div>
@@ -163,10 +163,10 @@ export const SetLogger: React.FC<SetLoggerProps> = ({
           </div>
           <Button
             onClick={handleAddSet}
-            className="w-full h-12 bg-gray-900 hover:bg-blue-700"
+            className="w-full h-12 bg-gray-900 flex justify-between items-center"
           >
-            <Circle className="w-5 h-5 mr-2" />
-            Complete Set
+            Finish Set
+            <CheckCircle2 className="w-5 h-5 ml-2" />
           </Button>
         </Card>
       )}
