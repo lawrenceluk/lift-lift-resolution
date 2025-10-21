@@ -1,58 +1,58 @@
-export interface WorkoutSet {
-  id: string;
-  prescribed: {
-    reps?: number;
-    weight?: number;
-    rir?: number;
-    notes?: string;
-  };
-  actual: {
-    reps?: number;
-    weight?: number;
-    rir?: number;
-    notes?: string;
-  };
+export interface SetResult {
+  setNumber: number;
+  reps: number;
+  weight?: number;
+  weightUnit: 'lbs' | 'kg';
+  rir?: number;
   completed: boolean;
+  notes?: string;
 }
 
 export interface Exercise {
   id: string;
   name: string;
-  sets: WorkoutSet[];
+  groupLabel?: string;
+  warmupSets: number;
+  workingSets: number;
+  reps: string;
+  targetLoad: string;
+  restSeconds: number;
   notes?: string;
+  sets: SetResult[];
+}
+
+export interface CardioBlock {
+  type: 'zone2' | 'intervals' | 'sweetspot' | 'threshold' | 'vo2max';
+  duration: number;
+  modality?: string;
+  instructions?: string;
   completed: boolean;
+  actualDuration?: number;
+  avgHeartRate?: number;
+  notes?: string;
 }
 
 export interface WorkoutSession {
   id: string;
-  title: string;
-  day: string;
-  date: string;
+  name: string;
+  scheduledDate?: string;
+  dayOfWeek?: string;
+  warmup?: string[];
   exercises: Exercise[];
-  cardio?: {
-    duration: number;
-    type?: string;
-    notes?: string;
-  };
+  cardio?: CardioBlock;
+  notes?: string;
   completed: boolean;
-  startedAt?: string;
-  completedAt?: string;
+  completedDate?: string;
+  duration?: number;
+  rating?: number;
 }
 
 export interface Week {
   id: string;
-  number: number;
+  weekNumber: number;
   phase: string;
   startDate: string;
   endDate: string;
   description?: string;
   sessions: WorkoutSession[];
-}
-
-export interface WorkoutProgram {
-  id: string;
-  name: string;
-  weeks: Week[];
-  createdAt: string;
-  updatedAt: string;
 }
