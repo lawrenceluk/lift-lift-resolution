@@ -84,6 +84,12 @@ export const sessionCompletionRate = (session: WorkoutSession): number => {
 
 export const getWorkoutStatus = (session: WorkoutSession): WorkoutStatus => {
   if (session.completed) return 'completed';
-  if (session.startedAt) return 'in-progress';
+
+  // Only consider it in-progress if at least one set has been completed
+  const hasCompletedSets = session.exercises.some((ex) =>
+    ex.sets.some((set) => set.completed)
+  );
+
+  if (session.startedAt && hasCompletedSets) return 'in-progress';
   return 'planned';
 };

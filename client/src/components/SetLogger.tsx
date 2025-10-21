@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { SetResult, Exercise } from '@/types/workout';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { CheckCircle2, Circle, Trash2 } from 'lucide-react';
+import { CheckCircle2, Circle, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface SetLoggerProps {
@@ -28,6 +28,18 @@ export const SetLogger: React.FC<SetLoggerProps> = ({
     rir: '',
   });
 
+  // Auto-fill form with data from the most recent set
+  useEffect(() => {
+    if (exercise.sets.length > 0) {
+      const lastSet = exercise.sets[exercise.sets.length - 1];
+      setNewSetData({
+        reps: lastSet.reps.toString(),
+        weight: lastSet.weight ? lastSet.weight.toString() : '',
+        rir: lastSet.rir ? lastSet.rir.toString() : '',
+      });
+    }
+  }, [exercise.sets]);
+
   const handleAddSet = () => {
     const setNumber = exercise.sets.length + 1;
     const newSet: SetResult = {
@@ -39,7 +51,6 @@ export const SetLogger: React.FC<SetLoggerProps> = ({
       completed: true,
     };
     onAddSet(newSet);
-    setNewSetData({ reps: '', weight: '', rir: '' });
   };
 
   const targetReps = exercise.reps.includes('-')
@@ -54,6 +65,11 @@ export const SetLogger: React.FC<SetLoggerProps> = ({
             Target: {targetReps} @ {exercise.targetLoad}
           </p>
           <p className="text-xs text-gray-500">Rest: {exercise.restSeconds}s</p>
+          {exercise.warmupSets > 0 && (
+            <p className="text-xs text-gray-500">
+              Warmup: {exercise.warmupSets} {exercise.warmupSets === 1 ? 'set' : 'sets'}
+            </p>
+          )}
         </div>
       </div>
 
@@ -68,9 +84,9 @@ export const SetLogger: React.FC<SetLoggerProps> = ({
               variant="ghost"
               size="icon"
               onClick={() => onDeleteSet(set.setNumber)}
-              className="h-7 w-7 text-red-600 hover:text-red-700 hover:bg-red-50"
+              className="h-7 w-7"
             >
-              <Trash2 className="w-4 h-4" />
+              <X className="w-4 h-4" />
             </Button>
           </div>
           <div className="grid grid-cols-3 gap-2 text-sm">
@@ -110,7 +126,11 @@ export const SetLogger: React.FC<SetLoggerProps> = ({
                 onChange={(e) =>
                   setNewSetData({ ...newSetData, reps: e.target.value })
                 }
-                placeholder={exercise.reps}
+                placeholder={(() => {
+                  // Extract numeric portion from strings like "10-15 per leg"
+                  const match = exercise.reps.match(/^[\d\s-]+/);
+                  return match ? match[0].trim() : '';
+                })()}
                 className="h-12 text-base"
               />
             </div>
@@ -143,7 +163,7 @@ export const SetLogger: React.FC<SetLoggerProps> = ({
           </div>
           <Button
             onClick={handleAddSet}
-            className="w-full h-12 bg-blue-600 hover:bg-blue-700"
+            className="w-full h-12 bg-gray-900 hover:bg-blue-700"
           >
             <Circle className="w-5 h-5 mr-2" />
             Complete Set

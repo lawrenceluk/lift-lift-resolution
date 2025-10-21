@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { CalendarIcon, DumbbellIcon, MoreVerticalIcon, Upload, Download } from 'lucide-react';
+import { CalendarIcon, Anvil, MoreVerticalIcon, Upload, Download } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -23,20 +23,19 @@ export const WorkoutTrackerApp = (): JSX.Element => {
     weekId: string;
     sessionId: string;
   } | null>(null);
+  const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!weeks) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <DumbbellIcon className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+          <Anvil className="w-12 h-12 mx-auto mb-4 text-gray-400" />
           <p className="text-gray-600">Loading workout program...</p>
         </div>
       </div>
     );
   }
-
-  const currentWeek = weeks[0];
 
   const handleStartSession = (weekId: string, sessionId: string) => {
     startSession(weekId, sessionId);
@@ -103,8 +102,6 @@ export const WorkoutTrackerApp = (): JSX.Element => {
     );
   }
 
-  const completedSessions = currentWeek.sessions.filter((s) => s.completed).length;
-  const totalSessions = currentWeek.sessions.length;
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -172,12 +169,12 @@ export const WorkoutTrackerApp = (): JSX.Element => {
         className="hidden"
       />
 
-      <header className="flex flex-col w-full items-start pt-4 pb-[0.55px] px-4 bg-[#fffffff2] border-b-[0.55px] border-solid border-[#0000001a] sticky top-0 z-10">
+      <header className="flex flex-col w-full items-start pt-4 pb-2 px-4 bg-[#fffffff2] border-b-[0.55px] border-solid border-[#0000001a] sticky top-0 z-10">
         <div className="flex h-9 items-center justify-between w-full">
           <div className="flex items-center gap-3">
-            <DumbbellIcon className="w-8 h-8" />
-            <h1 className="[font-family:'Inter',Helvetica] font-normal text-neutral-950 text-base tracking-[-0.31px] leading-6 whitespace-nowrap">
-              Workout Program
+            <Anvil className="w-6 h-6" />
+            <h1 className="[font-family:'Inter',Helvetica] font-bold text-neutral-950 text-base tracking-[-0.31px] leading-6 whitespace-nowrap">
+              Resolution
             </h1>
           </div>
           <DropdownMenu>
@@ -201,102 +198,134 @@ export const WorkoutTrackerApp = (): JSX.Element => {
       </header>
 
       <main className="flex flex-col w-full items-start pt-[23.54px] px-4 pb-8">
-        <Card className="w-full bg-white rounded-[14px] border-[0.55px] border-solid border-[#0000001a]">
-          <CardContent className="p-0">
-            <div className="flex flex-col w-full bg-[#ececf080] pt-4 pb-0 px-4 gap-[7.99px]">
-              <div className="flex items-start justify-between w-full">
-                <div className="flex flex-col items-start gap-[3.99px]">
-                  <div className="flex items-center gap-[7.99px]">
-                    <span className="[font-family:'Inter',Helvetica] font-normal text-neutral-950 text-base tracking-[-0.31px] leading-6">
-                      Week {currentWeek.weekNumber}
-                    </span>
+        {weeks.length > 1 && (
+          <div className="relative flex items-center justify-center w-full mb-4">
+            {currentWeekIndex > 0 && (
+              <Button
+                variant="outline"
+                onClick={() => setCurrentWeekIndex((prev) => Math.max(0, prev - 1))}
+                className="h-9 absolute left-0"
+              >
+                ← Previous
+              </Button>
+            )}
+            <span className="text-sm text-gray-600">
+              Week {currentWeekIndex + 1} of {weeks.length}
+            </span>
+            {currentWeekIndex < weeks.length - 1 && (
+              <Button
+                variant="outline"
+                onClick={() => setCurrentWeekIndex((prev) => Math.min(weeks.length - 1, prev + 1))}
+                className="h-9 absolute right-0"
+              >
+                Next →
+              </Button>
+            )}
+          </div>
+        )}
+
+        {(() => {
+          const week = weeks[currentWeekIndex];
+          const completedSessions = week.sessions.filter((s) => s.completed).length;
+          const totalSessions = week.sessions.length;
+
+          return (
+            <Card className="w-full bg-white rounded-[14px] border-[0.55px] border-solid border-[#0000001a]">
+              <CardContent className="p-0">
+                <div className="flex flex-col w-full bg-[#ececf080] pt-4 pb-0 px-4 gap-[7.99px]">
+                  <div className="flex items-start justify-between w-full">
+                    <div className="flex flex-col items-start gap-[3.99px]">
+                      <div className="flex items-center gap-[7.99px]">
+                        <span className="[font-family:'Inter',Helvetica] font-normal text-neutral-950 text-base tracking-[-0.31px] leading-6">
+                          Week {week.weekNumber}
+                        </span>
+                        <Badge
+                          variant="outline"
+                          className="h-[21.08px] px-2 py-0.5 rounded-lg border-[0.55px] border-solid border-[#0000001a]"
+                        >
+                          <span className="[font-family:'Inter',Helvetica] font-medium text-neutral-950 text-xs tracking-[0] leading-4">
+                            {week.phase}
+                          </span>
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CalendarIcon className="w-4 h-4" />
+                        <span className="[font-family:'Inter',Helvetica] font-normal text-[#717182] text-sm tracking-[-0.15px] leading-5">
+                          {formatDateRange(week.startDate, week.endDate)}
+                        </span>
+                      </div>
+                    </div>
                     <Badge
-                      variant="outline"
-                      className="h-[21.08px] px-2 py-0.5 rounded-lg border-[0.55px] border-solid border-[#0000001a]"
+                      variant="secondary"
+                      className="h-[21.08px] px-2 py-0.5 bg-[#eceef2] rounded-lg border-[0.55px] border-solid border-transparent"
                     >
-                      <span className="[font-family:'Inter',Helvetica] font-medium text-neutral-950 text-xs tracking-[0] leading-4">
-                        {currentWeek.phase}
+                      <span className="[font-family:'Inter',Helvetica] font-medium text-[#030213] text-xs tracking-[0] leading-4">
+                        {completedSessions}/{totalSessions}
                       </span>
                     </Badge>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <CalendarIcon className="w-4 h-4" />
-                    <span className="[font-family:'Inter',Helvetica] font-normal text-[#717182] text-sm tracking-[-0.15px] leading-5">
-                      {formatDateRange(currentWeek.startDate, currentWeek.endDate)}
-                    </span>
-                  </div>
+                  {week.description && (
+                    <p className="[font-family:'Inter',Helvetica] font-normal text-[#717182] text-sm tracking-[-0.15px] leading-5 pb-4">
+                      {week.description}
+                    </p>
+                  )}
                 </div>
-                <Badge
-                  variant="secondary"
-                  className="h-[21.08px] px-2 py-0.5 bg-[#eceef2] rounded-lg border-[0.55px] border-solid border-transparent"
-                >
-                  <span className="[font-family:'Inter',Helvetica] font-medium text-[#030213] text-xs tracking-[0] leading-4">
-                    {completedSessions}/{totalSessions}
-                  </span>
-                </Badge>
-              </div>
-              {currentWeek.description && (
-                <p className="[font-family:'Inter',Helvetica] font-normal text-[#717182] text-sm tracking-[-0.15px] leading-5 pb-4">
-                  {currentWeek.description}
-                </p>
-              )}
-            </div>
 
-            <div className="flex flex-col">
-              {currentWeek.sessions.map((session) => {
-                const totalExercises = session.exercises.length;
-                const cardioText = session.cardio
-                  ? `${session.cardio.duration} min ${session.cardio.modality || 'cardio'}`
-                  : null;
-                const status = getWorkoutStatus(session);
+                <div className="flex flex-col">
+                  {week.sessions.map((session) => {
+                    const totalExercises = session.exercises.length;
+                    const cardioText = session.cardio
+                      ? `${session.cardio.duration} min ${session.cardio.modality || 'cardio'}`
+                      : null;
+                    const status = getWorkoutStatus(session);
+                    const hasCompletedSets = session.exercises.some((ex) =>
+                      ex.sets.some((set) => set.completed)
+                    );
 
-                return (
-                  <div
-                    key={session.id}
-                    className="flex items-start justify-between pt-4 pb-4 px-4 border-b-[0.55px] border-solid border-[#0000001a] last:border-b-0"
-                  >
-                    <div className="flex flex-col items-start gap-[3.99px] flex-1">
-                      <div className="flex items-center gap-[7.99px]">
-                        <h3 className="[font-family:'Inter',Helvetica] font-normal text-neutral-950 text-base tracking-[-0.31px] leading-6">
-                          {session.name}
-                        </h3>
-                        {getStatusBadge(status)}
-                      </div>
-                      {(session.startedAt || session.completedDate) && (
-                        <p className="[font-family:'Inter',Helvetica] font-normal text-[#717182] text-sm tracking-[-0.15px] leading-5">
-                          {session.completedDate 
-                            ? `Completed ${formatDateTime(session.completedDate)}`
-                            : `Started ${formatDateTime(session.startedAt!)}`
-                          }
-                        </p>
-                      )}
-                      <div className="flex flex-col gap-0">
-                        <div className="flex items-center gap-2">
-                          <span className="[font-family:'Inter',Helvetica] font-normal text-[#717182] text-xs tracking-[0] leading-4">
-                            {totalExercises} {totalExercises === 1 ? 'exercise' : 'exercises'}
-                          </span>
-                          {cardioText && (
-                            <span className="[font-family:'Inter',Helvetica] font-normal text-[#717182] text-xs tracking-[0] leading-4">
-                              • {cardioText}
-                            </span>
+                    return (
+                      <div
+                        key={session.id}
+                        onClick={() => handleStartSession(week.id, session.id)}
+                        className="flex items-start justify-between pt-4 pb-4 px-4 border-b-[0.55px] border-solid border-[#0000001a] last:border-b-0 cursor-pointer hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                      >
+                        <div className="flex flex-col items-start gap-[3.99px] flex-1">
+                          <div className="flex items-center justify-between w-full gap-[7.99px]">
+                            <h3 className="[font-family:'Inter',Helvetica] font-normal text-neutral-950 text-base tracking-[-0.31px] leading-6">
+                              {session.name}
+                            </h3>
+                            {getStatusBadge(status)}
+                          </div>
+                          {((session.startedAt && hasCompletedSets) || session.completedDate) && (
+                            <p className="[font-family:'Inter',Helvetica] font-normal text-[#717182] text-sm tracking-[-0.15px] leading-5">
+                              {session.completedDate
+                                ? `Completed ${formatDateTime(session.completedDate)}`
+                                : `Started ${formatDateTime(session.startedAt!)}`
+                              }
+                            </p>
+                          )}
+                          {(totalExercises > 0 || cardioText) && (
+                            <div className="flex items-center gap-2">
+                              {totalExercises > 0 && (
+                                <span className="[font-family:'Inter',Helvetica] font-normal text-[#717182] text-xs tracking-[0] leading-4">
+                                  {totalExercises} {totalExercises === 1 ? 'exercise' : 'exercises'}
+                                </span>
+                              )}
+                              {cardioText && (
+                                <span className="[font-family:'Inter',Helvetica] font-normal text-[#717182] text-xs tracking-[0] leading-4">
+                                  {totalExercises > 0 ? '+' : ''}{cardioText}
+                                </span>
+                              )}
+                            </div>
                           )}
                         </div>
                       </div>
-                    </div>
-                    <Button
-                      onClick={() => handleStartSession(currentWeek.id, session.id)}
-                      className="h-12 px-6 py-2 bg-[#030213] rounded-lg touch-manipulation active:scale-95 transition-transform"
-                    >
-                      <span className="[font-family:'Inter',Helvetica] font-medium text-white text-sm tracking-[-0.15px] leading-5">
-                        {status === 'planned' ? 'Start' : 'Continue'}
-                      </span>
-                    </Button>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })()}
       </main>
     </div>
   );

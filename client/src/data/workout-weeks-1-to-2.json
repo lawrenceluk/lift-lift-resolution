@@ -1,0 +1,828 @@
+[
+  {
+    "id": "week-1",
+    "weekNumber": 1,
+    "phase": "Foundation",
+    "startDate": "2025-10-20",
+    "endDate": "2025-10-26",
+    "description": "Week 1 is lighter with less volume to ease you in. It shouldn't feel overly taxing - trust the process!",
+    "sessions": [
+      {
+        "id": "week-1-session-1",
+        "name": "Lower Heavy",
+        "dayOfWeek": "Monday",
+        "warmup": [
+          "5-10 min cardio warmup",
+          "1 set of clamshells/monster walks"
+        ],
+        "exercises": [
+          {
+            "id": "week-1-session-1-exercise-1",
+            "name": "Back Squat",
+            "groupLabel": "A1",
+            "warmupSets": 3,
+            "workingSets": 3,
+            "reps": "12",
+            "targetLoad": "2-3 RIR",
+            "restSeconds": 210,
+            "notes": "12 reps is a lot! Don't rush.",
+            "sets": []
+          },
+          {
+            "id": "week-1-session-1-exercise-2",
+            "name": "Walking BB/DB/Sandbag Lunge",
+            "groupLabel": "B1",
+            "warmupSets": 1,
+            "workingSets": 2,
+            "reps": "10-15 per leg",
+            "targetLoad": "2-3 RIR",
+            "restSeconds": 120,
+            "notes": "Don't get sloppy! Don't overstride. Lunging up and down not forward.",
+            "sets": []
+          },
+          {
+            "id": "week-1-session-1-exercise-3",
+            "name": "Machine Calf Raise",
+            "groupLabel": "C1",
+            "warmupSets": 1,
+            "workingSets": 2,
+            "reps": "10-15",
+            "targetLoad": "3-4 RIR",
+            "restSeconds": 90,
+            "notes": "Aim for full stretch at the bottom",
+            "sets": []
+          },
+          {
+            "id": "week-1-session-1-exercise-4",
+            "name": "Knee Tuck Crunch",
+            "groupLabel": "C2",
+            "warmupSets": 0,
+            "workingSets": 2,
+            "reps": "til it burns",
+            "targetLoad": "5-10 seconds in the tank",
+            "restSeconds": 90,
+            "notes": "Each rep starts and finishes in hollow body position. Don't have to go full hollowbody if it's too challenging.",
+            "sets": []
+          },
+          {
+            "id": "week-1-session-1-exercise-5",
+            "name": "Leg Curl",
+            "groupLabel": "D1",
+            "warmupSets": 1,
+            "workingSets": 2,
+            "reps": "8-10",
+            "targetLoad": "2-3 RIR",
+            "restSeconds": 120,
+            "notes": "Slower eccentric than concentric",
+            "sets": []
+          },
+          {
+            "id": "week-1-session-1-exercise-6",
+            "name": "Side Plank Raises",
+            "groupLabel": "D2",
+            "warmupSets": 0,
+            "workingSets": 1,
+            "reps": "til it burns (each side)",
+            "targetLoad": "3 RIR",
+            "restSeconds": 90,
+            "notes": "Straight body line, shoulder over elbow. 30 secs between sides.",
+            "sets": []
+          }
+        ],
+        "completed": false
+      },
+      {
+        "id": "week-1-session-2",
+        "name": "Upper Moderate",
+        "dayOfWeek": "Tuesday",
+        "warmup": [
+          "5-10 min cardio warmup"
+        ],
+        "exercises": [
+          {
+            "id": "week-1-session-2-exercise-1",
+            "name": "Bench Press",
+            "groupLabel": "A1",
+            "warmupSets": 3,
+            "workingSets": 3,
+            "reps": "12",
+            "targetLoad": "2-3 RIR",
+            "restSeconds": 210,
+            "notes": "Don't be a hero - if you're feeling weak, drop the weight. Use safeties!",
+            "sets": []
+          },
+          {
+            "id": "week-1-session-2-exercise-2",
+            "name": "Seated Cable Row",
+            "groupLabel": "A2",
+            "warmupSets": 1,
+            "workingSets": 2,
+            "reps": "10-12",
+            "targetLoad": "2-3 RIR",
+            "restSeconds": 90,
+            "notes": "Shoulders down, try to minimize torso flexion.",
+            "sets": []
+          },
+          {
+            "id": "week-1-session-2-exercise-3",
+            "name": "Seated DB OHP",
+            "groupLabel": "B1",
+            "warmupSets": 1,
+            "workingSets": 2,
+            "reps": "10-12",
+            "targetLoad": "2-3 RIR",
+            "restSeconds": 120,
+            "notes": "Elbows dipping just below shoulders at bottom of movement. Elbows ever so slightly in front of body.",
+            "sets": []
+          },
+          {
+            "id": "week-1-session-2-exercise-4",
+            "name": "Lat Pulldown/Chinup",
+            "groupLabel": "B2",
+            "warmupSets": 1,
+            "workingSets": 2,
+            "reps": "10-12",
+            "targetLoad": "2-3 RIR",
+            "restSeconds": 90,
+            "notes": "Aim for full ROM, eccentric slower than concentric",
+            "sets": []
+          },
+          {
+            "id": "week-1-session-2-exercise-5",
+            "name": "Cable Fly/Cable Crossovers",
+            "groupLabel": "C1",
+            "warmupSets": 1,
+            "workingSets": 2,
+            "reps": "10-12",
+            "targetLoad": "2-3 RIR",
+            "restSeconds": 120,
+            "notes": "Get a good stretch",
+            "sets": []
+          },
+          {
+            "id": "week-1-session-2-exercise-6",
+            "name": "Hammer Curl",
+            "groupLabel": "C2",
+            "warmupSets": 1,
+            "workingSets": 2,
+            "reps": "10-15",
+            "targetLoad": "2-3 RIR",
+            "restSeconds": 90,
+            "notes": "Brachioradialis time!",
+            "sets": []
+          },
+          {
+            "id": "week-1-session-2-exercise-7",
+            "name": "Overhead Tricep Extension",
+            "groupLabel": "C3",
+            "warmupSets": 1,
+            "workingSets": 2,
+            "reps": "10-15",
+            "targetLoad": "2-3 RIR",
+            "restSeconds": 90,
+            "notes": "Go higher reps with lighter weight if elbows are a bit sensitive.",
+            "sets": []
+          }
+        ],
+        "cardio": {
+          "type": "zone2",
+          "duration": 45,
+          "instructions": "30 mins - 1 hour Zone 2 cardio. Conversational pace.",
+          "completed": false
+        },
+        "completed": false
+      },
+      {
+        "id": "week-1-session-3",
+        "name": "Rest or Light Cardio",
+        "dayOfWeek": "Wednesday",
+        "exercises": [],
+        "notes": "Rest day or cardio if not done on Day 2",
+        "completed": false
+      },
+      {
+        "id": "week-1-session-4",
+        "name": "Lower Moderate/Volume",
+        "dayOfWeek": "Thursday",
+        "warmup": [
+          "5-10 min cardio warmup"
+        ],
+        "exercises": [
+          {
+            "id": "week-1-session-4-exercise-1",
+            "name": "Back Squat",
+            "groupLabel": "A1",
+            "warmupSets": 3,
+            "workingSets": 2,
+            "reps": "15-25",
+            "targetLoad": "2-3 RIR",
+            "restSeconds": 180,
+            "notes": "Pump time! Not as fussy about reps today. Try to finish each set with 2-3 reps in the tank.",
+            "sets": []
+          },
+          {
+            "id": "week-1-session-4-exercise-2",
+            "name": "RDLs",
+            "groupLabel": "B1",
+            "warmupSets": 1,
+            "workingSets": 2,
+            "reps": "8-10",
+            "targetLoad": "2-3 RIR",
+            "restSeconds": 120,
+            "notes": "Feel the stretch! Bar stays close to legs (slight bend), neutral spine",
+            "sets": []
+          },
+          {
+            "id": "week-1-session-4-exercise-3",
+            "name": "Single Leg Calf Raise",
+            "groupLabel": "B2",
+            "warmupSets": 0,
+            "workingSets": 3,
+            "reps": "15+ each leg",
+            "targetLoad": "BW, 3 RIR each leg",
+            "restSeconds": 60,
+            "notes": "Full ROM, slow eccentric. Take a minute off before next set of RDLs",
+            "sets": []
+          },
+          {
+            "id": "week-1-session-4-exercise-4",
+            "name": "DB/BB Reverse Lunge",
+            "groupLabel": "C1",
+            "warmupSets": 0,
+            "workingSets": 3,
+            "reps": "8-12 each leg",
+            "targetLoad": "2-3 RIR",
+            "restSeconds": 120,
+            "notes": "Slight lean forward in torso, back knee stops just above ground",
+            "sets": []
+          },
+          {
+            "id": "week-1-session-4-exercise-5",
+            "name": "Banded Clamshells or Monster Walks",
+            "groupLabel": "D1",
+            "warmupSets": 0,
+            "workingSets": 2,
+            "reps": "til it burns",
+            "targetLoad": "til it burns",
+            "restSeconds": 60,
+            "notes": "Clamshells - 2 sets each side. Give it a minute+ before doing set 2. Don't go near failure.",
+            "sets": []
+          },
+          {
+            "id": "week-1-session-4-exercise-6",
+            "name": "Plank DB Pull Throughs",
+            "groupLabel": "D2",
+            "warmupSets": 0,
+            "workingSets": 2,
+            "reps": "til it burns",
+            "targetLoad": "5-10 seconds in the tank",
+            "restSeconds": 90,
+            "notes": "Pushup position, lifting/sliding a light DB under your body from one side to the other, using the opposite arm.",
+            "sets": []
+          },
+          {
+            "id": "week-1-session-4-exercise-7",
+            "name": "Leg Extension",
+            "groupLabel": "D3",
+            "warmupSets": 0,
+            "workingSets": 2,
+            "reps": "15-20",
+            "targetLoad": "2-3 RIR",
+            "restSeconds": 120,
+            "notes": "Full ROM, slow eccentric.",
+            "sets": []
+          }
+        ],
+        "completed": false
+      },
+      {
+        "id": "week-1-session-5",
+        "name": "Upper Heavy",
+        "dayOfWeek": "Friday",
+        "warmup": [
+          "5-10 min cardio warmup"
+        ],
+        "exercises": [
+          {
+            "id": "week-1-session-5-exercise-1",
+            "name": "Bench Press",
+            "groupLabel": "A1",
+            "warmupSets": 3,
+            "workingSets": 3,
+            "reps": "10",
+            "targetLoad": "2-3 RIR",
+            "restSeconds": 210,
+            "notes": "Don't be a hero - if you're feeling weak, drop the weight. Use safeties!",
+            "sets": []
+          },
+          {
+            "id": "week-1-session-5-exercise-2",
+            "name": "Lat Pulldown/Chinup",
+            "groupLabel": "A2",
+            "warmupSets": 1,
+            "workingSets": 2,
+            "reps": "8-10",
+            "targetLoad": "2-3 RIR",
+            "restSeconds": 90,
+            "notes": "Aim for full ROM, eccentric slower than concentric",
+            "sets": []
+          },
+          {
+            "id": "week-1-session-5-exercise-3",
+            "name": "Seated DB OHP",
+            "groupLabel": "B1",
+            "warmupSets": 1,
+            "workingSets": 2,
+            "reps": "8-10",
+            "targetLoad": "2-3 RIR",
+            "restSeconds": 120,
+            "notes": "Elbows dipping just below shoulders at bottom of movement. Elbows ever so slightly in front of body.",
+            "sets": []
+          },
+          {
+            "id": "week-1-session-5-exercise-4",
+            "name": "Chest-Supported Row",
+            "groupLabel": "B2",
+            "warmupSets": 1,
+            "workingSets": 2,
+            "reps": "8-10",
+            "targetLoad": "2-3 RIR",
+            "restSeconds": 90,
+            "notes": "Super brief pause at the end of the concentric wouldn't go astray",
+            "sets": []
+          },
+          {
+            "id": "week-1-session-5-exercise-5",
+            "name": "Facepulls",
+            "groupLabel": "C1",
+            "warmupSets": 0,
+            "workingSets": 2,
+            "reps": "15+",
+            "targetLoad": "4 RIR",
+            "restSeconds": 120,
+            "notes": "Elbows at shoulder height. Hands and elbows working in unison",
+            "sets": []
+          },
+          {
+            "id": "week-1-session-5-exercise-6",
+            "name": "Tricep Pushdown",
+            "groupLabel": "C2",
+            "warmupSets": 1,
+            "workingSets": 2,
+            "reps": "10-15",
+            "targetLoad": "2-3 RIR",
+            "restSeconds": 90,
+            "notes": "Just get a good pump",
+            "sets": []
+          },
+          {
+            "id": "week-1-session-5-exercise-7",
+            "name": "Biceps Curl",
+            "groupLabel": "C3",
+            "warmupSets": 1,
+            "workingSets": 2,
+            "reps": "10-15",
+            "targetLoad": "2-3 RIR",
+            "restSeconds": 90,
+            "notes": "Just get a good pump",
+            "sets": []
+          }
+        ],
+        "completed": false
+      },
+      {
+        "id": "week-1-session-6",
+        "name": "Zone 2 Cardio",
+        "dayOfWeek": "Saturday",
+        "exercises": [],
+        "cardio": {
+          "type": "zone2",
+          "duration": 45,
+          "instructions": "30 mins - 1 hour Zone 2 cardio. Can be done after Upper on Day 5 if it suits.",
+          "completed": false
+        },
+        "completed": false
+      },
+      {
+        "id": "week-1-session-7",
+        "name": "Rest",
+        "dayOfWeek": "Sunday",
+        "exercises": [],
+        "completed": false
+      }
+    ]
+  },
+  {
+    "id": "week-2",
+    "weekNumber": 2,
+    "phase": "Foundation",
+    "startDate": "2025-10-27",
+    "endDate": "2025-11-02",
+    "description": "Volume increases this week with an extra set on most exercises",
+    "sessions": [
+      {
+        "id": "week-2-session-1",
+        "name": "Lower Heavy",
+        "dayOfWeek": "Monday",
+        "warmup": [
+          "5-10 min cardio warmup",
+          "1 set of clamshells/monster walks"
+        ],
+        "exercises": [
+          {
+            "id": "week-2-session-1-exercise-1",
+            "name": "Back Squat",
+            "groupLabel": "A1",
+            "warmupSets": 3,
+            "workingSets": 4,
+            "reps": "12",
+            "targetLoad": "2-3 RIR",
+            "restSeconds": 210,
+            "notes": "Small bump up in weight.",
+            "sets": []
+          },
+          {
+            "id": "week-2-session-1-exercise-2",
+            "name": "Walking BB/DB/Sandbag Lunge",
+            "groupLabel": "B1",
+            "warmupSets": 1,
+            "workingSets": 3,
+            "reps": "10-15 per leg",
+            "targetLoad": "2-3 RIR",
+            "restSeconds": 120,
+            "notes": "Don't get sloppy! Don't overstride. Lunging up and down not forward.",
+            "sets": []
+          },
+          {
+            "id": "week-2-session-1-exercise-3",
+            "name": "Machine Calf Raise",
+            "groupLabel": "C1",
+            "warmupSets": 1,
+            "workingSets": 3,
+            "reps": "10-15",
+            "targetLoad": "3-4 RIR",
+            "restSeconds": 90,
+            "notes": "Aim for full stretch at the bottom",
+            "sets": []
+          },
+          {
+            "id": "week-2-session-1-exercise-4",
+            "name": "Knee Tuck Crunch",
+            "groupLabel": "C2",
+            "warmupSets": 0,
+            "workingSets": 3,
+            "reps": "til it burns",
+            "targetLoad": "5-10 seconds in the tank",
+            "restSeconds": 90,
+            "notes": "Each rep starts and finishes in hollow body position.",
+            "sets": []
+          },
+          {
+            "id": "week-2-session-1-exercise-5",
+            "name": "Leg Curl",
+            "groupLabel": "D1",
+            "warmupSets": 1,
+            "workingSets": 3,
+            "reps": "8-10",
+            "targetLoad": "2-3 RIR",
+            "restSeconds": 120,
+            "notes": "Slower eccentric than concentric",
+            "sets": []
+          },
+          {
+            "id": "week-2-session-1-exercise-6",
+            "name": "Side Plank Raises",
+            "groupLabel": "D2",
+            "warmupSets": 0,
+            "workingSets": 2,
+            "reps": "til it burns (each side)",
+            "targetLoad": "3 RIR",
+            "restSeconds": 90,
+            "notes": "Straight body line, shoulder over elbow. 30 secs between sides.",
+            "sets": []
+          }
+        ],
+        "completed": false
+      },
+      {
+        "id": "week-2-session-2",
+        "name": "Upper Moderate",
+        "dayOfWeek": "Tuesday",
+        "warmup": [
+          "5-10 min cardio warmup"
+        ],
+        "exercises": [
+          {
+            "id": "week-2-session-2-exercise-1",
+            "name": "Bench Press",
+            "groupLabel": "A1",
+            "warmupSets": 3,
+            "workingSets": 4,
+            "reps": "12",
+            "targetLoad": "2-3 RIR",
+            "restSeconds": 210,
+            "notes": "Don't be a hero - if you're feeling weak, drop the weight. Use safeties!",
+            "sets": []
+          },
+          {
+            "id": "week-2-session-2-exercise-2",
+            "name": "Seated Cable Row",
+            "groupLabel": "A2",
+            "warmupSets": 1,
+            "workingSets": 3,
+            "reps": "10-12",
+            "targetLoad": "2-3 RIR",
+            "restSeconds": 90,
+            "notes": "Shoulders down, try to minimize torso flexion.",
+            "sets": []
+          },
+          {
+            "id": "week-2-session-2-exercise-3",
+            "name": "Seated DB OHP",
+            "groupLabel": "B1",
+            "warmupSets": 1,
+            "workingSets": 3,
+            "reps": "10-12",
+            "targetLoad": "2-3 RIR",
+            "restSeconds": 120,
+            "notes": "Elbows dipping just below shoulders at bottom of movement.",
+            "sets": []
+          },
+          {
+            "id": "week-2-session-2-exercise-4",
+            "name": "Lat Pulldown/Chinup",
+            "groupLabel": "B2",
+            "warmupSets": 1,
+            "workingSets": 3,
+            "reps": "10-12",
+            "targetLoad": "2-3 RIR",
+            "restSeconds": 90,
+            "notes": "Aim for full ROM, eccentric slower than concentric",
+            "sets": []
+          },
+          {
+            "id": "week-2-session-2-exercise-5",
+            "name": "Cable Fly/Cable Crossovers",
+            "groupLabel": "C1",
+            "warmupSets": 1,
+            "workingSets": 3,
+            "reps": "10-12",
+            "targetLoad": "2-3 RIR",
+            "restSeconds": 120,
+            "notes": "Get a good stretch",
+            "sets": []
+          },
+          {
+            "id": "week-2-session-2-exercise-6",
+            "name": "Hammer Curl",
+            "groupLabel": "C2",
+            "warmupSets": 1,
+            "workingSets": 3,
+            "reps": "10-15",
+            "targetLoad": "2-3 RIR",
+            "restSeconds": 90,
+            "notes": "Brachioradialis time!",
+            "sets": []
+          },
+          {
+            "id": "week-2-session-2-exercise-7",
+            "name": "Overhead Tricep Extension",
+            "groupLabel": "C3",
+            "warmupSets": 1,
+            "workingSets": 3,
+            "reps": "10-15",
+            "targetLoad": "2-3 RIR",
+            "restSeconds": 90,
+            "notes": "Go higher reps with lighter weight if elbows are a bit sensitive.",
+            "sets": []
+          }
+        ],
+        "cardio": {
+          "type": "zone2",
+          "duration": 45,
+          "instructions": "30 mins - 1 hour Zone 2 cardio.",
+          "completed": false
+        },
+        "completed": false
+      },
+      {
+        "id": "week-2-session-3",
+        "name": "Rest or Light Cardio",
+        "dayOfWeek": "Wednesday",
+        "exercises": [],
+        "notes": "Rest day or cardio if not done on Day 2",
+        "completed": false
+      },
+      {
+        "id": "week-2-session-4",
+        "name": "Lower Moderate/Volume",
+        "dayOfWeek": "Thursday",
+        "warmup": [
+          "5-10 min cardio warmup"
+        ],
+        "exercises": [
+          {
+            "id": "week-2-session-4-exercise-1",
+            "name": "Back Squat",
+            "groupLabel": "A1",
+            "warmupSets": 3,
+            "workingSets": 3,
+            "reps": "15-25",
+            "targetLoad": "2-3 RIR",
+            "restSeconds": 180,
+            "notes": "Pump time! Try to finish each set with 2-3 reps in the tank.",
+            "sets": []
+          },
+          {
+            "id": "week-2-session-4-exercise-2",
+            "name": "RDLs",
+            "groupLabel": "B1",
+            "warmupSets": 1,
+            "workingSets": 3,
+            "reps": "8-10",
+            "targetLoad": "2-3 RIR",
+            "restSeconds": 120,
+            "notes": "Feel the stretch! Bar stays close to legs, neutral spine",
+            "sets": []
+          },
+          {
+            "id": "week-2-session-4-exercise-3",
+            "name": "Single Leg Calf Raise",
+            "groupLabel": "B2",
+            "warmupSets": 0,
+            "workingSets": 3,
+            "reps": "15+ each leg",
+            "targetLoad": "BW, 3 RIR each leg",
+            "restSeconds": 60,
+            "notes": "Full ROM, slow eccentric.",
+            "sets": []
+          },
+          {
+            "id": "week-2-session-4-exercise-4",
+            "name": "DB/BB Reverse Lunge",
+            "groupLabel": "C1",
+            "warmupSets": 0,
+            "workingSets": 3,
+            "reps": "8-12 each leg",
+            "targetLoad": "2-3 RIR",
+            "restSeconds": 120,
+            "notes": "Slight lean forward in torso, back knee stops just above ground",
+            "sets": []
+          },
+          {
+            "id": "week-2-session-4-exercise-5",
+            "name": "Banded Clamshells or Monster Walks",
+            "groupLabel": "D1",
+            "warmupSets": 0,
+            "workingSets": 2,
+            "reps": "til it burns",
+            "targetLoad": "til it burns",
+            "restSeconds": 60,
+            "notes": "Don't go near failure.",
+            "sets": []
+          },
+          {
+            "id": "week-2-session-4-exercise-6",
+            "name": "Plank DB Pull Throughs",
+            "groupLabel": "D2",
+            "warmupSets": 0,
+            "workingSets": 3,
+            "reps": "til it burns",
+            "targetLoad": "5-10 seconds in the tank",
+            "restSeconds": 90,
+            "notes": "Pushup position, lifting/sliding a light DB under your body.",
+            "sets": []
+          },
+          {
+            "id": "week-2-session-4-exercise-7",
+            "name": "Leg Extension",
+            "groupLabel": "D3",
+            "warmupSets": 0,
+            "workingSets": 2,
+            "reps": "15-20",
+            "targetLoad": "2-3 RIR",
+            "restSeconds": 120,
+            "notes": "Full ROM, slow eccentric.",
+            "sets": []
+          }
+        ],
+        "completed": false
+      },
+      {
+        "id": "week-2-session-5",
+        "name": "Upper Heavy",
+        "dayOfWeek": "Friday",
+        "warmup": [
+          "5-10 min cardio warmup"
+        ],
+        "exercises": [
+          {
+            "id": "week-2-session-5-exercise-1",
+            "name": "Bench Press",
+            "groupLabel": "A1",
+            "warmupSets": 3,
+            "workingSets": 4,
+            "reps": "10",
+            "targetLoad": "2-3 RIR",
+            "restSeconds": 210,
+            "notes": "Use safeties!",
+            "sets": []
+          },
+          {
+            "id": "week-2-session-5-exercise-2",
+            "name": "Lat Pulldown/Chinup",
+            "groupLabel": "A2",
+            "warmupSets": 1,
+            "workingSets": 3,
+            "reps": "8-10",
+            "targetLoad": "2-3 RIR",
+            "restSeconds": 90,
+            "notes": "Aim for full ROM, eccentric slower than concentric",
+            "sets": []
+          },
+          {
+            "id": "week-2-session-5-exercise-3",
+            "name": "Seated DB OHP",
+            "groupLabel": "B1",
+            "warmupSets": 1,
+            "workingSets": 3,
+            "reps": "8-10",
+            "targetLoad": "2-3 RIR",
+            "restSeconds": 120,
+            "notes": "Elbows dipping just below shoulders at bottom.",
+            "sets": []
+          },
+          {
+            "id": "week-2-session-5-exercise-4",
+            "name": "Chest-Supported Row",
+            "groupLabel": "B2",
+            "warmupSets": 1,
+            "workingSets": 3,
+            "reps": "8-10",
+            "targetLoad": "2-3 RIR",
+            "restSeconds": 90,
+            "notes": "Brief pause at the end of the concentric",
+            "sets": []
+          },
+          {
+            "id": "week-2-session-5-exercise-5",
+            "name": "Facepulls",
+            "groupLabel": "C1",
+            "warmupSets": 0,
+            "workingSets": 3,
+            "reps": "15+",
+            "targetLoad": "4 RIR",
+            "restSeconds": 120,
+            "notes": "Elbows at shoulder height",
+            "sets": []
+          },
+          {
+            "id": "week-2-session-5-exercise-6",
+            "name": "Tricep Pushdown",
+            "groupLabel": "C2",
+            "warmupSets": 1,
+            "workingSets": 3,
+            "reps": "10-15",
+            "targetLoad": "2-3 RIR",
+            "restSeconds": 90,
+            "notes": "Just get a good pump",
+            "sets": []
+          },
+          {
+            "id": "week-2-session-5-exercise-7",
+            "name": "Biceps Curl",
+            "groupLabel": "C3",
+            "warmupSets": 1,
+            "workingSets": 3,
+            "reps": "10-15",
+            "targetLoad": "2-3 RIR",
+            "restSeconds": 90,
+            "notes": "Just get a good pump",
+            "sets": []
+          }
+        ],
+        "completed": false
+      },
+      {
+        "id": "week-2-session-6",
+        "name": "Zone 2 Cardio",
+        "dayOfWeek": "Saturday",
+        "exercises": [],
+        "cardio": {
+          "type": "zone2",
+          "duration": 45,
+          "instructions": "30 mins - 1 hour Zone 2 cardio.",
+          "completed": false
+        },
+        "completed": false
+      },
+      {
+        "id": "week-2-session-7",
+        "name": "Rest",
+        "dayOfWeek": "Sunday",
+        "exercises": [],
+        "completed": false
+      }
+    ]
+  }
+]

@@ -58,6 +58,15 @@ export const SessionView: React.FC<SessionViewProps> = ({
         </div>
       </header>
 
+      {session.notes && (
+        <div className="px-4 pt-4">
+          <Card className="p-4 bg-blue-50 border-blue-200">
+            <h3 className="font-semibold text-blue-900 mb-2">Session Notes</h3>
+            <p className="text-sm text-blue-800">{session.notes}</p>
+          </Card>
+        </div>
+      )}
+
       {session.warmup && session.warmup.length > 0 && (
         <div className="px-4 pt-4">
           <Card className="p-4 bg-orange-50 border-orange-200">

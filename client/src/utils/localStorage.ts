@@ -42,7 +42,20 @@ export const importWeeks = (file: File): Promise<Week[]> => {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const weeks = JSON.parse(e.target?.result as string) as Week[];
+        const parsed = JSON.parse(e.target?.result as string);
+
+        // Handle both array and single object formats
+        let weeks: Week[];
+        if (Array.isArray(parsed)) {
+          weeks = parsed as Week[];
+        } else if (parsed && typeof parsed === 'object' && 'weekNumber' in parsed) {
+          // Single week object - wrap it in an array
+          weeks = [parsed as Week];
+        } else {
+          reject(new Error('Invalid workout data format'));
+          return;
+        }
+
         resolve(weeks);
       } catch (error) {
         reject(new Error('Invalid JSON file'));
