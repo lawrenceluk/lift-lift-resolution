@@ -13,8 +13,6 @@ export const createSampleWeeks = (): Week[] => [
       {
         id: createSessionId(1, 1),
         name: 'Lower Heavy',
-        scheduledDate: '2024-10-20',
-        dayOfWeek: 'Sunday',
         warmup: ['5-10 min cardio', '1 set of clamshells/monster walks'],
         completed: false,
         exercises: [
@@ -58,8 +56,6 @@ export const createSampleWeeks = (): Week[] => [
       {
         id: createSessionId(1, 2),
         name: 'Upper + Cardio',
-        scheduledDate: '2024-10-22',
-        dayOfWeek: 'Tuesday',
         warmup: ['5 min cardio', 'Band pull-aparts'],
         completed: false,
         cardio: {
