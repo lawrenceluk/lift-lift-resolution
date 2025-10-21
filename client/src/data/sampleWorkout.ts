@@ -1,124 +1,111 @@
-import { WorkoutProgram } from '@/types/workout';
+import { Week } from '@/types/workout';
+import { createWeekId, createSessionId, createExerciseId } from '@/utils/idHelpers';
 
-export const createSampleProgram = (): WorkoutProgram => ({
-  id: 'program-1',
-  name: 'Foundation Training Program',
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-  weeks: [
-    {
-      id: 'week-1',
-      number: 1,
-      phase: 'Foundation',
-      startDate: '2024-10-19',
-      endDate: '2024-10-25',
-      description: 'Easing back in - should feel manageable, not exhausting',
-      sessions: [
-        {
-          id: 'session-1',
-          title: 'Lower Heavy',
-          day: 'Sunday',
-          date: '2024-10-19',
-          completed: false,
-          exercises: [
-            {
-              id: 'ex-1',
-              name: 'Barbell Squat',
-              completed: false,
-              sets: [
-                {
-                  id: 'set-1-1',
-                  prescribed: { reps: 8, weight: 185, rir: 2, notes: 'Warm-up set' },
-                  actual: {},
-                  completed: false,
-                },
-                {
-                  id: 'set-1-2',
-                  prescribed: { reps: 8, weight: 225, rir: 2 },
-                  actual: {},
-                  completed: false,
-                },
-                {
-                  id: 'set-1-3',
-                  prescribed: { reps: 8, weight: 225, rir: 2 },
-                  actual: {},
-                  completed: false,
-                },
-                {
-                  id: 'set-1-4',
-                  prescribed: { reps: 8, weight: 225, rir: 2 },
-                  actual: {},
-                  completed: false,
-                },
-              ],
-            },
-            {
-              id: 'ex-2',
-              name: 'Romanian Deadlift',
-              completed: false,
-              sets: [
-                {
-                  id: 'set-2-1',
-                  prescribed: { reps: 10, weight: 135, rir: 3 },
-                  actual: {},
-                  completed: false,
-                },
-                {
-                  id: 'set-2-2',
-                  prescribed: { reps: 10, weight: 155, rir: 3 },
-                  actual: {},
-                  completed: false,
-                },
-                {
-                  id: 'set-2-3',
-                  prescribed: { reps: 10, weight: 155, rir: 3 },
-                  actual: {},
-                  completed: false,
-                },
-              ],
-            },
-          ],
-        },
-        {
-          id: 'session-2',
-          title: 'Upper + Cardio',
-          day: 'Tuesday',
-          date: '2024-10-21',
-          completed: false,
-          cardio: {
-            duration: 35,
-            type: 'Incline walk',
-            notes: 'Zone 2 heart rate',
+export const createSampleWeeks = (): Week[] => [
+  {
+    id: createWeekId(1),
+    weekNumber: 1,
+    phase: 'Foundation',
+    startDate: '2024-10-20',
+    endDate: '2024-10-26',
+    description: 'Easing back in - should feel manageable, not exhausting',
+    sessions: [
+      {
+        id: createSessionId(1, 1),
+        name: 'Lower Heavy',
+        scheduledDate: '2024-10-20',
+        dayOfWeek: 'Sunday',
+        warmup: ['5-10 min cardio', '1 set of clamshells/monster walks'],
+        completed: false,
+        exercises: [
+          {
+            id: createExerciseId(1, 1, 1),
+            name: 'Back Squat',
+            groupLabel: 'A1',
+            warmupSets: 2,
+            workingSets: 3,
+            reps: '12',
+            targetLoad: '2-3 RIR',
+            restSeconds: 180,
+            notes: '12 reps is a lot! Don\'t rush.',
+            sets: [],
           },
-          exercises: [
-            {
-              id: 'ex-3',
-              name: 'Bench Press',
-              completed: false,
-              sets: [
-                {
-                  id: 'set-3-1',
-                  prescribed: { reps: 8, weight: 135, rir: 2 },
-                  actual: {},
-                  completed: false,
-                },
-                {
-                  id: 'set-3-2',
-                  prescribed: { reps: 8, weight: 155, rir: 2 },
-                  actual: {},
-                  completed: false,
-                },
-                {
-                  id: 'set-3-3',
-                  prescribed: { reps: 8, weight: 155, rir: 2 },
-                  actual: {},
-                  completed: false,
-                },
-              ],
-            },
-          ],
+          {
+            id: createExerciseId(1, 1, 2),
+            name: 'Romanian Deadlift',
+            groupLabel: 'B1',
+            warmupSets: 1,
+            workingSets: 3,
+            reps: '10',
+            targetLoad: '3 RIR',
+            restSeconds: 120,
+            notes: 'Focus on hamstring stretch',
+            sets: [],
+          },
+          {
+            id: createExerciseId(1, 1, 3),
+            name: 'Leg Press',
+            groupLabel: 'C1',
+            warmupSets: 1,
+            workingSets: 2,
+            reps: '15',
+            targetLoad: '2-3 RIR',
+            restSeconds: 90,
+            sets: [],
+          },
+        ],
+      },
+      {
+        id: createSessionId(1, 2),
+        name: 'Upper + Cardio',
+        scheduledDate: '2024-10-22',
+        dayOfWeek: 'Tuesday',
+        warmup: ['5 min cardio', 'Band pull-aparts'],
+        completed: false,
+        cardio: {
+          type: 'zone2',
+          duration: 35,
+          modality: 'stairmaster',
+          instructions: 'Conversational pace, stay in zone 2',
+          completed: false,
         },
-      ],
-    },
-  ],
-});
+        exercises: [
+          {
+            id: createExerciseId(1, 2, 1),
+            name: 'Bench Press',
+            groupLabel: 'A1',
+            warmupSets: 2,
+            workingSets: 3,
+            reps: '8',
+            targetLoad: '2 RIR',
+            restSeconds: 180,
+            notes: 'Controlled descent',
+            sets: [],
+          },
+          {
+            id: createExerciseId(1, 2, 2),
+            name: 'Barbell Row',
+            groupLabel: 'A2',
+            warmupSets: 1,
+            workingSets: 3,
+            reps: '10',
+            targetLoad: '2-3 RIR',
+            restSeconds: 120,
+            sets: [],
+          },
+          {
+            id: createExerciseId(1, 2, 3),
+            name: 'Overhead Press',
+            groupLabel: 'B1',
+            warmupSets: 1,
+            workingSets: 3,
+            reps: '8',
+            targetLoad: '2-3 RIR',
+            restSeconds: 150,
+            sets: [],
+          },
+        ],
+      },
+    ],
+  },
+];
