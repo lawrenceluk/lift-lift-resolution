@@ -181,7 +181,7 @@ export const WorkoutTrackerApp = (): JSX.Element => {
   };
 
   return (
-    <div className="bg-white w-full min-h-screen">
+    <div className="bg-white w-full min-h-screen flex flex-col items-center">
       <input
         ref={fileInputRef}
         type="file"
@@ -190,13 +190,10 @@ export const WorkoutTrackerApp = (): JSX.Element => {
         className="hidden"
       />
 
-      <header className="flex flex-col w-full items-start pt-4 pb-2 px-4 bg-[#fffffff2] border-b-[0.55px] border-solid border-[#0000001a] sticky top-0 z-10">
+      <header className="flex flex-col w-full max-w-2xl items-start pt-4 pb-2 px-4 bg-[#fffffff2] border-b-[0.55px] border-solid border-[#0000001a] sticky top-0 z-10">
         <div className="flex h-9 items-center justify-between w-full">
           <div className="flex items-center gap-3">
-            <Anvil className="w-6 h-6" />
-            <h1 className="[font-family:'Inter',Helvetica] font-bold text-neutral-950 text-base tracking-[-0.31px] leading-6 whitespace-nowrap">
-              Resolution
-            </h1>
+            <img src="/header-logo.png" alt="Lift Lift Resolution" className="h-8" />
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -218,7 +215,7 @@ export const WorkoutTrackerApp = (): JSX.Element => {
         </div>
       </header>
 
-      <main className="flex flex-col w-full items-start pt-[23.54px] px-4 pb-8">
+      <main className="flex flex-col w-full max-w-2xl items-start pt-[23.54px] px-4 pb-8">
         {weeks.length > 1 && (
           <div className="relative flex items-center justify-center w-full mb-4">
             {currentWeekIndex > 0 && (

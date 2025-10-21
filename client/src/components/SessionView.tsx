@@ -33,8 +33,8 @@ export const SessionView: React.FC<SessionViewProps> = ({
   ).length;
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24">
-      <header className="bg-white sticky top-0 z-10 border-b border-gray-200 px-4 py-3">
+    <div className="min-h-screen bg-white pb-24 flex flex-col items-center">
+      <header className="bg-white sticky top-0 z-10 border-b border-gray-200 px-4 py-3 w-full max-w-2xl">
         <div className="flex items-center gap-3 mb-2">
           <Button variant="ghost" size="icon" onClick={onBack} className="h-9 w-9">
             <ArrowLeft className="w-5 h-5" />
@@ -59,7 +59,7 @@ export const SessionView: React.FC<SessionViewProps> = ({
       </header>
 
       {session.notes && (
-        <div className="px-4 pt-4">
+        <div className="px-4 pt-4 w-full max-w-2xl">
           <Card className="p-4 bg-gray-50 border-blue-200">
             <h3 className="font-semibold text-blue-900 mb-2">Session Notes</h3>
             <p className="text-sm text-blue-800">{session.notes}</p>
@@ -68,7 +68,7 @@ export const SessionView: React.FC<SessionViewProps> = ({
       )}
 
       {session.warmup && session.warmup.length > 0 && (
-        <div className="px-4 pt-4">
+        <div className="px-4 pt-4 w-full max-w-2xl">
           <Card className="p-4 bg-orange-50 border-orange-200">
             <h3 className="font-semibold text-orange-900 mb-2">Warmup</h3>
             <ul className="space-y-1">
@@ -82,7 +82,7 @@ export const SessionView: React.FC<SessionViewProps> = ({
         </div>
       )}
 
-      <main className="px-4 pt-4">
+      <main className="px-4 pt-4 w-full max-w-2xl">
         {session.exercises.map((exercise) => (
           <ExerciseView
             key={exercise.id}
@@ -117,10 +117,10 @@ export const SessionView: React.FC<SessionViewProps> = ({
       </main>
 
       {!session.completed && allExercisesComplete && (
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200">
+        <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200 flex justify-center">
           <Button
             onClick={onCompleteSession}
-            className="w-full h-14 text-base bg-green-600 hover:bg-green-700"
+            className="w-full max-w-2xl h-14 text-base bg-green-600 hover:bg-green-700"
           >
             <CheckCircle2 className="w-5 h-5 mr-2" />
             Complete Workout
