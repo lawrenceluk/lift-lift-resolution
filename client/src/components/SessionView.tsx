@@ -41,10 +41,17 @@ export const SessionView: React.FC<SessionViewProps> = ({
           </Button>
           <div className="flex-1">
             <h1 className="text-lg font-semibold text-gray-900">{session.name}</h1>
-            <p className="text-sm text-gray-500 mt-[-6px]">Week {weekNumber}</p>
+            <p className="text-sm text-gray-500">Week {weekNumber}</p>
           </div>
-          {session.completed && <Badge className="bg-green-500">Completed</Badge>}
-          {!session.completed && session.startedAt && <Badge className="bg-orange-500">In Progress</Badge>}
+          <div className="flex flex-col items-end gap-1">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-600">
+                {completedExercises}/{session.exercises.length} exercises
+              </span>
+            </div>
+            {session.completed && <Badge className="bg-green-500">Completed</Badge>}
+            {!session.completed && session.startedAt && <Badge className="bg-orange-500">In Progress</Badge>}
+          </div>
         </div>
       </header>
 
