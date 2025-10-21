@@ -34,27 +34,17 @@ export const SessionView: React.FC<SessionViewProps> = ({
 
   return (
     <div className="min-h-screen bg-white pb-24 flex flex-col items-center">
-      <header className="bg-white sticky top-0 z-10 border-b border-gray-200 px-4 py-3 w-full max-w-2xl">
+      <header className="bg-white sticky top-0 z-10 border-b border-gray-200 px-4 py-4 w-full max-w-2xl">
         <div className="flex items-center gap-3 mb-2">
           <Button variant="ghost" size="icon" onClick={onBack} className="h-9 w-9">
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div className="flex-1">
             <h1 className="text-lg font-semibold text-gray-900">{session.name}</h1>
-            <p className="text-sm text-gray-500">Week {weekNumber}</p>
+            <p className="text-sm text-gray-500 mt-[-6px]">Week {weekNumber}</p>
           </div>
           {session.completed && <Badge className="bg-green-500">Completed</Badge>}
           {!session.completed && session.startedAt && <Badge className="bg-orange-500">In Progress</Badge>}
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-600">
-            {completedExercises}/{session.exercises.length} exercises
-          </span>
-          {session.cardio && (
-            <span className="text-sm text-gray-600">
-              + {session.cardio.duration}min {session.cardio.modality || 'cardio'}
-            </span>
-          )}
         </div>
       </header>
 
