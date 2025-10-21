@@ -34,12 +34,9 @@ export const useWorkoutProgram = () => {
           sessions: week.sessions.map((session) => {
             if (session.id !== sessionId) return session;
 
-            const totalSetsBefore = session.exercises.reduce((sum, ex) => sum + ex.sets.length, 0);
-            const isFirstSetEver = totalSetsBefore === 0;
-
             return {
               ...session,
-              startedAt: session.startedAt || (isFirstSetEver ? new Date().toISOString() : session.startedAt),
+              startedAt: session.startedAt || new Date().toISOString(),
               exercises: session.exercises.map((exercise) => {
                 if (exercise.id !== exerciseId) return exercise;
 
