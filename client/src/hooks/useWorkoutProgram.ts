@@ -1,135 +1,192 @@
 import { useState, useEffect, useCallback } from 'react';
-import { WorkoutProgram, WorkoutSet, Exercise, WorkoutSession } from '@/types/workout';
-import { loadWorkoutProgram, saveWorkoutProgram } from '@/utils/localStorage';
-import { createSampleProgram } from '@/data/sampleWorkout';
+import { Week, SetResult } from '@/types/workout';
+import { loadWeeks, saveWeeks } from '@/utils/localStorage';
+import { createSampleWeeks } from '@/data/sampleWorkout';
 
 export const useWorkoutProgram = () => {
-  const [program, setProgram] = useState<WorkoutProgram | null>(null);
+  const [weeks, setWeeks] = useState<Week[] | null>(null);
 
   useEffect(() => {
-    const loadedProgram = loadWorkoutProgram();
-    if (loadedProgram) {
-      setProgram(loadedProgram);
+    const loadedWeeks = loadWeeks();
+    if (loadedWeeks && loadedWeeks.length > 0) {
+      setWeeks(loadedWeeks);
     } else {
-      const sampleProgram = createSampleProgram();
-      setProgram(sampleProgram);
-      saveWorkoutProgram(sampleProgram);
+      const sampleWeeks = createSampleWeeks();
+      setWeeks(sampleWeeks);
+      saveWeeks(sampleWeeks);
     }
   }, []);
 
-  const updateProgram = useCallback((updatedProgram: WorkoutProgram) => {
-    const programWithTimestamp = {
-      ...updatedProgram,
-      updatedAt: new Date().toISOString(),
-    };
-    setProgram(programWithTimestamp);
-    saveWorkoutProgram(programWithTimestamp);
+  const updateWeeks = useCallback((updatedWeeks: Week[]) => {
+    setWeeks(updatedWeeks);
+    saveWeeks(updatedWeeks);
   }, []);
 
-  const updateSet = useCallback(
-    (weekId: string, sessionId: string, exerciseId: string, setId: string, updates: Partial<WorkoutSet>) => {
-      if (!program) return;
+  const addSet = useCallback(
+    (weekId: string, sessionId: string, exerciseId: string, set: SetResult) => {
+      if (!weeks) return;
 
-      const updatedProgram = { ...program };
-      const week = updatedProgram.weeks.find((w) => w.id === weekId);
-      if (!week) return;
+      const updatedWeeks = weeks.map((week) => {
+        if (week.id !== weekId) return week;
 
-      const session = week.sessions.find((s) => s.id === sessionId);
-      if (!session) return;
+        return {
+          ...week,
+          sessions: week.sessions.map((session) => {
+            if (session.id !== sessionId) return session;
 
-      const exercise = session.exercises.find((e) => e.id === exerciseId);
-      if (!exercise) return;
+            return {
+              ...session,
+              exercises: session.exercises.map((exercise) => {
+                if (exercise.id !== exerciseId) return exercise;
 
-      const set = exercise.sets.find((s) => s.id === setId);
-      if (!set) return;
-
-      Object.assign(set, updates);
-
-      exercise.completed = exercise.sets.every((s) => s.completed);
-      session.completed = session.exercises.every((e) => e.completed);
-
-      updateProgram(updatedProgram);
-    },
-    [program, updateProgram]
-  );
-
-  const toggleExerciseComplete = useCallback(
-    (weekId: string, sessionId: string, exerciseId: string) => {
-      if (!program) return;
-
-      const updatedProgram = { ...program };
-      const week = updatedProgram.weeks.find((w) => w.id === weekId);
-      if (!week) return;
-
-      const session = week.sessions.find((s) => s.id === sessionId);
-      if (!session) return;
-
-      const exercise = session.exercises.find((e) => e.id === exerciseId);
-      if (!exercise) return;
-
-      exercise.completed = !exercise.completed;
-      exercise.sets.forEach((set) => {
-        set.completed = exercise.completed;
+                return {
+                  ...exercise,
+                  sets: [...exercise.sets, set],
+                };
+              }),
+            };
+          }),
+        };
       });
 
-      session.completed = session.exercises.every((e) => e.completed);
-
-      updateProgram(updatedProgram);
+      updateWeeks(updatedWeeks);
     },
-    [program, updateProgram]
+    [weeks, updateWeeks]
+  );
+
+  const updateSet = useCallback(
+    (weekId: string, sessionId: string, exerciseId: string, setNumber: number, updates: Partial<SetResult>) => {
+      if (!weeks) return;
+
+      const updatedWeeks = weeks.map((week) => {
+        if (week.id !== weekId) return week;
+
+        return {
+          ...week,
+          sessions: week.sessions.map((session) => {
+            if (session.id !== sessionId) return session;
+
+            return {
+              ...session,
+              exercises: session.exercises.map((exercise) => {
+                if (exercise.id !== exerciseId) return exercise;
+
+                return {
+                  ...exercise,
+                  sets: exercise.sets.map((set) =>
+                    set.setNumber === setNumber ? { ...set, ...updates } : set
+                  ),
+                };
+              }),
+            };
+          }),
+        };
+      });
+
+      updateWeeks(updatedWeeks);
+    },
+    [weeks, updateWeeks]
+  );
+
+  const deleteSet = useCallback(
+    (weekId: string, sessionId: string, exerciseId: string, setNumber: number) => {
+      if (!weeks) return;
+
+      const updatedWeeks = weeks.map((week) => {
+        if (week.id !== weekId) return week;
+
+        return {
+          ...week,
+          sessions: week.sessions.map((session) => {
+            if (session.id !== sessionId) return session;
+
+            return {
+              ...session,
+              exercises: session.exercises.map((exercise) => {
+                if (exercise.id !== exerciseId) return exercise;
+
+                return {
+                  ...exercise,
+                  sets: exercise.sets
+                    .filter((set) => set.setNumber !== setNumber)
+                    .map((set, index) => ({ ...set, setNumber: index + 1 })),
+                };
+              }),
+            };
+          }),
+        };
+      });
+
+      updateWeeks(updatedWeeks);
+    },
+    [weeks, updateWeeks]
   );
 
   const startSession = useCallback(
     (weekId: string, sessionId: string) => {
-      if (!program) return;
+      if (!weeks) return;
 
-      const updatedProgram = { ...program };
-      const week = updatedProgram.weeks.find((w) => w.id === weekId);
-      if (!week) return;
+      const updatedWeeks = weeks.map((week) => {
+        if (week.id !== weekId) return week;
 
-      const session = week.sessions.find((s) => s.id === sessionId);
-      if (!session) return;
+        return {
+          ...week,
+          sessions: week.sessions.map((session) => {
+            if (session.id !== sessionId) return session;
 
-      session.startedAt = new Date().toISOString();
+            return {
+              ...session,
+            };
+          }),
+        };
+      });
 
-      updateProgram(updatedProgram);
+      updateWeeks(updatedWeeks);
     },
-    [program, updateProgram]
+    [weeks, updateWeeks]
   );
 
   const completeSession = useCallback(
     (weekId: string, sessionId: string) => {
-      if (!program) return;
+      if (!weeks) return;
 
-      const updatedProgram = { ...program };
-      const week = updatedProgram.weeks.find((w) => w.id === weekId);
-      if (!week) return;
+      const updatedWeeks = weeks.map((week) => {
+        if (week.id !== weekId) return week;
 
-      const session = week.sessions.find((s) => s.id === sessionId);
-      if (!session) return;
+        return {
+          ...week,
+          sessions: week.sessions.map((session) => {
+            if (session.id !== sessionId) return session;
 
-      session.completed = true;
-      session.completedAt = new Date().toISOString();
+            return {
+              ...session,
+              completed: true,
+              completedDate: new Date().toISOString(),
+            };
+          }),
+        };
+      });
 
-      updateProgram(updatedProgram);
+      updateWeeks(updatedWeeks);
     },
-    [program, updateProgram]
+    [weeks, updateWeeks]
   );
 
-  const importProgram = useCallback(
-    (newProgram: WorkoutProgram) => {
-      updateProgram(newProgram);
+  const importWeeks = useCallback(
+    (newWeeks: Week[]) => {
+      updateWeeks(newWeeks);
     },
-    [updateProgram]
+    [updateWeeks]
   );
 
   return {
-    program,
+    weeks,
+    addSet,
     updateSet,
-    toggleExerciseComplete,
+    deleteSet,
     startSession,
     completeSession,
-    importProgram,
-    updateProgram,
+    importWeeks,
+    updateWeeks,
   };
 };
