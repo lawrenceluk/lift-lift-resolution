@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { CalendarIcon, Anvil, MoreVerticalIcon, Upload, Download } from 'lucide-react';
+import { CalendarIcon, Anvil, MoreVerticalIcon, Upload, Download, HelpCircle } from 'lucide-react';
+import { useLocation } from 'wouter';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -19,6 +20,7 @@ export const WorkoutTrackerApp = (): JSX.Element => {
   const { weeks, addSet, updateSet, deleteSet, startSession, completeSession, importWeeks: importWeeksHook } =
     useWorkoutProgram();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [activeSession, setActiveSession] = useState<{
     weekId: string;
     sessionId: string;
@@ -202,6 +204,10 @@ export const WorkoutTrackerApp = (): JSX.Element => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setLocation('/how-it-works')}>
+                <HelpCircle className="w-4 h-4 mr-2" />
+                How it works
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={handleExport}>
                 <Download className="w-4 h-4 mr-2" />
                 Export Program
