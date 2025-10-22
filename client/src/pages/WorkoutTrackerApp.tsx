@@ -109,6 +109,7 @@ export const WorkoutTrackerApp = (): JSX.Element => {
       <SessionView
         session={session}
         weekNumber={week.weekNumber}
+        allWeeks={weeks}
         onAddSet={(exerciseId, set) => addSet(week.id, session.id, exerciseId, set)}
         onUpdateSet={(exerciseId, setNumber, updates) =>
           updateSet(week.id, session.id, exerciseId, setNumber, updates)
@@ -303,7 +304,7 @@ export const WorkoutTrackerApp = (): JSX.Element => {
                       : null;
                     const status = getWorkoutStatus(session);
                     const hasCompletedSets = session.exercises.some((ex) =>
-                      ex.sets.some((set) => set.completed)
+                      ex.sets?.some((set) => set.completed)
                     );
 
                     return (

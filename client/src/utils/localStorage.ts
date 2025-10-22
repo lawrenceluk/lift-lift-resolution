@@ -12,11 +12,25 @@ export const saveWeeks = (weeks: Week[]): void => {
   }
 };
 
+const normalizeWeeks = (weeks: Week[]): Week[] => {
+  return weeks.map(week => ({
+    ...week,
+    sessions: (week.sessions || []).map(session => ({
+      ...session,
+      exercises: (session.exercises || []).map(exercise => ({
+        ...exercise,
+        sets: Array.isArray(exercise.sets) ? exercise.sets : [],
+      })),
+    })),
+  }));
+};
+
 export const loadWeeks = (): Week[] | null => {
   try {
     const data = localStorage.getItem(STORAGE_KEY);
     if (!data) return null;
-    return JSON.parse(data) as Week[];
+    const parsed = JSON.parse(data) as Week[];
+    return normalizeWeeks(parsed);
   } catch (error) {
     console.error('Error loading workout weeks:', error);
     return null;
@@ -57,7 +71,8 @@ export const importWeeks = (file: File): Promise<Week[]> => {
           return;
         }
 
-        resolve(weeks);
+        // Normalize and validate the data structure
+        resolve(normalizeWeeks(weeks));
       } catch (error) {
         reject(new Error('Invalid JSON file'));
       }

@@ -69,13 +69,13 @@ export const getBreadcrumb = (weeks: Week[], id: string) => {
 export const sessionVolume = (session: WorkoutSession): number =>
   session.exercises.reduce(
     (sum, ex) =>
-      sum + ex.sets.reduce((setSum, set) => setSum + (set.weight || 0) * set.reps, 0),
+      sum + (ex.sets || []).reduce((setSum, set) => setSum + (set.weight || 0) * set.reps, 0),
     0
   );
 
 export const sessionCompletionRate = (session: WorkoutSession): number => {
   const completedSets = session.exercises.reduce(
-    (sum, ex) => sum + ex.sets.filter((s) => s.completed).length,
+    (sum, ex) => sum + (ex.sets || []).filter((s) => s.completed).length,
     0
   );
   const totalSets = session.exercises.reduce((sum, ex) => sum + ex.workingSets, 0);
@@ -87,7 +87,7 @@ export const getWorkoutStatus = (session: WorkoutSession): WorkoutStatus => {
 
   // Only consider it in-progress if at least one set has been completed
   const hasCompletedSets = session.exercises.some((ex) =>
-    ex.sets.some((set) => set.completed)
+    ex.sets?.some((set) => set.completed)
   );
 
   if (session.startedAt && hasCompletedSets) return 'in-progress';

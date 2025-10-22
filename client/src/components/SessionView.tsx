@@ -1,5 +1,5 @@
 import React from 'react';
-import { WorkoutSession, SetResult } from '@/types/workout';
+import { WorkoutSession, SetResult, Week } from '@/types/workout';
 import { ExerciseView } from './ExerciseView';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, CheckCircle2 } from 'lucide-react';
@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/card';
 interface SessionViewProps {
   session: WorkoutSession;
   weekNumber: number;
+  allWeeks?: Week[];
   onAddSet: (exerciseId: string, set: SetResult) => void;
   onUpdateSet: (exerciseId: string, setNumber: number, updates: Partial<SetResult>) => void;
   onDeleteSet: (exerciseId: string, setNumber: number) => void;
@@ -19,6 +20,7 @@ interface SessionViewProps {
 export const SessionView: React.FC<SessionViewProps> = ({
   session,
   weekNumber,
+  allWeeks,
   onAddSet,
   onUpdateSet,
   onDeleteSet,
@@ -26,10 +28,10 @@ export const SessionView: React.FC<SessionViewProps> = ({
   onCompleteSession,
 }) => {
   const allExercisesComplete = session.exercises.every(
-    (ex) => ex.sets.filter((s) => s.completed).length >= ex.workingSets
+    (ex) => (ex.sets || []).filter((s) => s.completed).length >= ex.workingSets
   );
   const completedExercises = session.exercises.filter(
-    (ex) => ex.sets.filter((s) => s.completed).length >= ex.workingSets
+    (ex) => (ex.sets || []).filter((s) => s.completed).length >= ex.workingSets
   ).length;
 
   return (
@@ -84,6 +86,7 @@ export const SessionView: React.FC<SessionViewProps> = ({
           <ExerciseView
             key={exercise.id}
             exercise={exercise}
+            allWeeks={allWeeks}
             onAddSet={(set) => onAddSet(exercise.id, set)}
             onUpdateSet={(setNumber, updates) =>
               onUpdateSet(exercise.id, setNumber, updates)

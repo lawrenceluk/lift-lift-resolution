@@ -1,11 +1,12 @@
 import React from 'react';
-import { Exercise, SetResult } from '@/types/workout';
+import { Exercise, SetResult, Week } from '@/types/workout';
 import { SetLogger } from './SetLogger';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
 interface ExerciseViewProps {
   exercise: Exercise;
+  allWeeks?: Week[];
   onAddSet: (set: SetResult) => void;
   onUpdateSet: (setNumber: number, updates: Partial<SetResult>) => void;
   onDeleteSet: (setNumber: number) => void;
@@ -13,6 +14,7 @@ interface ExerciseViewProps {
 
 export const ExerciseView: React.FC<ExerciseViewProps> = ({
   exercise,
+  allWeeks,
   onAddSet,
   onUpdateSet,
   onDeleteSet,
@@ -51,6 +53,7 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
       <CardContent>
         <SetLogger
           exercise={exercise}
+          allWeeks={allWeeks}
           onAddSet={onAddSet}
           onUpdateSet={onUpdateSet}
           onDeleteSet={onDeleteSet}
