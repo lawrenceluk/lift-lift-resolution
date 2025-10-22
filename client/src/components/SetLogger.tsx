@@ -112,10 +112,10 @@ export const SetLogger: React.FC<SetLoggerProps> = ({
     // Trigger animation
     setIsCompleted(true);
     
-    // Add the set after a brief delay to allow animation to start
+    // Add the set after animation completes
     setTimeout(() => {
       onAddSet(newSet);
-    }, 100);
+    }, 500);
     
     // Reset animation state
     setTimeout(() => {
@@ -131,12 +131,12 @@ export const SetLogger: React.FC<SetLoggerProps> = ({
     <div className="space-y-3">
       <div className="flex items-center justify-between mb-2">
         <div>
-          <p className="text-xs text-gray-500">
+          <p className="text-sm text-gray-500">
             Target: {targetReps} @ {exercise.targetLoad}
           </p>
-          <p className="text-xs text-gray-500">Rest: {exercise.restSeconds}s</p>
+          <p className="text-sm text-gray-500">Rest: {exercise.restSeconds}s</p>
           {exercise.warmupSets > 0 && (
-            <p className="text-xs text-gray-500">
+            <p className="text-sm text-gray-500">
               Warmup: {exercise.warmupSets} {exercise.warmupSets === 1 ? 'set' : 'sets'}
             </p>
           )}
@@ -267,7 +267,7 @@ export const SetLogger: React.FC<SetLoggerProps> = ({
               }}
               transition={{ duration: 0.15, delay: 0.1 }}
             >
-              {isCompleted ? "Set Complete!" : "Finish Set"}
+              {isCompleted ? "Nice work!" : "Finish Set"}
             </motion.span>
             
             <motion.div

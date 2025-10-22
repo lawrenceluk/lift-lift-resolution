@@ -3,6 +3,7 @@ import { Exercise, SetResult, Week } from '@/types/workout';
 import { SetLogger } from './SetLogger';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { CheckCircle2 } from 'lucide-react';
 
 interface ExerciseViewProps {
   exercise: Exercise;
@@ -26,28 +27,31 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
   return (
     <Card className="mb-4">
       <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              {exercise.groupLabel && (
+        <div className="flex flex-col items-start justify-between gap-2">
+          <div className="flex items-center gap-2">
+            {exercise.groupLabel && (
                 <Badge variant="outline" className="text-xs font-mono">
                   {exercise.groupLabel}
                 </Badge>
               )}
+            {isComplete && (
+              <Badge className="bg-green-500">Complete</Badge>
+            )}
+            {!isComplete && <Badge variant="outline" className="text-xs font-mono">
+                {totalSets} sets
+              </Badge>
+            }
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
               <h3 className="text-lg font-semibold text-gray-900">
                 {exercise.name}
               </h3>
             </div>
-            <p className="text-sm text-gray-500 mt-1">
-              {completedSets}/{totalSets} sets completed
-            </p>
           </div>
-          {isComplete && (
-            <Badge className="bg-green-500">Complete</Badge>
-          )}
         </div>
         {exercise.notes && (
-          <p className="text-sm text-gray-600 mt-2 italic">{exercise.notes}</p>
+          <p className="text-sm text-gray-600 italic">{exercise.notes}</p>
         )}
       </CardHeader>
       <CardContent>
