@@ -32,12 +32,7 @@ npm start
 ```
 Runs the production build from `dist/index.js`.
 
-### Database Migration
-```bash
-npm run db:push
-```
-Pushes Drizzle schema changes to PostgreSQL. Requires `DATABASE_URL` environment variable to be set.
-
+fi
 ## Architecture
 
 ### Monorepo Structure
@@ -51,35 +46,24 @@ Pushes Drizzle schema changes to PostgreSQL. Requires `DATABASE_URL` environment
   - `src/data/` - Sample data generators
   - `src/lib/` - Utility libraries
 
-- **`server/`** - Express backend
+- **`server/`** - Express backend (static file serving only)
   - `index.ts` - Main server entry point
-  - `routes.ts` - API route registration
   - `vite.ts` - Vite middleware setup for development
-  - `storage.ts` - In-memory storage interface (currently unused)
-
-- **`shared/`** - Code shared between client and server
-  - `schema.ts` - Drizzle ORM database schema (defines `users` table)
 
 ### Path Aliases
 
 TypeScript is configured with the following path aliases:
 - `@/*` → `./client/src/*`
-- `@shared/*` → `./shared/*`
 - `@assets/*` → `./attached_assets/*`
 
 ### Data Storage
 
-**Current Implementation: LocalStorage**
-- Primary data persistence is in browser LocalStorage under the key `workout_weeks`
+**LocalStorage-Only Implementation**
+- All data persistence is in browser LocalStorage under the key `workout_weeks`
 - `useWorkoutProgram` hook manages all CRUD operations
 - Data flows: LocalStorage → React state → UI components
-- Export/import functionality allows downloading/uploading JSON files
-
-**Database Schema (Not Currently Used)**
-- Drizzle ORM configured for PostgreSQL via `DATABASE_URL`
-- Schema defined in `shared/schema.ts` (currently only defines a `users` table)
-- Migrations output to `./migrations`
-- The workout data types are defined in TypeScript but not persisted to the database
+- Export/import functionality allows downloading/uploading JSON files for backup/sharing
+- No backend API or database - this is a client-side only application
 
 ### Hierarchical ID System
 
@@ -159,13 +143,14 @@ All mutation functions:
 - **date-fns** for date manipulation
 - **React Hook Form** + **Zod** for form validation
 
-### Backend Stack
+### Server (Static File Serving Only)
 
-- **Express.js** server with TypeScript
+- **Express.js** server with TypeScript - serves static files only, no API endpoints
 - **Development mode**: Vite middleware provides HMR
 - **Production mode**: Serves pre-built static files from `dist/public`
 - **Replit plugins**: Only active in development when `REPL_ID` is set
   - Cartographer, dev banner, runtime error overlay
+- **No database or backend API** - all data lives in browser localStorage
 
 ### Build Process
 
@@ -190,7 +175,7 @@ All mutation functions:
 1. Update TypeScript types in `client/src/types/workout.ts`
 2. Update sample data generator in `client/src/data/sampleWorkout.ts`
 3. Update relevant components that display/edit the data
-4. If adding fields to localStorage, ensure backward compatibility
+4. Ensure backward compatibility in localStorage - the `normalizeWeeks()` function in `localStorage.ts` handles data migration
 
 ### Modifying the ID System
 
@@ -200,11 +185,10 @@ The hierarchical ID structure is fundamental to navigation and data lookups. Whe
 - Update ID creation functions to maintain determinism
 - Keep 1-based indexing for user-facing displays
 
-### Database Integration (Future)
+### Data Import/Export
 
-To migrate from localStorage to database:
-1. Define workout tables in `shared/schema.ts` using Drizzle ORM
-2. Create API routes in `server/routes.ts`
-3. Update `useWorkoutProgram` to use API calls instead of localStorage
-4. Use TanStack Query for server state management
-5. Run `npm run db:push` to apply schema changes
+Users can backup and share their workout programs via JSON export/import:
+- Export: Downloads all weeks as a timestamped JSON file
+- Import: Uploads JSON file and replaces current program
+- The `normalizeWeeks()` function in `localStorage.ts` ensures imported data has proper structure
+- Historical set data: When logging sets, the app looks backwards through all sessions to find the last time that exercise was performed and shows those values as placeholders

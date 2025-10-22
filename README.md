@@ -1,6 +1,18 @@
 # Lift Lift Resolution
 
-A modern workout tracking application built with React, TypeScript, Express, and Tailwind CSS. Designed for structured training programs with AI-assisted program generation, this app helps you track your workouts, log sets, and monitor your progress with an intuitive mobile-first interface.
+A lightweight, frontend-only workout tracking PWA designed to be your gym companion. Built with React and TypeScript, this app runs entirely in your browser with local storage - no servers, no accounts, no complexity. Perfect for adding to your iOS home screen for quick access during workouts.
+
+**🌐 Live Demo:** [lift.luk.xyz](https://lift.luk.xyz)
+
+## Why This App Exists
+
+Most workout apps are overcomplicated with unnecessary features, slow loading times, and complex data syncing. This app takes a different approach:
+
+- **Ultra-lightweight** - Runs entirely in your browser, loads instantly
+- **No accounts required** - Your data stays private on your device
+- **PWA-ready** - Add to iOS home screen for native app feel
+- **Gym-optimized** - Designed for one-handed use while lifting
+- **AI-powered** - Generate workout programs with ChatGPT/Claude
 
 ## Features
 
@@ -8,43 +20,58 @@ A modern workout tracking application built with React, TypeScript, Express, and
 - 📅 **Workout Program Management** - Organize workouts by weeks, phases, and sessions
 - 🏋️ **Set Logging** - Log sets, reps, weights, and RIR (reps in reserve) with real-time updates
 - 📊 **Progress Tracking** - Visual progress indicators and workout status (planned, in-progress, completed)
-- 💾 **Data Persistence** - Local storage with JSON import/export and paste functionality
+- 💾 **Local Storage** - All data stored in your browser - no cloud, no accounts, no sync issues
 - 🎨 **Modern UI** - Clean, responsive mobile-first design with Tailwind CSS and Radix UI
 - 🔄 **Real-time Updates** - Live session tracking and state management
-- 📱 **Mobile-First** - Optimized for phone use at the gym, with desktop support
+- 📱 **PWA Ready** - Add to iOS home screen for native app experience
+- 📤 **Data Export/Import** - JSON backup and restore functionality
 
 ## Tech Stack
 
-### Frontend
+**Frontend-Only Architecture** - No backend required for production use
+
+### Core Technologies
 - **React 18** - Modern React with hooks
 - **TypeScript** - Type-safe development
 - **Tailwind CSS** - Utility-first styling
 - **Radix UI** - Accessible component primitives
-- **React Query** - Server state management
 - **Wouter** - Lightweight routing
 - **Framer Motion** - Smooth animations
 
-### Backend
-- **Express.js** - Web framework
-- **TypeScript** - Type-safe server code
-- **Drizzle ORM** - Type-safe database queries
-- **PostgreSQL** - Database (via Neon)
-- **Express Session** - Session management
+### Data & Storage
+- **Local Storage** - Browser-based data persistence
+- **JSON Import/Export** - Data portability and backup
+- **No Database** - Everything runs client-side
 
-### Development
+### Development Tools
 - **Vite** - Fast build tool and dev server
 - **ESBuild** - Fast bundling
-- **Drizzle Kit** - Database migrations
+- **PWA Manifest** - iOS home screen support
 
-## Getting Started
+### Optional Backend (Development Only)
+The repository includes an Express server for development and testing, but the production app runs entirely in the browser.
 
-### Prerequisites
+## Quick Start
 
+### For Users
+
+**Option 1: Use the Live App**
+1. Visit [lift.luk.xyz](https://lift.luk.xyz) in your browser
+2. Add to iOS home screen: Tap Share → Add to Home Screen
+3. Start tracking your workouts!
+
+**Option 2: Self-Host**
+1. Download the built files from the `dist/` folder
+2. Serve them with any static file server
+3. Access via your domain
+
+### For Developers
+
+**Prerequisites**
 - Node.js 18+ 
 - npm or yarn
-- PostgreSQL database (or use Neon for cloud hosting)
 
-### Installation
+**Installation & Development**
 
 1. **Clone the repository**
    ```bash
@@ -57,38 +84,23 @@ A modern workout tracking application built with React, TypeScript, Express, and
    npm install
    ```
 
-3. **Set up environment variables**
-   Create a `.env` file in the root directory:
-   ```env
-   DATABASE_URL=your_postgresql_connection_string
-   SESSION_SECRET=your_session_secret_key
-   NODE_ENV=development
-   ```
-
-4. **Set up the database**
-   ```bash
-   npm run db:push
-   ```
-
-5. **Start the development server**
+3. **Start development server**
    ```bash
    npm run dev
    ```
 
-The application will be available at `http://localhost:5000`
+4. **Build for production**
+   ```bash
+   npm run build
+   ```
 
-### Production Build
-
-```bash
-npm run build
-npm start
-```
+The built files in `dist/` can be deployed to any static hosting service (Vercel, Netlify, GitHub Pages, etc.).
 
 ## Project Structure
 
 ```
 workout-tracker/
-├── client/                 # React frontend
+├── client/                 # React frontend (main app)
 │   ├── src/
 │   │   ├── components/     # Reusable UI components
 │   │   ├── pages/          # Page components
@@ -96,13 +108,14 @@ workout-tracker/
 │   │   ├── types/          # TypeScript type definitions
 │   │   ├── utils/          # Utility functions
 │   │   └── data/           # Sample data and fixtures
-│   └── public/             # Static assets
-├── server/                 # Express backend
-│   ├── index.ts           # Server entry point
-│   ├── routes.ts          # API routes
-│   └── storage.ts         # Database operations
+│   └── public/             # Static assets & PWA manifest
+├── server/                 # Optional Express backend (dev only)
+│   ├── src/
+│   │   ├── index.ts       # Server entry point
+│   │   ├── routes/        # API routes
+│   │   └── storage.ts     # Database operations
 ├── shared/                 # Shared types and schemas
-└── dist/                   # Build output
+└── dist/                   # Production build output
 ```
 
 ## Usage
@@ -134,15 +147,36 @@ Visit the "How it works" page (accessible from the menu) to create your program:
 - **Export**: Download your workout program as JSON (includes all logged data)
 - **Import**: Upload a JSON file or paste JSON directly
 - **Local Storage**: All data persists in your browser automatically
+- **Backup**: Export regularly to avoid data loss
+- **Privacy**: Your data never leaves your device unless you export it
 
-## API Endpoints
+## Design Philosophy
 
-The backend provides RESTful API endpoints for:
+### Why Frontend-Only?
 
-- `GET /api/workouts` - Fetch workout programs
-- `POST /api/workouts` - Create new workout
-- `PUT /api/workouts/:id` - Update workout
-- `DELETE /api/workouts/:id` - Delete workout
+**Simplicity First**
+- No server maintenance or hosting costs
+- No database migrations or backups
+- No user accounts or authentication complexity
+- No API rate limits or downtime
+
+**Privacy & Control**
+- Your data stays on your device
+- No tracking or analytics
+- No data mining or selling
+- Complete control over your information
+
+**Performance**
+- Instant loading (no network requests)
+- Works offline
+- No server latency
+- Minimal resource usage
+
+**Mobile-First PWA**
+- Add to iOS home screen for native feel
+- One-handed operation while lifting
+- Optimized for gym environment
+- Works without internet connection
 
 ## Development
 
@@ -150,9 +184,8 @@ The backend provides RESTful API endpoints for:
 
 - `npm run dev` - Start development server
 - `npm run build` - Build for production
-- `npm start` - Start production server
 - `npm run check` - Type check with TypeScript
-- `npm run db:push` - Push database schema changes
+- `npm run preview` - Preview production build locally
 
 ### Code Style
 
@@ -162,6 +195,15 @@ This project follows strict TypeScript practices:
 - **Minimal Code** - Only necessary code, no over-engineering
 - **Self-Documenting** - Clear naming and single responsibility
 - **Performance** - Efficient state management and rendering
+
+### Deployment
+
+The app is designed to be deployed as a static site:
+
+1. **Build the app**: `npm run build`
+2. **Deploy the `dist/` folder** to any static hosting service
+3. **Configure PWA** (optional): Ensure proper manifest.json and service worker
+4. **No server required** - just serve the static files
 
 ## Contributing
 
@@ -209,3 +251,4 @@ The built-in prompt builder helps users generate properly structured workout pro
 - Icons from Lucide React
 - Styling with Tailwind CSS
 - Designed for structured training programs and periodization
+- Inspired by the need for simple, privacy-focused fitness tracking
