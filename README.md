@@ -1,15 +1,17 @@
-# Workout Tracker App
+# Lift Lift Resolution
 
-A modern, full-stack workout tracking application built with React, TypeScript, Express, and Tailwind CSS. Track your workouts, log sets, and monitor your progress with an intuitive interface.
+A modern workout tracking application built with React, TypeScript, Express, and Tailwind CSS. Designed for structured training programs with AI-assisted program generation, this app helps you track your workouts, log sets, and monitor your progress with an intuitive mobile-first interface.
 
 ## Features
 
-- 📅 **Workout Program Management** - Organize workouts by weeks and sessions
-- 🏋️ **Set Logging** - Log sets, reps, and weights with real-time updates
-- 📊 **Progress Tracking** - Visual progress indicators and workout status
-- 💾 **Data Persistence** - Local storage with import/export functionality
-- 🎨 **Modern UI** - Clean, responsive design with Tailwind CSS and Radix UI
+- 🤖 **AI-Assisted Program Creation** - Generate workout programs using ChatGPT or Claude with a built-in prompt builder
+- 📅 **Workout Program Management** - Organize workouts by weeks, phases, and sessions
+- 🏋️ **Set Logging** - Log sets, reps, weights, and RIR (reps in reserve) with real-time updates
+- 📊 **Progress Tracking** - Visual progress indicators and workout status (planned, in-progress, completed)
+- 💾 **Data Persistence** - Local storage with JSON import/export and paste functionality
+- 🎨 **Modern UI** - Clean, responsive mobile-first design with Tailwind CSS and Radix UI
 - 🔄 **Real-time Updates** - Live session tracking and state management
+- 📱 **Mobile-First** - Optimized for phone use at the gym, with desktop support
 
 ## Tech Stack
 
@@ -105,19 +107,33 @@ workout-tracker/
 
 ## Usage
 
-### Starting a Workout Session
+### Creating Your First Workout Program
 
-1. Navigate to the workout tracker
-2. Select a week from the program
-3. Click "Start Session" on any workout
-4. Log your sets as you complete them
-5. Mark the session as complete when finished
+Visit the "How it works" page (accessible from the menu) to create your program:
 
-### Managing Workout Data
+**Option 1: AI-Generated Program (Recommended)**
+1. Fill out the workout preferences form (duration, goals, experience level, equipment)
+2. Click "Copy prompt for AI"
+3. Paste the prompt into ChatGPT, Claude, or any LLM
+4. Copy the generated JSON from the AI
+5. Paste it directly into the app or save as a file and import
 
-- **Export**: Download your workout program as JSON
-- **Import**: Upload a previously exported program
-- **Reset**: Clear all data and start fresh
+**Option 2: Manual JSON Creation**
+- Create your own JSON file following the hierarchical ID structure
+- See the "How it works" page for detailed schema requirements
+
+### Using the App
+
+**Starting a Workout Session**
+1. Navigate between weeks using Previous/Next buttons
+2. Tap any workout session to begin
+3. Log sets with weight, reps, and RIR as you complete them
+4. Complete the session when all exercises are done
+
+**Managing Workout Data**
+- **Export**: Download your workout program as JSON (includes all logged data)
+- **Import**: Upload a JSON file or paste JSON directly
+- **Local Storage**: All data persists in your browser automatically
 
 ## API Endpoints
 
@@ -159,9 +175,37 @@ This project follows strict TypeScript practices:
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+## Key Concepts
+
+### Hierarchical ID System
+
+The app uses deterministic IDs for all workout components:
+- Week ID: `week-{weekNumber}` (e.g., `week-1`)
+- Session ID: `week-{weekNumber}-session-{sessionNumber}` (e.g., `week-1-session-2`)
+- Exercise ID: `week-{weekNumber}-session-{sessionNumber}-exercise-{exerciseNumber}` (e.g., `week-1-session-2-exercise-3`)
+
+All IDs use 1-based indexing for human readability.
+
+### Data Model
+
+Workouts are organized hierarchically:
+- **Weeks** contain sessions and metadata (phase, dates, description)
+- **Sessions** contain exercises, warmup, optional cardio, and completion tracking
+- **Exercises** contain target parameters (sets, reps, load) and actual logged sets
+- **Sets** capture actual performance (weight, reps, RIR, completion status)
+
+### AI Prompt Generation
+
+The built-in prompt builder helps users generate properly structured workout programs by:
+- Collecting user preferences (goals, experience, equipment)
+- Generating a detailed prompt with JSON schema
+- Providing examples and validation rules
+- Handling common LLM output formats (with or without code blocks)
+
 ## Acknowledgments
 
 - Built with modern web technologies
-- UI components from Radix UI
+- UI components from shadcn/ui and Radix UI
 - Icons from Lucide React
 - Styling with Tailwind CSS
+- Designed for structured training programs and periodization

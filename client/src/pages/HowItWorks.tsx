@@ -92,6 +92,7 @@ export const HowItWorks: React.FC = () => {
   const { toast } = useToast();
   const { importWeeks: importWeeksHook } = useWorkoutProgram();
   const [copied, setCopied] = useState(false);
+  const [pastedJson, setPastedJson] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [preferences, setPreferences] = useState({
     duration: '4 weeks',
@@ -101,6 +102,19 @@ export const HowItWorks: React.FC = () => {
     equipment: 'full gym',
     constraints: '',
   });
+
+  const cleanJsonString = (jsonStr: string): string => {
+    // Remove markdown code block wrappers if present
+    let cleaned = jsonStr.trim();
+
+    // Remove ```json or ``` from start and ``` from end
+    if (cleaned.startsWith('```')) {
+      cleaned = cleaned.replace(/^```(?:json)?\n?/, '');
+      cleaned = cleaned.replace(/\n?```$/, '');
+    }
+
+    return cleaned.trim();
+  };
 
   const handleCopyPrompt = async () => {
     const prompt = generatePrompt(preferences);
@@ -142,6 +156,40 @@ export const HowItWorks: React.FC = () => {
     }
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
+    }
+  };
+
+  const handleImportFromPaste = () => {
+    if (!pastedJson.trim()) {
+      toast({
+        title: 'No JSON provided',
+        description: 'Please paste your workout program JSON.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const cleanedJson = cleanJsonString(pastedJson);
+      const importedWeeks = JSON.parse(cleanedJson);
+
+      // Basic validation
+      if (!Array.isArray(importedWeeks)) {
+        throw new Error('Invalid format: expected an array of weeks');
+      }
+
+      importWeeksHook(importedWeeks);
+      toast({
+        title: 'Program imported',
+        description: 'Your workout program has been loaded successfully.',
+      });
+      setLocation('/');
+    } catch (error) {
+      toast({
+        title: 'Import failed',
+        description: error instanceof Error ? error.message : 'Failed to parse JSON. Please check the format.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -304,9 +352,22 @@ export const HowItWorks: React.FC = () => {
               </Button>
 
               <p className="text-sm text-gray-700">
-                After the AI generates the JSON, save it to a file (e.g., <code className="bg-gray-100 px-1 rounded">my-workout.json</code>),
-                then import it using the button below.
+                After the AI generates the JSON, you can either paste it directly below or save it to a file and import it.
               </p>
+
+              <div className="space-y-2">
+                <Label htmlFor="jsonPaste" className="text-sm">Paste JSON from AI</Label>
+                <Textarea
+                  id="jsonPaste"
+                  value={pastedJson}
+                  onChange={(e) => setPastedJson(e.target.value)}
+                  placeholder="Paste your workout program JSON here... (code blocks like ```json are automatically handled)"
+                  className="min-h-[120px] font-mono text-xs"
+                />
+                <Button onClick={handleImportFromPaste} className="w-full" disabled={!pastedJson.trim()}>
+                  Import from pasted JSON
+                </Button>
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -325,10 +386,12 @@ export const HowItWorks: React.FC = () => {
           </section>
 
           <div className="space-y-3">
-            <Button onClick={() => fileInputRef.current?.click()} className="w-full" size="lg">
-              <Upload className="w-4 h-4 mr-2" />
-              Import Program
-            </Button>
+            <div className="text-center">
+              <Button onClick={() => fileInputRef.current?.click()} variant="outline" className="w-full">
+                <Upload className="w-4 h-4 mr-2" />
+                Import from file
+              </Button>
+            </div>
             <Button onClick={() => setLocation('/')} variant="outline" className="w-full">
               Back to Workouts
             </Button>
