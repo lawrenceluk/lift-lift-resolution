@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { CalendarIcon, Anvil, MoreVerticalIcon, Upload, Download, HelpCircle } from 'lucide-react';
-import { useLocation } from 'wouter';
+import { CalendarIcon, MoreVerticalIcon, Upload, Download, HelpCircle, ArrowLeft, Search } from 'lucide-react';
+import { useLocation, useRoute } from 'wouter';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -14,22 +14,38 @@ import { useWorkoutProgram } from '@/hooks/useWorkoutProgram';
 import { SessionView } from '@/components/SessionView';
 import { exportWeeks, importWeeks, loadCurrentWeekIndex, saveCurrentWeekIndex } from '@/utils/localStorage';
 import { useToast } from '@/hooks/use-toast';
-import { getWorkoutStatus } from '@/utils/idHelpers';
+import { getWorkoutStatus, parseId } from '@/utils/idHelpers';
+import { CoachChat } from '@/components/CoachChat';
 
 export const WorkoutTrackerApp = (): JSX.Element => {
   const { weeks, addSet, updateSet, deleteSet, startSession, completeSession, importWeeks: importWeeksHook } =
     useWorkoutProgram();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
-  const [activeSession, setActiveSession] = useState<{
-    weekId: string;
-    sessionId: string;
-  } | null>(null);
+
+  // Check if we're on a workout route (either week or session)
+  const [matchWorkout, workoutParams] = useRoute('/:id');
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Determine current week index from URL or localStorage
   const [currentWeekIndex, setCurrentWeekIndex] = useState(() => {
-    // Load cached week index from localStorage
     return loadCurrentWeekIndex();
   });
-  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Sync current week index with URL params
+  useEffect(() => {
+    if (!weeks || !matchWorkout || !workoutParams?.id) return;
+
+    // Parse the ID to determine if it's a week or session
+    const parsed = parseId(workoutParams.id);
+    if (parsed?.weekNumber) {
+      const index = weeks.findIndex(w => w.weekNumber === parsed.weekNumber);
+      if (index !== -1 && index !== currentWeekIndex) {
+        setCurrentWeekIndex(index);
+      }
+    }
+  }, [weeks, matchWorkout, workoutParams, currentWeekIndex]);
 
   // Save current week index to localStorage whenever it changes
   useEffect(() => {
@@ -46,14 +62,21 @@ export const WorkoutTrackerApp = (): JSX.Element => {
   const updateCurrentWeekIndex = (newIndex: number) => {
     if (weeks && newIndex >= 0 && newIndex < weeks.length) {
       setCurrentWeekIndex(newIndex);
+      // Update URL to reflect the new week
+      const week = weeks[newIndex];
+      setLocation(`/${week.id}`);
     }
+  };
+
+  const goToHome = () => {
+    setLocation('/');
   };
 
   if (!weeks) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <Anvil className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+          <Search className="w-12 h-12 mx-auto mb-4 text-gray-400" />
           <p className="text-gray-600">Loading workout program...</p>
         </div>
       </div>
@@ -62,7 +85,7 @@ export const WorkoutTrackerApp = (): JSX.Element => {
 
   const handleStartSession = (weekId: string, sessionId: string) => {
     startSession(weekId, sessionId);
-    setActiveSession({ weekId, sessionId });
+    setLocation(`/${sessionId}`);
   };
 
   const handleExport = () => {
@@ -96,34 +119,74 @@ export const WorkoutTrackerApp = (): JSX.Element => {
     }
   };
 
-  if (activeSession) {
-    const week = weeks.find((w) => w.id === activeSession.weekId);
-    const session = week?.sessions.find((s) => s.id === activeSession.sessionId);
+  // Handle workout route (either week or session)
+  if (matchWorkout && workoutParams?.id) {
+    const id = workoutParams.id;
+    const parsed = parseId(id);
 
-    if (!week || !session) {
-      setActiveSession(null);
-      return <div>Session not found</div>;
+    // Determine if this is a session ID (has sessionNumber) or week ID
+    if (parsed?.sessionNumber) {
+      // This is a session
+      const week = weeks.find((w) => w.weekNumber === parsed.weekNumber);
+      const session = week?.sessions.find((s) => s.id === id);
+
+      if (!week || !session) {
+        return (
+          <div className="flex items-center justify-center min-h-screen px-4">
+            <div className="text-center max-w-md">
+              <Search className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">Workout Not Found</h2>
+              <p className="text-gray-600 mb-6">
+                The workout session you're looking for doesn't exist in your current program. It may have been removed or the link is outdated.
+              </p>
+              <Button onClick={goToHome} className="w-full sm:w-auto">
+                Go to Home
+              </Button>
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <SessionView
+          session={session}
+          weekNumber={week.weekNumber}
+          allWeeks={weeks}
+          onAddSet={(exerciseId, set) => addSet(week.id, session.id, exerciseId, set)}
+          onUpdateSet={(exerciseId, setNumber, updates) =>
+            updateSet(week.id, session.id, exerciseId, setNumber, updates)
+          }
+          onDeleteSet={(exerciseId, setNumber) =>
+            deleteSet(week.id, session.id, exerciseId, setNumber)
+          }
+          onBack={() => setLocation(`/${week.id}`)}
+          onCompleteSession={() => {
+            completeSession(week.id, session.id);
+            setLocation(`/${week.id}`);
+          }}
+        />
+      );
+    } else if (parsed?.weekNumber) {
+      // This is a week
+      const week = weeks.find((w) => w.id === id);
+
+      if (!week) {
+        return (
+          <div className="flex items-center justify-center min-h-screen px-4">
+            <div className="text-center max-w-md">
+              <Search className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">Week Not Found</h2>
+              <p className="text-gray-600 mb-6">
+                The week you're looking for doesn't exist in your current program. It may have been removed or the link is outdated.
+              </p>
+              <Button onClick={goToHome} className="w-full sm:w-auto">
+                Go to Home
+              </Button>
+            </div>
+          </div>
+        );
+      }
     }
-
-    return (
-      <SessionView
-        session={session}
-        weekNumber={week.weekNumber}
-        allWeeks={weeks}
-        onAddSet={(exerciseId, set) => addSet(week.id, session.id, exerciseId, set)}
-        onUpdateSet={(exerciseId, setNumber, updates) =>
-          updateSet(week.id, session.id, exerciseId, setNumber, updates)
-        }
-        onDeleteSet={(exerciseId, setNumber) =>
-          deleteSet(week.id, session.id, exerciseId, setNumber)
-        }
-        onBack={() => setActiveSession(null)}
-        onCompleteSession={() => {
-          completeSession(week.id, session.id);
-          setActiveSession(null);
-        }}
-      />
-    );
   }
 
 
@@ -196,6 +259,11 @@ export const WorkoutTrackerApp = (): JSX.Element => {
       <header className="flex flex-col w-full max-w-2xl items-start pt-4 pb-2 px-4 bg-[#fffffff2] border-b-[0.55px] border-solid border-[#0000001a] sticky top-0 z-10">
         <div className="flex h-9 items-center justify-between w-full">
           <div className="flex items-center gap-3">
+            {matchWorkout && workoutParams?.id && (
+              <Button variant="ghost" size="icon" className="h-9 w-9" onClick={goToHome}>
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+            )}
             <img src="/header-logo.png" alt="Lift Lift Resolution" className="h-8" />
           </div>
           <DropdownMenu>
@@ -352,6 +420,9 @@ export const WorkoutTrackerApp = (): JSX.Element => {
           );
         })()}
       </main>
+
+      {/* Coach Chat */}
+      <CoachChat />
     </div>
   );
 };
