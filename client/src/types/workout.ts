@@ -19,6 +19,7 @@ export interface Exercise {
   restSeconds: number;
   notes?: string;
   sets: SetResult[];
+  skipped?: boolean;
 }
 
 export interface CardioBlock {

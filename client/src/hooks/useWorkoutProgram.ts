@@ -174,6 +174,70 @@ export const useWorkoutProgram = () => {
     [weeks, updateWeeks]
   );
 
+  const skipExercise = useCallback(
+    (weekId: string, sessionId: string, exerciseId: string) => {
+      if (!weeks) return;
+
+      const updatedWeeks = weeks.map((week) => {
+        if (week.id !== weekId) return week;
+
+        return {
+          ...week,
+          sessions: week.sessions.map((session) => {
+            if (session.id !== sessionId) return session;
+
+            return {
+              ...session,
+              exercises: session.exercises.map((exercise) => {
+                if (exercise.id !== exerciseId) return exercise;
+
+                return {
+                  ...exercise,
+                  skipped: true,
+                };
+              }),
+            };
+          }),
+        };
+      });
+
+      updateWeeks(updatedWeeks);
+    },
+    [weeks, updateWeeks]
+  );
+
+  const unskipExercise = useCallback(
+    (weekId: string, sessionId: string, exerciseId: string) => {
+      if (!weeks) return;
+
+      const updatedWeeks = weeks.map((week) => {
+        if (week.id !== weekId) return week;
+
+        return {
+          ...week,
+          sessions: week.sessions.map((session) => {
+            if (session.id !== sessionId) return session;
+
+            return {
+              ...session,
+              exercises: session.exercises.map((exercise) => {
+                if (exercise.id !== exerciseId) return exercise;
+
+                return {
+                  ...exercise,
+                  skipped: false,
+                };
+              }),
+            };
+          }),
+        };
+      });
+
+      updateWeeks(updatedWeeks);
+    },
+    [weeks, updateWeeks]
+  );
+
   const importWeeks = useCallback(
     (newWeeks: Week[]) => {
       updateWeeks(newWeeks);
@@ -188,6 +252,8 @@ export const useWorkoutProgram = () => {
     deleteSet,
     startSession,
     completeSession,
+    skipExercise,
+    unskipExercise,
     importWeeks,
     updateWeeks,
   };

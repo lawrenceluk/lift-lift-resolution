@@ -13,6 +13,8 @@ interface SessionViewProps {
   onAddSet: (exerciseId: string, set: SetResult) => void;
   onUpdateSet: (exerciseId: string, setNumber: number, updates: Partial<SetResult>) => void;
   onDeleteSet: (exerciseId: string, setNumber: number) => void;
+  onSkipExercise: (exerciseId: string) => void;
+  onUnskipExercise: (exerciseId: string) => void;
   onBack: () => void;
   onCompleteSession: () => void;
 }
@@ -24,14 +26,16 @@ export const SessionView: React.FC<SessionViewProps> = ({
   onAddSet,
   onUpdateSet,
   onDeleteSet,
+  onSkipExercise,
+  onUnskipExercise,
   onBack,
   onCompleteSession,
 }) => {
   const allExercisesComplete = session.exercises.every(
-    (ex) => (ex.sets || []).filter((s) => s.completed).length >= ex.workingSets
+    (ex) => ex.skipped || (ex.sets || []).filter((s) => s.completed).length >= ex.workingSets
   );
   const completedExercises = session.exercises.filter(
-    (ex) => (ex.sets || []).filter((s) => s.completed).length >= ex.workingSets
+    (ex) => !ex.skipped && (ex.sets || []).filter((s) => s.completed).length >= ex.workingSets
   ).length;
 
   return (
@@ -92,6 +96,8 @@ export const SessionView: React.FC<SessionViewProps> = ({
               onUpdateSet(exercise.id, setNumber, updates)
             }
             onDeleteSet={(setNumber) => onDeleteSet(exercise.id, setNumber)}
+            onSkip={() => onSkipExercise(exercise.id)}
+            onUnskip={() => onUnskipExercise(exercise.id)}
           />
         ))}
 

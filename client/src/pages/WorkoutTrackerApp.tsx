@@ -18,7 +18,7 @@ import { getWorkoutStatus, parseId } from '@/utils/idHelpers';
 import { CoachChat } from '@/components/CoachChat';
 
 export const WorkoutTrackerApp = (): JSX.Element => {
-  const { weeks, addSet, updateSet, deleteSet, startSession, completeSession, importWeeks: importWeeksHook } =
+  const { weeks, addSet, updateSet, deleteSet, startSession, completeSession, skipExercise, unskipExercise, importWeeks: importWeeksHook } =
     useWorkoutProgram();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -159,6 +159,8 @@ export const WorkoutTrackerApp = (): JSX.Element => {
           onDeleteSet={(exerciseId, setNumber) =>
             deleteSet(week.id, session.id, exerciseId, setNumber)
           }
+          onSkipExercise={(exerciseId) => skipExercise(week.id, session.id, exerciseId)}
+          onUnskipExercise={(exerciseId) => unskipExercise(week.id, session.id, exerciseId)}
           onBack={() => setLocation(`/${week.id}`)}
           onCompleteSession={() => {
             completeSession(week.id, session.id);
