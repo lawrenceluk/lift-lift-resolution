@@ -7,6 +7,7 @@ import NotFound from "@/pages/not-found";
 
 import { WorkoutTrackerApp } from "@/pages/WorkoutTrackerApp";
 import { HowItWorks } from "@/pages/HowItWorks";
+import { CoachChat } from "@/components/CoachChat";
 
 function Router() {
   return (
@@ -28,6 +29,8 @@ function App() {
       <TooltipProvider>
         <Toaster />
         <Router />
+        {/* Global Coach Chat - persists across routes */}
+        <CoachChat />
       </TooltipProvider>
     </QueryClientProvider>
   );

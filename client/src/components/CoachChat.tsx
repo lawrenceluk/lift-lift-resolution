@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Sparkle, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Sparkle, X, ChevronLeft, ChevronRight, Minimize2, Maximize2, Minus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from './ui/badge';
 
@@ -22,6 +22,7 @@ interface Message {
 export const CoachChat = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
 
   // Hardcoded conversation history for Milestone 2.5
   const conversationHistory: Message[] = [
@@ -66,14 +67,20 @@ export const CoachChat = () => {
     setTimeout(() => {
       setIsOpen(false);
       setIsClosing(false);
+      setIsMinimized(false); // Reset minimized state on close
       // Reset to latest message on close
       setCurrentMessageIndex(conversationHistory.length - 1);
     }, 200); // Match animation duration
   };
 
+  const handleMinimize = () => {
+    setIsMinimized(!isMinimized);
+  };
+
   const handleOpen = () => {
     setIsOpen(true);
     setIsClosing(false);
+    setIsMinimized(false); // Reset minimized state on open
   };
 
   const handleBackward = () => {
@@ -113,11 +120,11 @@ export const CoachChat = () => {
             className={`border border-gray-300 fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl z-50 max-w-2xl mx-auto ${
               isClosing ? 'animate-slide-down' : 'animate-slide-up'
             }`}
-            style={{ height: '40vh' }}
+            style={{ height: isMinimized ? 'auto' : '40vh' }}
           >
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3">
-              <div className="flex items-center gap-1">
+              {!isMinimized ? <div className="flex items-center gap-1">
                 {/* Navigation Arrows */}
                 <Button
                   variant="ghost"
@@ -139,54 +146,74 @@ export const CoachChat = () => {
                 >
                   <ChevronRight className="h-5 w-5" />
                 </Button>
-              </div>
+              </div> : <div className="text-sm font-bold text-gray-600">Chat with Coach</div>}
 
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleClose}
-                aria-label="Close chat"
-              >
-                <X className="h-5 w-5" />
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleMinimize}
+                  aria-label={isMinimized ? "Expand chat" : "Minimize chat"}
+                >
+                  {isMinimized ? <Maximize2 className="h-5 w-5" /> : <Minus className="h-5 w-5" />}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleClose}
+                  aria-label="Close chat"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
             </div>
 
-            {/* Message Area - JRPG Style */}
-            <div className="flex flex-col flex-1 overflow-hidden">
-              <div className="flex-1 flex items-center px-6 py-2">
-                {currentMessage.role === 'coach' ? (
-                  <div className="flex items-start gap-4 w-full">
-                    <img
-                      src={`/coach-avatar/${currentMessage.avatarPose || 'default-pose'}.png`}
-                      alt="Coach avatar"
-                      className="hidden sm:block w-28 h-28 sm:w-36 sm:h-36 md:w-40 md:h-40 select-none pointer-events-none"
-                    />
-                    <div className="gap-2">
-                      <Badge variant="outline" className="text-gray-900 mb-2">Coach</Badge>
+            {/* Message Area - JRPG Style - only shown when not minimized */}
+            {!isMinimized && (
+              <div className="flex flex-col flex-1 overflow-hidden">
+                <div className="flex-1 flex items-center px-6 py-2">
+                  {currentMessage.role === 'coach' ? (
+                    <div className="flex items-start gap-4 w-full">
+                      <div
+                        className="hidden sm:block w-28 h-28 sm:w-36 sm:h-36 md:w-40 md:h-40 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden select-none pointer-events-none"
+                        style={{ position: 'relative' }}
+                      >
+                        <img
+                          src={`/coach-avatar/${currentMessage.avatarPose || 'default-pose'}.png`}
+                          alt="Coach avatar"
+                          className="w-full h-full object-contain"
+                          style={{ display: 'block' }}
+                          width={160} // md:w-40 = 160px
+                          height={160}
+                        />
+                      </div>
+                      <div className="gap-2">
+                        <Badge variant="outline" className="text-gray-900 mb-2">Coach</Badge>
+                        <p className="text-gray-900 text-md leading-relaxed">
+                          {currentMessage.content}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="w-full">
+                      <Badge variant="outline" className="text-gray-900 mb-2">You</Badge>
                       <p className="text-gray-900 text-md leading-relaxed">
                         {currentMessage.content}
                       </p>
                     </div>
-                  </div>
-                ) : (
-                  <div className="w-full">
-                    <Badge variant="outline" className="text-gray-900 mb-2">You</Badge>
-                    <p className="text-gray-900 text-md leading-relaxed">
-                      {currentMessage.content}
-                    </p>
+                  )}
+                </div>
+
+                {/* User Input Area - only shown when at latest message */}
+                {!isViewingHistory && (
+                  <div className="border-t border-gray-200 p-4 bg-gray-50">
+                    <div className="text-sm text-gray-400 text-center">
+                      Reply options will appear here
+                    </div>
                   </div>
                 )}
               </div>
-
-              {/* User Input Area - only shown when at latest message */}
-              {!isViewingHistory && (
-                <div className="border-t border-gray-200 p-4 bg-gray-50">
-                  <div className="text-sm text-gray-400 text-center">
-                    Reply options will appear here
-                  </div>
-                </div>
-              )}
-            </div>
+            )}
           </div>
         </>
       )}

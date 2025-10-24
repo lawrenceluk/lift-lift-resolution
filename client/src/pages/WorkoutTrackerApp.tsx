@@ -15,7 +15,6 @@ import { SessionView } from '@/components/SessionView';
 import { exportWeeks, importWeeks, loadCurrentWeekIndex, saveCurrentWeekIndex } from '@/utils/localStorage';
 import { useToast } from '@/hooks/use-toast';
 import { getWorkoutStatus, parseId } from '@/utils/idHelpers';
-import { CoachChat } from '@/components/CoachChat';
 
 export const WorkoutTrackerApp = (): JSX.Element => {
   const { weeks, addSet, updateSet, deleteSet, startSession, completeSession, skipExercise, unskipExercise, importWeeks: importWeeksHook } =
@@ -423,8 +422,7 @@ export const WorkoutTrackerApp = (): JSX.Element => {
         })()}
       </main>
 
-      {/* Coach Chat */}
-      <CoachChat />
+      {/* Coach Chat is now rendered globally in App.tsx */}
     </div>
   );
 };
