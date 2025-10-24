@@ -38,6 +38,13 @@ export function useChatWebSocket(options: UseChatWebSocketOptions = {}): UseChat
   const pendingSuggestedRepliesRef = useRef<string[]>([]);
   // Track if we've hit the separator to stop processing chunks
   const hitSeparatorRef = useRef<boolean>(false);
+  // Use ref to store current workout context to ensure sendMessage always has latest context
+  const workoutContextRef = useRef<WorkoutContext | undefined>(options.workoutContext);
+
+  // Update workout context ref whenever options.workoutContext changes
+  useEffect(() => {
+    workoutContextRef.current = options.workoutContext;
+  }, [options.workoutContext]);
 
   // WebSocket connection management
   useEffect(() => {
@@ -97,7 +104,6 @@ export function useChatWebSocket(options: UseChatWebSocketOptions = {}): UseChat
 
         // Subscribe to suggested replies events
         const unsubReplies = chatWebSocket.onSuggestedReplies((payload) => {
-          console.log('[useChatWebSocket] Received suggested replies:', payload.replies);
           pendingSuggestedRepliesRef.current = payload.replies;
         });
         unsubscribeFns.push(unsubReplies);
@@ -105,8 +111,6 @@ export function useChatWebSocket(options: UseChatWebSocketOptions = {}): UseChat
         // Subscribe to message complete events
         let messageCompleteTimeout: NodeJS.Timeout | null = null;
         const unsubComplete = chatWebSocket.onMessageComplete(() => {
-          console.log('[useChatWebSocket] Message complete');
-
           // Small delay to ensure streamingMessage state is updated
           messageCompleteTimeout = setTimeout(() => {
             setIsStreaming(false);
@@ -197,7 +201,7 @@ export function useChatWebSocket(options: UseChatWebSocketOptions = {}): UseChat
             content: m.content,
             timestamp: m.timestamp,
           })),
-          context: options.workoutContext,
+          context: workoutContextRef.current,
         });
         // Response will be handled by WebSocket event listeners
       } else {
@@ -205,7 +209,7 @@ export function useChatWebSocket(options: UseChatWebSocketOptions = {}): UseChat
         console.log('[useChatWebSocket] Sending via HTTP (WebSocket not available)');
         const response = await sendChatMessage({
           messages: updatedHistory,
-          context: options.workoutContext,
+          context: workoutContextRef.current,
         });
 
         // Create coach message from response
@@ -226,7 +230,7 @@ export function useChatWebSocket(options: UseChatWebSocketOptions = {}): UseChat
       setError(err instanceof Error ? err.message : 'Failed to send message');
       setIsLoading(false);
     }
-  }, [conversationHistory, isLoading, isWebSocketConnected, useWebSocket, options.workoutContext]);
+  }, [conversationHistory, isLoading, isWebSocketConnected, useWebSocket]);
 
   // Reset conversation function
   const resetConversation = useCallback(() => {

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { MessageSquare, X, ChevronLeft, ChevronRight, Minimize2, Maximize2, Minus, Send, Eraser } from 'lucide-react';
+import { MessageSquare, X, ChevronLeft, ChevronRight, Minimize2, Maximize2, Minus, Send, Eraser, Check } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,6 +24,7 @@ export const CoachChat = () => {
   const [isMinimized, setIsMinimized] = useState(false);
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
   const [customInput, setCustomInput] = useState('');
+  const [isConfirmingReset, setIsConfirmingReset] = useState(false);
 
   // Get workout program data
   const { weeks } = useWorkoutProgram();
@@ -153,10 +154,18 @@ export const CoachChat = () => {
     }
   };
 
+  const handleConfirmReset = () => {
+    setIsConfirmingReset(true);
+    setTimeout(() => {
+      setIsConfirmingReset(false);
+    }, 3000);
+  };
+
   const handleReset = () => {
     resetConversation();
     setCurrentMessageIndex(0);
     setCustomInput('');
+    setIsConfirmingReset(false);
   };
 
   return (
@@ -165,7 +174,7 @@ export const CoachChat = () => {
       {!isOpen && (
         <Button
           onClick={handleOpen}
-          className="fixed bottom-4 right-4 h-14 w-14 rounded-full shadow-lg border border-gray-500 bg-white backdrop-blur-lg bg-opacity-80 transition-shadow cursor-pointer"
+          className="fixed bottom-4 right-4 h-14 w-14 rounded-full shadow-lg border border-gray-400 bg-white backdrop-blur-lg bg-opacity-80 transition-shadow cursor-pointer"
           size="icon"
           aria-label="Open coach chat"
         >
@@ -216,12 +225,20 @@ export const CoachChat = () => {
               </div> : <div></div>) : <div className="text-sm font-bold text-gray-600">Chat with Coach</div>}
 
               <div className="flex items-center gap-1">
+                {isConfirmingReset && (
+                  <div className="flex items-center gap-1">
+                    <p className="text-sm text-gray-600">Reset conversation?</p>
+                    <Button variant="ghost" size="icon" onClick={handleReset} aria-label="Confirm">
+                      <span className="text-sm">OK</span>
+                    </Button>
+                  </div>
+                )}
                 {/* Reset button - only show when there are more than just the initial message */}
-                {conversationHistory.length > 1 && !isMinimized && (
+                {!isConfirmingReset && conversationHistory.length > 1 && !isMinimized && (
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={handleReset}
+                    onClick={handleConfirmReset}
                     aria-label="Reset conversation"
                     className="h-8 w-8"
                   >
