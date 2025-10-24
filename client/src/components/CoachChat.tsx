@@ -1,9 +1,13 @@
-import { useState } from 'react';
-import { Sparkle, X, ChevronLeft, ChevronRight, Minimize2, Maximize2, Minus, Send } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { MessageSquare, X, ChevronLeft, ChevronRight, Minimize2, Maximize2, Minus, Send, Eraser } from 'lucide-react';
+import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from './ui/badge';
-import { checkHealth } from '@/lib/api';
+import { useChatWebSocket } from '@/hooks/useChatWebSocket';
+import { useWorkoutProgram } from '@/hooks/useWorkoutProgram';
+import { findSession, findWeek, parseId } from '@/utils/idHelpers';
+import type { WorkoutContext } from '@/types/chat';
 
 type CoachAvatarPose =
   | 'default-pose'
@@ -14,60 +18,84 @@ type CoachAvatarPose =
   | 'thumbs-up'
   | 'standing-at-attention';
 
-interface Message {
-  id: string;
-  role: 'user' | 'coach';
-  content: string;
-  avatarPose?: CoachAvatarPose; // Only relevant for coach messages
-  suggestedReplies?: string[]; // Only relevant for coach messages
-}
-
 export const CoachChat = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
+  const [customInput, setCustomInput] = useState('');
 
-  // Hardcoded conversation history for Milestone 3
-  const conversationHistory: Message[] = [
-    {
+  // Get workout program data
+  const { weeks } = useWorkoutProgram();
+  const [location] = useLocation();
+
+  // Extract workout context based on current URL
+  const workoutContext: WorkoutContext | undefined = useMemo(() => {
+    if (!weeks || weeks.length === 0) {
+      return undefined;
+    }
+
+    // Parse current URL to extract session/week ID
+    const pathParts = location.split('/').filter(Boolean);
+    const currentId = pathParts[0]; // e.g., "week-1-session-2" or "week-1"
+
+    if (!currentId) {
+      return {
+        fullProgram: weeks,
+        currentUrl: location,
+      };
+    }
+
+    // Try to find the current session
+    const parsed = parseId(currentId);
+    let currentSession = parsed?.sessionNumber ? findSession(weeks, currentId) : undefined;
+    let currentWeek = parsed?.weekNumber ? findWeek(weeks, currentId) : undefined;
+
+    return {
+      currentSession,
+      currentWeek,
+      fullProgram: weeks,
+      currentUrl: location,
+    };
+  }, [weeks, location]);
+
+  // Use chat WebSocket hook for all conversation management
+  const {
+    conversationHistory,
+    isLoading,
+    isStreaming,
+    streamingMessage,
+    error,
+    sendMessage: sendChatMessageViaHook,
+    resetConversation,
+  } = useChatWebSocket({
+    initialMessage: {
       id: '1',
       role: 'coach',
       content: "Hey there! I'm your workout coach. I can help you modify your training program, answer questions about exercises, and make adjustments based on how you're feeling.",
-      avatarPose: 'default-pose',
-      suggestedReplies: ["Let's get started", "Tell me more", "Not right now"]
+      timestamp: new Date().toISOString(),
+      avatarPose: 'default-pose'
     },
-    {
-      id: '2',
-      role: 'user',
-      content: "How do I do a Romanian Deadlift?"
-    },
-    {
-      id: '3',
-      role: 'coach',
-      content: "Romanian Deadlifts are great for your hamstrings! Start with feet hip-width apart, holding a barbell. Hinge at the hips while keeping your back straight, lowering the bar down your shins.",
-      avatarPose: 'passionately-explaining',
-      suggestedReplies: ["Got it, thanks!", "Show me another exercise", "What about form cues?"]
-    },
-    {
-      id: '4',
-      role: 'user',
-      content: "What if I don't have a barbell?"
-    },
-    {
-      id: '5',
-      role: 'coach',
-      content: "No problem! You can use dumbbells or kettlebells instead. The movement pattern stays the same - focus on that hip hinge and keeping tension in your hamstrings.",
-      avatarPose: 'thumbs-up',
-      suggestedReplies: ["Perfect!", "Can you modify my workout?", "What's next?"]
-    }
-  ];
-
-  const [currentMessageIndex, setCurrentMessageIndex] = useState(conversationHistory.length - 1);
-  const [selectedReply, setSelectedReply] = useState<string | null>(null);
-  const [customInput, setCustomInput] = useState('');
+    workoutContext,
+  });
 
   const currentMessage = conversationHistory[currentMessageIndex];
   const isViewingHistory = currentMessageIndex < conversationHistory.length - 1;
+
+  // Update current message index when new messages arrive
+  // Jump to latest message whenever conversation history grows
+  useEffect(() => {
+    // Only auto-jump if we're already at the latest message (not viewing history)
+    if (!isViewingHistory || currentMessageIndex === conversationHistory.length - 2) {
+      setCurrentMessageIndex(conversationHistory.length - 1);
+    }
+  }, [conversationHistory.length]); // Only trigger when length changes
+
+  // Create a "waiting for coach" placeholder when user sends message
+  // This shows immediately before streaming starts
+  const isWaitingForCoach = !isViewingHistory &&
+    currentMessage.role === 'user' &&
+    (isLoading || isStreaming);
 
   const handleClose = () => {
     setIsClosing(true);
@@ -107,19 +135,14 @@ export const CoachChat = () => {
   const canGoForward = currentMessageIndex < conversationHistory.length - 1;
 
   const handleReplySelect = (reply: string) => {
-    setSelectedReply(reply);
-    // In future milestones, this will send the message
-    console.log('Selected reply:', reply);
-    // Clear custom input when selecting a suggested reply
     setCustomInput('');
+    sendChatMessageViaHook(reply);
   };
 
   const handleSendCustomMessage = () => {
     if (customInput.trim()) {
-      console.log('Sending custom message:', customInput);
-      // In future milestones, this will send the message
+      sendChatMessageViaHook(customInput);
       setCustomInput('');
-      setSelectedReply(null);
     }
   };
 
@@ -130,16 +153,10 @@ export const CoachChat = () => {
     }
   };
 
-  // Test health endpoint (M5.1)
-  const testHealthEndpoint = async () => {
-    try {
-      const result = await checkHealth();
-      console.log('Health check result:', result);
-      alert(`Server is healthy! Timestamp: ${result.timestamp}`);
-    } catch (error) {
-      console.error('Health check failed:', error);
-      alert('Health check failed - check console');
-    }
+  const handleReset = () => {
+    resetConversation();
+    setCurrentMessageIndex(0);
+    setCustomInput('');
   };
 
   return (
@@ -148,11 +165,11 @@ export const CoachChat = () => {
       {!isOpen && (
         <Button
           onClick={handleOpen}
-          className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg"
+          className="fixed bottom-4 right-4 h-14 w-14 rounded-full shadow-lg border border-gray-500 bg-white backdrop-blur-lg bg-opacity-80 transition-shadow cursor-pointer"
           size="icon"
           aria-label="Open coach chat"
         >
-          <Sparkle className="h-6 w-6" />
+          <h2 className="text-2xl text-gray-700">?</h2>
         </Button>
       )}
 
@@ -168,7 +185,7 @@ export const CoachChat = () => {
           >
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 flex-shrink-0">
-              {!isMinimized ? <div className="flex items-center gap-1">
+              {!isMinimized ? (conversationHistory.length > 1 ? <div className="flex items-center gap-1">
                 {/* Navigation Arrows */}
                 <Button
                   variant="ghost"
@@ -190,18 +207,27 @@ export const CoachChat = () => {
                 >
                   <ChevronRight className="h-5 w-5" />
                 </Button>
-                {/* Test Health API Button (M5.1 - remove after testing) */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={testHealthEndpoint}
-                  className="text-xs"
-                >
-                  Test API
-                </Button>
-              </div> : <div className="text-sm font-bold text-gray-600">Chat with Coach</div>}
+                {/* Page Indicator - only show when viewing history */}
+                {isViewingHistory && (
+                  <span className="text-xs text-gray-400 px-1">
+                    {currentMessageIndex + 1}/{conversationHistory.length}
+                  </span>
+                )}
+              </div> : <div></div>) : <div className="text-sm font-bold text-gray-600">Chat with Coach</div>}
 
               <div className="flex items-center gap-1">
+                {/* Reset button - only show when there are more than just the initial message */}
+                {conversationHistory.length > 1 && !isMinimized && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleReset}
+                    aria-label="Reset conversation"
+                    className="h-8 w-8"
+                  >
+                    <Eraser className="h-5 w-5" />
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="icon"
@@ -225,7 +251,37 @@ export const CoachChat = () => {
             {!isMinimized && (
               <div className="flex-1 overflow-y-auto min-h-0 overscroll-contain">
                 <div className="px-6 py-4">
-                  {currentMessage.role === 'coach' ? (
+                  {/* Show waiting/streaming state when user just sent a message */}
+                  {isWaitingForCoach ? (
+                    <div className="flex items-start gap-4 w-full">
+                      <div
+                        className="hidden sm:block w-28 h-28 sm:w-36 sm:h-36 md:w-40 md:h-40 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden select-none pointer-events-none"
+                        style={{ position: 'relative' }}
+                      >
+                        <img
+                          src="/coach-avatar/thinking.png"
+                          alt="Coach avatar"
+                          className="w-full h-full object-contain"
+                          style={{ display: 'block' }}
+                          width={160}
+                          height={160}
+                        />
+                      </div>
+                      <div className="gap-2">
+                        <Badge variant="outline" className="text-gray-900 mb-2">Coach</Badge>
+                        {streamingMessage ? (
+                          <p className="text-gray-900 text-md leading-relaxed whitespace-pre-wrap">
+                            {streamingMessage}
+                            <span className="inline-block w-2 h-4 ml-1 bg-gray-900 animate-pulse" />
+                          </p>
+                        ) : (
+                          <div className="py-4">
+                            <div className="spinner-loader"></div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : currentMessage.role === 'coach' ? (
                     <div className="flex items-start gap-4 w-full">
                       <div
                         className="hidden sm:block w-28 h-28 sm:w-36 sm:h-36 md:w-40 md:h-40 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden select-none pointer-events-none"
@@ -242,7 +298,7 @@ export const CoachChat = () => {
                       </div>
                       <div className="gap-2">
                         <Badge variant="outline" className="text-gray-900 mb-2">Coach</Badge>
-                        <p className="text-gray-900 text-md leading-relaxed">
+                        <p className="text-gray-900 text-md leading-relaxed whitespace-pre-wrap">
                           {currentMessage.content}
                         </p>
                       </div>
@@ -258,17 +314,22 @@ export const CoachChat = () => {
                 </div>
 
                 {/* User Input Area - only shown when at latest message */}
-                {!isViewingHistory && currentMessage.role === 'coach' && (
+                {!isViewingHistory && currentMessage.role === 'coach' && !isLoading && !isStreaming && (
                   <div className="border-t border-gray-200 bg-gray-50">
                     {/* Suggested Replies */}
                     {currentMessage.suggestedReplies && currentMessage.suggestedReplies.length > 0 && (
                       <div className="p-4 pb-2 flex flex-col gap-2">
                         {currentMessage.suggestedReplies.map((reply, index) => (
                           <Button
-                            key={index}
-                            variant={selectedReply === reply ? "default" : "outline"}
-                            className="w-full justify-center h-auto py-3 px-4 text-sm font-normal"
+                            key={`${currentMessage.id}-${index}`}
+                            variant="outline"
+                            className="w-full justify-center h-auto py-3 px-4 text-sm font-normal animate-fade-up"
+                            style={{
+                              animationDelay: `${index * 50}ms`,
+                              animationFillMode: 'backwards'
+                            }}
                             onClick={() => handleReplySelect(reply)}
+                            disabled={isLoading}
                           >
                             {reply}
                           </Button>
@@ -286,11 +347,12 @@ export const CoachChat = () => {
                           onChange={(e) => setCustomInput(e.target.value)}
                           onKeyDown={handleKeyPress}
                           className="flex-1 min-h-[44px]"
+                          disabled={isLoading}
                         />
                         <Button
                           size="icon"
                           onClick={handleSendCustomMessage}
-                          disabled={!customInput.trim()}
+                          disabled={!customInput.trim() || isLoading}
                           className="flex-shrink-0 h-11 w-11"
                           aria-label="Send message"
                         >
@@ -300,10 +362,12 @@ export const CoachChat = () => {
                     </div>
                   </div>
                 )}
-                {!isViewingHistory && currentMessage.role === 'user' && (
-                  <div className="border-t border-gray-200 p-4 bg-gray-50">
-                    <div className="text-sm text-gray-400 text-center">
-                      Waiting for coach...
+                {/* Loading State - removed, now handled by isWaitingForCoach spinner */}
+                {/* Error State */}
+                {!isViewingHistory && error && (
+                  <div className="border-t border-gray-200 p-4 bg-red-50">
+                    <div className="text-sm text-red-600 text-center">
+                      {error}
                     </div>
                   </div>
                 )}
