@@ -31,6 +31,7 @@ Your response structure should ALWAYS be:
 
     // PRIORITY: Current session (what user is looking at right now)
     if (context.currentSession) {
+      console.log('context.currentSession', JSON.stringify(context.currentSession));
       const session = context.currentSession;
       systemPrompt += `\n\n🎯 CURRENT WORKOUT SESSION (User is viewing this NOW):
 Session: ${session.name || 'Unnamed'}
