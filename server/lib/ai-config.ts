@@ -31,7 +31,7 @@ Your response structure should ALWAYS be:
 
     // PRIORITY: Current session (what user is looking at right now)
     if (context.currentSession) {
-      console.log('context.currentSession', JSON.stringify(context.currentSession));
+      console.log('context.currentSession\n\n', JSON.stringify(context.currentSession));
       const session = context.currentSession;
       systemPrompt += `\n\n🎯 CURRENT WORKOUT SESSION (User is viewing this NOW):
 Session: ${session.name || 'Unnamed'}
@@ -42,14 +42,12 @@ Exercises in this session:`;
 
       session.exercises?.forEach((ex: any, idx: number) => {
         systemPrompt += `\n${idx + 1}. ${ex.name}`;
+        systemPrompt += ` - ${ex.workingSets} sets × ${ex.reps} reps @ ${ex.targetLoad}`;
         if (ex.skipped) {
           systemPrompt += ` [SKIPPED]`;
-        } else {
-          systemPrompt += ` - ${ex.workingSets} sets × ${ex.reps} reps @ ${ex.targetLoad}`;
-          if (ex.sets && ex.sets.length > 0) {
-            const completedSets = ex.sets.filter((s: any) => s.completed).length;
-            systemPrompt += ` [${completedSets}/${ex.workingSets} sets logged]`;
-          }
+        } else if (ex.sets && ex.sets.length > 0) {
+          const completedSets = ex.sets.filter((s: any) => s.completed).length;
+          systemPrompt += ` [${completedSets}/${ex.workingSets} sets logged]`;
         }
         if (ex.notes) systemPrompt += `\n   Notes: ${ex.notes}`;
       });
@@ -79,6 +77,8 @@ Exercises in this session:`;
 
     systemPrompt += `\n\n=== END CONTEXT ===\n\nWhen the user asks questions, prioritize information from the CURRENT WORKOUT SESSION they're viewing. Be specific and reference actual exercises, sets, and reps from their program.`;
   }
+
+  console.log('systemPrompt\n\n', systemPrompt);
 
   return systemPrompt;
 }
