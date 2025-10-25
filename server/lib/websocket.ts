@@ -15,7 +15,7 @@ async function handleChatMessage(socket: Socket, payload: SendMessagePayload): P
       context: payload.context
     };
 
-    const { streamGenerator, getSuggestedReplies } = await aiService.processChatRequest(chatRequest);
+    const { streamGenerator, getSuggestedReplies, getToolCalls } = await aiService.processChatRequest(chatRequest);
 
     // Stream chunks to client and accumulate full response
     let fullResponse = '';
@@ -39,6 +39,23 @@ async function handleChatMessage(socket: Socket, payload: SendMessagePayload): P
       replies: suggestedReplies,
       mode: 'quick_reply',
     } as SuggestedRepliesPayload);
+
+    // Get and send tool calls if present
+    const toolCalls = getToolCalls();
+    if (toolCalls && toolCalls.length > 0) {
+      console.log(`[WebSocket] Sending ${toolCalls.length} tool call(s) to ${socket.id}`);
+
+      // Convert to payload format
+      const toolCallsPayload: ToolCallsPayload = {
+        calls: toolCalls.map(tc => ({
+          id: tc.id,
+          name: tc.function.name,
+          parameters: JSON.parse(tc.function.arguments)
+        }))
+      };
+
+      socket.emit(SocketEvents.TOOL_CALLS, toolCallsPayload);
+    }
 
     // Send completion event
     socket.emit(SocketEvents.MESSAGE_COMPLETE, {

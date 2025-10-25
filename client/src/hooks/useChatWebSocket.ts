@@ -36,6 +36,8 @@ export function useChatWebSocket(options: UseChatWebSocketOptions = {}): UseChat
 
   // Use ref to store pending suggested replies during streaming
   const pendingSuggestedRepliesRef = useRef<string[]>([]);
+  // Use ref to store pending tool calls during streaming
+  const pendingToolCallsRef = useRef<any[]>([]);
   // Track if we've hit the separator to stop processing chunks
   const hitSeparatorRef = useRef<boolean>(false);
   // Use ref to store current workout context to ensure sendMessage always has latest context
@@ -73,7 +75,6 @@ export function useChatWebSocket(options: UseChatWebSocketOptions = {}): UseChat
         // Subscribe to message chunk events (streaming)
         const unsubChunk = chatWebSocket.onMessageChunk((payload) => {
           if (payload.isComplete) {
-            console.log('[useChatWebSocket] Message chunk complete');
             // Reset separator flag for next message
             hitSeparatorRef.current = false;
           } else {
@@ -108,6 +109,21 @@ export function useChatWebSocket(options: UseChatWebSocketOptions = {}): UseChat
         });
         unsubscribeFns.push(unsubReplies);
 
+        // Subscribe to tool calls events
+        const unsubToolCalls = chatWebSocket.onToolCalls((payload) => {
+          console.log('[useChatWebSocket] Received tool calls:', payload.calls);
+          const toolCalls = payload.calls.map(call => ({
+            id: call.id,
+            type: 'function' as const,
+            function: {
+              name: call.name,
+              arguments: JSON.stringify(call.parameters)
+            }
+          }));
+          pendingToolCallsRef.current = toolCalls;
+        });
+        unsubscribeFns.push(unsubToolCalls);
+
         // Subscribe to message complete events
         let messageCompleteTimeout: NodeJS.Timeout | null = null;
         const unsubComplete = chatWebSocket.onMessageComplete(() => {
@@ -118,12 +134,17 @@ export function useChatWebSocket(options: UseChatWebSocketOptions = {}): UseChat
 
             // Create the final coach message with the accumulated streaming text
             setStreamingMessage(currentStreamingMessage => {
-              if (currentStreamingMessage) {
+              // Create message if we have text content OR tool calls OR suggested replies
+              const hasContent = currentStreamingMessage ||
+                                 pendingToolCallsRef.current.length > 0 ||
+                                 pendingSuggestedRepliesRef.current.length > 0;
+
+              if (hasContent) {
                 // Strip suggested replies section (everything after "---")
-                let messageContent = currentStreamingMessage;
-                const separatorIndex = currentStreamingMessage.indexOf('---');
+                let messageContent = currentStreamingMessage || '';
+                const separatorIndex = messageContent.indexOf('---');
                 if (separatorIndex !== -1) {
-                  messageContent = currentStreamingMessage.substring(0, separatorIndex).trim();
+                  messageContent = messageContent.substring(0, separatorIndex).trim();
                 }
 
                 const coachMessage: Message = {
@@ -135,12 +156,19 @@ export function useChatWebSocket(options: UseChatWebSocketOptions = {}): UseChat
                   suggestedReplies: pendingSuggestedRepliesRef.current.length > 0
                     ? pendingSuggestedRepliesRef.current
                     : undefined,
+                  toolCalls: pendingToolCallsRef.current.length > 0
+                    ? pendingToolCallsRef.current
+                    : undefined,
                 };
 
-                setConversationHistory(prev => [...prev, coachMessage]);
+                setConversationHistory(prev => {
+                  const newHistory = [...prev, coachMessage];
+                  return newHistory;
+                });
 
                 // Clear pending state
                 pendingSuggestedRepliesRef.current = [];
+                pendingToolCallsRef.current = [];
                 return '';
               }
               return currentStreamingMessage;
@@ -240,6 +268,7 @@ export function useChatWebSocket(options: UseChatWebSocketOptions = {}): UseChat
     setIsStreaming(false);
     setStreamingMessage('');
     pendingSuggestedRepliesRef.current = [];
+    pendingToolCallsRef.current = [];
     hitSeparatorRef.current = false;
   }, [options.initialMessage]);
 

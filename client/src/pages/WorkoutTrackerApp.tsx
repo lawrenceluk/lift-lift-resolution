@@ -10,7 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useWorkoutProgram } from '@/hooks/useWorkoutProgram';
+import { useWorkoutProgramContext } from '@/contexts/WorkoutProgramContext';
 import { SessionView } from '@/components/SessionView';
 import { exportWeeks, importWeeks, loadCurrentWeekIndex, saveCurrentWeekIndex } from '@/utils/localStorage';
 import { useToast } from '@/hooks/use-toast';
@@ -18,7 +18,7 @@ import { getWorkoutStatus, parseId } from '@/utils/idHelpers';
 
 export const WorkoutTrackerApp = (): JSX.Element => {
   const { weeks, addSet, updateSet, deleteSet, startSession, completeSession, skipExercise, unskipExercise, importWeeks: importWeeksHook } =
-    useWorkoutProgram();
+    useWorkoutProgramContext();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 

@@ -1,6 +1,34 @@
-import { streamChatCompletion } from './openrouter';
+import { streamChatCompletionWithTools, type ToolCall } from './openrouter';
 import { simulateStreamingText, parseSuggestedReplies } from './text-processing';
 import { buildSystemPrompt } from './ai-config';
+import { allToolSchemas } from '../../client/src/lib/tools/schemas';
+
+/**
+ * OpenAI tool format (used by OpenRouter)
+ */
+interface OpenAITool {
+  type: 'function';
+  function: {
+    name: string;
+    description: string;
+    parameters: any;
+  };
+}
+
+/**
+ * Convert Anthropic tool schema format to OpenAI format
+ * OpenRouter uses OpenAI's function calling standard
+ */
+function convertToOpenAIToolSchema(anthropicSchema: any): OpenAITool {
+  return {
+    type: 'function',
+    function: {
+      name: anthropicSchema.name,
+      description: anthropicSchema.description,
+      parameters: anthropicSchema.input_schema // OpenAI uses 'parameters' instead of 'input_schema'
+    }
+  };
+}
 
 export interface ChatMessage {
   id: string;
@@ -24,6 +52,7 @@ export interface ChatRequest {
 export interface ChatResponse {
   fullResponse: string;
   suggestedReplies: string[];
+  toolCalls?: ToolCall[];
 }
 
 /**
@@ -41,14 +70,16 @@ export class AIService {
   }
 
   /**
-   * Process a chat request and return streaming response
+   * Process a chat request and return streaming response with tool call support
    * The caller is responsible for consuming the stream and then calling parseSuggestedReplies
    */
   async processChatRequest(request: ChatRequest): Promise<{
     streamGenerator: AsyncGenerator<string>;
     getSuggestedReplies: (fullResponse: string) => string[];
+    getToolCalls: () => ToolCall[];
   }> {
-    console.log('[AIService] Processing chat request');
+    // Convert Anthropic tool schemas to OpenAI format for OpenRouter
+    const openAITools: OpenAITool[] = allToolSchemas.map(convertToOpenAIToolSchema);
 
     // Build context-aware system prompt
     const systemPrompt = buildSystemPrompt(request.context);
@@ -65,19 +96,21 @@ export class AIService {
       }))
     ];
 
-    // Stream from OpenRouter with buffering
-    const rawStream = streamChatCompletion({
+    // Stream from OpenRouter with tool support (using OpenAI format)
+    const { textGenerator, getToolCalls } = await streamChatCompletionWithTools({
       model: 'anthropic/claude-haiku-4.5',
       messages,
-      apiKey: this.apiKey
+      apiKey: this.apiKey,
+      tools: openAITools // Use converted OpenAI format tools
     });
 
-    // Create streaming generator
-    const streamGenerator = simulateStreamingText(rawStream);
+    // Create streaming generator with buffering
+    const streamGenerator = simulateStreamingText(textGenerator);
 
     return {
       streamGenerator,
-      getSuggestedReplies: parseSuggestedReplies
+      getSuggestedReplies: parseSuggestedReplies,
+      getToolCalls
     };
   }
 }

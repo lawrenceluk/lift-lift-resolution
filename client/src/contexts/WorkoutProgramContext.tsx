@@ -1,0 +1,36 @@
+import React, { createContext, useContext, ReactNode } from 'react';
+import { useWorkoutProgram } from '@/hooks/useWorkoutProgram';
+import type { Week, SetResult } from '@/types/workout';
+
+interface WorkoutProgramContextType {
+  weeks: Week[] | null;
+  addSet: (weekId: string, sessionId: string, exerciseId: string, set: SetResult) => void;
+  updateSet: (weekId: string, sessionId: string, exerciseId: string, setNumber: number, updates: Partial<SetResult>) => void;
+  deleteSet: (weekId: string, sessionId: string, exerciseId: string, setNumber: number) => void;
+  startSession: (weekId: string, sessionId: string) => void;
+  completeSession: (weekId: string, sessionId: string) => void;
+  skipExercise: (weekId: string, sessionId: string, exerciseId: string) => void;
+  unskipExercise: (weekId: string, sessionId: string, exerciseId: string) => void;
+  importWeeks: (weeks: Week[]) => void;
+  updateWeeks: (weeks: Week[]) => void;
+}
+
+const WorkoutProgramContext = createContext<WorkoutProgramContextType | undefined>(undefined);
+
+export function WorkoutProgramProvider({ children }: { children: ReactNode }) {
+  const workoutProgram = useWorkoutProgram();
+
+  return (
+    <WorkoutProgramContext.Provider value={workoutProgram}>
+      {children}
+    </WorkoutProgramContext.Provider>
+  );
+}
+
+export function useWorkoutProgramContext() {
+  const context = useContext(WorkoutProgramContext);
+  if (context === undefined) {
+    throw new Error('useWorkoutProgramContext must be used within a WorkoutProgramProvider');
+  }
+  return context;
+}

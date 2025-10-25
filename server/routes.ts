@@ -23,12 +23,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
 
-    // Log incoming messages for debugging
-    console.log("[/api/chat] Received messages:", messages.length);
-    messages.forEach((msg: any, i: number) => {
-      console.log(`  [${i}] ${msg.role}: ${msg.content?.substring(0, 50)}...`);
-    });
-
     // Hardcoded response (M5.2)
     // Vary the suggested replies to see the animation
     const replySets = [
