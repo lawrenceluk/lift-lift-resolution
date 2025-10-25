@@ -1,13 +1,16 @@
 import { useState, useEffect, useMemo } from 'react';
-import { MessageSquare, X, ChevronLeft, ChevronRight, Minimize2, Maximize2, Minus, Send, Eraser, Check } from 'lucide-react';
+import { MessageSquare, X, ChevronLeft, ChevronRight, Maximize2, Minus, Send, Eraser, Check } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from './ui/badge';
 import { useChatWebSocket } from '@/hooks/useChatWebSocket';
-import { useWorkoutProgram } from '@/hooks/useWorkoutProgram';
+import { useWorkoutProgramContext } from '@/contexts/WorkoutProgramContext';
 import { findSession, findWeek, parseId } from '@/utils/idHelpers';
+import { ToolCallPreview } from '@/components/ToolCallPreview';
+import { executeToolCalls } from '@/lib/tools/executor';
 import type { WorkoutContext } from '@/types/chat';
+import type { ToolCall } from '@/types/chat';
 
 type CoachAvatarPose =
   | 'default-pose'
@@ -27,8 +30,9 @@ export const CoachChat = () => {
   const [isConfirmingReset, setIsConfirmingReset] = useState(false);
 
   // Get workout program data
-  const { weeks } = useWorkoutProgram();
+  const { weeks, updateWeeks } = useWorkoutProgramContext();
   const [location] = useLocation();
+  const [isExecutingTools, setIsExecutingTools] = useState(false);
 
   // Extract workout context based on current URL
   const workoutContext: WorkoutContext | undefined = useMemo(() => {
@@ -80,17 +84,20 @@ export const CoachChat = () => {
     workoutContext,
   });
 
-  const currentMessage = conversationHistory[currentMessageIndex];
-  const isViewingHistory = currentMessageIndex < conversationHistory.length - 1;
+  // Filter out system messages from UI display (they're sent to LLM but not shown to user)
+  const visibleMessages = conversationHistory.filter(msg => !msg.content.startsWith('[SYSTEM]'));
+
+  const currentMessage = visibleMessages[currentMessageIndex];
+  const isViewingHistory = currentMessageIndex < visibleMessages.length - 1;
 
   // Update current message index when new messages arrive
   // Jump to latest message whenever conversation history grows
   useEffect(() => {
     // Only auto-jump if we're already at the latest message (not viewing history)
-    if (!isViewingHistory || currentMessageIndex === conversationHistory.length - 2) {
-      setCurrentMessageIndex(conversationHistory.length - 1);
+    if (!isViewingHistory || currentMessageIndex === visibleMessages.length - 2) {
+      setCurrentMessageIndex(visibleMessages.length - 1);
     }
-  }, [conversationHistory.length]); // Only trigger when length changes
+  }, [visibleMessages.length]); // Only trigger when length changes
 
   // Create a "waiting for coach" placeholder when user sends message
   // This shows immediately before streaming starts
@@ -106,7 +113,7 @@ export const CoachChat = () => {
       setIsClosing(false);
       setIsMinimized(false); // Reset minimized state on close
       // Reset to latest message on close
-      setCurrentMessageIndex(conversationHistory.length - 1);
+      setCurrentMessageIndex(visibleMessages.length - 1);
     }, 200); // Match animation duration
   };
 
@@ -127,13 +134,13 @@ export const CoachChat = () => {
   };
 
   const handleForward = () => {
-    if (currentMessageIndex < conversationHistory.length - 1) {
+    if (currentMessageIndex < visibleMessages.length - 1) {
       setCurrentMessageIndex(currentMessageIndex + 1);
     }
   };
 
   const canGoBack = currentMessageIndex > 0;
-  const canGoForward = currentMessageIndex < conversationHistory.length - 1;
+  const canGoForward = currentMessageIndex < visibleMessages.length - 1;
 
   const handleReplySelect = (reply: string) => {
     setCustomInput('');
@@ -168,13 +175,82 @@ export const CoachChat = () => {
     setIsConfirmingReset(false);
   };
 
+  const handleApplyChanges = async (toolCalls: ToolCall[]) => {
+    if (!weeks || isExecutingTools) return;
+
+    setIsExecutingTools(true);
+
+    try {
+      // Execute all tool calls atomically
+      const result = await executeToolCalls(toolCalls, weeks);
+
+      if (result.success) {
+        // Update workout data in state and localStorage
+        updateWeeks(result.data);
+
+        // Build detailed success message for LLM with parameter details
+        const successDetails = result.results
+          .map((_r, i) => {
+            const toolCall = toolCalls[i];
+            if (!toolCall) return 'unknown';
+
+            try {
+              const params = JSON.parse(toolCall.function.arguments);
+              const toolName = toolCall.function.name;
+
+              // Add context about what was actually changed
+              if (toolName === 'add_exercise') {
+                return `Added exercise "${params.exercise.name}" to Week ${params.weekNumber} Session ${params.sessionNumber} at position ${params.position}`;
+              } else if (toolName === 'modify_exercise') {
+                const updates = Object.entries(params.updates).map(([k, v]) => `${k}=${v}`).join(', ');
+                return `Modified Week ${params.weekNumber} Session ${params.sessionNumber} Exercise ${params.exerciseNumber}: ${updates}`;
+              } else if (toolName === 'remove_exercise') {
+                return `Removed exercise ${params.exerciseNumber} from Week ${params.weekNumber} Session ${params.sessionNumber}`;
+              } else {
+                return `${toolName}: Applied`;
+              }
+            } catch {
+              return `${toolCall.function.name}: Applied`;
+            }
+          })
+          .join('. ');
+
+        // Send confirmation back to LLM (this will be filtered from UI display)
+        await sendChatMessageViaHook(`[SYSTEM] ${successDetails}. The changes have been successfully applied to the workout program.`);
+      } else {
+        // Build error message
+        const failedTools = result.results
+          .filter(r => !r.success)
+          .map(r => {
+            const toolName = toolCalls.find(tc => tc.id === r.toolCallId)?.function.name || 'unknown';
+            const errorMsg = r.errors?.join(', ') || 'Unknown error';
+            return `${toolName}: ${errorMsg}`;
+          })
+          .join('; ');
+
+        // Send error back to LLM
+        await sendChatMessageViaHook(`[SYSTEM] Failed to apply changes: ${failedTools}`);
+      }
+    } catch (error) {
+      console.error('[CoachChat] Tool execution error:', error);
+      await sendChatMessageViaHook(`[SYSTEM] An error occurred while applying changes: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsExecutingTools(false);
+    }
+  };
+
+  const handleCancelChanges = async () => {
+    // User cancelled the proposed changes
+    await sendChatMessageViaHook('I changed my mind, please don\'t make those changes.');
+  };
+
   return (
     <>
       {/* Floating Chat Button */}
       {!isOpen && (
         <Button
           onClick={handleOpen}
-          className="fixed bottom-4 right-4 h-14 w-14 rounded-full shadow-lg border border-gray-400 bg-white backdrop-blur-lg bg-opacity-80 transition-shadow cursor-pointer"
+          className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg border border-gray-400 bg-white backdrop-blur-lg bg-opacity-80 transition-shadow cursor-pointer hover:bg-gray-100"
           size="icon"
           aria-label="Open coach chat"
         >
@@ -194,7 +270,7 @@ export const CoachChat = () => {
           >
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 flex-shrink-0">
-              {!isMinimized ? (conversationHistory.length > 1 ? <div className="flex items-center gap-1">
+              {!isMinimized ? (visibleMessages.length > 1 ? <div className="flex items-center gap-1">
                 {/* Navigation Arrows */}
                 <Button
                   variant="ghost"
@@ -219,7 +295,7 @@ export const CoachChat = () => {
                 {/* Page Indicator - only show when viewing history */}
                 {isViewingHistory && (
                   <span className="text-xs text-gray-400 px-1">
-                    {currentMessageIndex + 1}/{conversationHistory.length}
+                    {currentMessageIndex + 1}/{visibleMessages.length}
                   </span>
                 )}
               </div> : <div></div>) : <div className="text-sm font-bold text-gray-600">Chat with Coach</div>}
@@ -234,7 +310,7 @@ export const CoachChat = () => {
                   </div>
                 )}
                 {/* Reset button - only show when there are more than just the initial message */}
-                {!isConfirmingReset && conversationHistory.length > 1 && !isMinimized && (
+                {!isConfirmingReset && visibleMessages.length > 1 && !isMinimized && (
                   <Button
                     variant="ghost"
                     size="icon"
@@ -248,18 +324,10 @@ export const CoachChat = () => {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={handleMinimize}
+                  onClick={handleClose}
                   aria-label={isMinimized ? "Expand chat" : "Minimize chat"}
                 >
                   {isMinimized ? <Maximize2 className="h-5 w-5" /> : <Minus className="h-5 w-5" />}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleClose}
-                  aria-label="Close chat"
-                >
-                  <X className="h-5 w-5" />
                 </Button>
               </div>
             </div>
@@ -313,11 +381,25 @@ export const CoachChat = () => {
                           height={160}
                         />
                       </div>
-                      <div className="gap-2">
+                      <div className="gap-2 flex-1">
                         <Badge variant="outline" className="text-gray-900 mb-2">Coach</Badge>
                         <p className="text-gray-900 text-md leading-relaxed whitespace-pre-wrap">
                           {currentMessage.content}
                         </p>
+
+                        {/* Tool Call Preview - Show modifications before user confirms */}
+                        {(() => {
+                          if (currentMessage.toolCalls && currentMessage.toolCalls.length > 0 && weeks) {
+                            return (
+                              <ToolCallPreview
+                                toolCalls={currentMessage.toolCalls}
+                                workoutData={weeks}
+                              />
+                            );
+                          } else {
+                            return null;
+                          }
+                        })()}
                       </div>
                     </div>
                   ) : (
@@ -333,25 +415,47 @@ export const CoachChat = () => {
                 {/* User Input Area - only shown when at latest message */}
                 {!isViewingHistory && currentMessage.role === 'coach' && !isLoading && !isStreaming && (
                   <div className="border-t border-gray-200 bg-gray-50">
-                    {/* Suggested Replies */}
-                    {currentMessage.suggestedReplies && currentMessage.suggestedReplies.length > 0 && (
-                      <div className="p-4 pb-2 flex flex-col gap-2">
-                        {currentMessage.suggestedReplies.map((reply, index) => (
-                          <Button
-                            key={`${currentMessage.id}-${index}`}
-                            variant="outline"
-                            className="w-full justify-center h-auto py-3 px-4 text-sm font-normal animate-fade-up"
-                            style={{
-                              animationDelay: `${index * 50}ms`,
-                              animationFillMode: 'backwards'
-                            }}
-                            onClick={() => handleReplySelect(reply)}
-                            disabled={isLoading}
-                          >
-                            {reply}
-                          </Button>
-                        ))}
+                    {/* Confirmation Buttons - shown when tool calls are present */}
+                    {currentMessage.toolCalls && currentMessage.toolCalls.length > 0 ? (
+                      <div className="p-4 pb-2 flex gap-2">
+                        <Button
+                          variant="default"
+                          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                          onClick={() => handleApplyChanges(currentMessage.toolCalls!)}
+                          disabled={isExecutingTools}
+                        >
+                          {isExecutingTools ? 'Applying...' : 'Apply Changes'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="flex-1"
+                          onClick={handleCancelChanges}
+                          disabled={isExecutingTools}
+                        >
+                          Cancel
+                        </Button>
                       </div>
+                    ) : (
+                      /* Suggested Replies - shown when no tool calls */
+                      currentMessage.suggestedReplies && currentMessage.suggestedReplies.length > 0 && (
+                        <div className="p-4 pb-2 flex flex-col gap-2">
+                          {currentMessage.suggestedReplies.map((reply, index) => (
+                            <Button
+                              key={`${currentMessage.id}-${index}`}
+                              variant="outline"
+                              className="w-full justify-center h-auto py-3 px-4 text-sm font-normal animate-fade-up"
+                              style={{
+                                animationDelay: `${index * 50}ms`,
+                                animationFillMode: 'backwards'
+                              }}
+                              onClick={() => handleReplySelect(reply)}
+                              disabled={isLoading}
+                            >
+                              {reply}
+                            </Button>
+                          ))}
+                        </div>
+                      )
                     )}
 
                     {/* Custom Text Input - Always visible when at latest coach message */}

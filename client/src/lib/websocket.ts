@@ -1,5 +1,5 @@
 import { io, Socket } from 'socket.io-client';
-import type { SendMessagePayload, MessageChunkPayload, SuggestedRepliesPayload, ErrorPayload } from '../../../server/lib/websocket';
+import type { SendMessagePayload, MessageChunkPayload, SuggestedRepliesPayload, ToolCallsPayload, ErrorPayload } from '../../../server/lib/websocket';
 
 /**
  * Socket.io event names (mirrored from server)
@@ -115,6 +115,23 @@ export class ChatWebSocket {
     return () => {
       if (this.socket) {
         this.socket.off(SocketEvents.SUGGESTED_REPLIES, callback);
+      }
+    };
+  }
+
+  /**
+   * Subscribe to tool calls
+   */
+  onToolCalls(callback: (payload: ToolCallsPayload) => void): () => void {
+    if (!this.socket) {
+      throw new Error('WebSocket is not initialized');
+    }
+
+    this.socket.on(SocketEvents.TOOL_CALLS, callback);
+
+    return () => {
+      if (this.socket) {
+        this.socket.off(SocketEvents.TOOL_CALLS, callback);
       }
     };
   }

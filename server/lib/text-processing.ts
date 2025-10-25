@@ -64,7 +64,6 @@ export function parseSuggestedReplies(fullResponse: string): string[] {
 
   if (separatorIndex === -1) {
     // No separator found, return defaults
-    console.log('[TextProcessing] No suggested replies separator found, using defaults');
     return ["Tell me more", "Sounds good!", "What else?"];
   }
 

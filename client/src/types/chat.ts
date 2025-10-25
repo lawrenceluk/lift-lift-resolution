@@ -11,6 +11,29 @@ export interface Message {
   timestamp: string;
   avatarPose?: string; // Only relevant for coach messages
   suggestedReplies?: string[]; // Only relevant for coach messages
+  toolCalls?: ToolCall[]; // Tool calls from LLM (coach messages only)
+}
+
+/**
+ * Tool call from LLM (Anthropic format)
+ */
+export interface ToolCall {
+  id: string;
+  type: 'function';
+  function: {
+    name: string;
+    arguments: string; // JSON string of parameters
+  };
+}
+
+/**
+ * Tool result sent back to LLM
+ */
+export interface ToolResult {
+  type: 'tool_result';
+  tool_use_id: string;
+  content: string;
+  is_error?: boolean;
 }
 
 export interface WorkoutContext {
@@ -29,4 +52,5 @@ export interface ChatApiResponse {
   message: string;
   suggestedReplies?: string[];
   inputMode: 'options' | 'freeform';
+  toolCalls?: ToolCall[]; // Tool calls from LLM
 }

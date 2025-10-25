@@ -4,7 +4,7 @@ const STORAGE_KEY = 'workout_weeks';
 const CURRENT_WEEK_KEY = 'current_week_index';
 
 export const saveWeeks = (weeks: Week[]): void => {
-  try {
+  try {    
     localStorage.setItem(STORAGE_KEY, JSON.stringify(weeks));
   } catch (error) {
     console.error('Error saving workout weeks:', error);
