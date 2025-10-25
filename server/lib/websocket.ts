@@ -1,6 +1,7 @@
 import { Server as HttpServer } from 'http';
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { AIService, ChatRequest } from './ai-service';
+import { toolSchemasByName } from '../../client/src/lib/tools/schemas';
 
 /**
  * Handle incoming chat message with AI service
@@ -15,7 +16,7 @@ async function handleChatMessage(socket: Socket, payload: SendMessagePayload): P
       context: payload.context
     };
 
-    const { streamGenerator, getSuggestedReplies, getToolCalls } = await aiService.processChatRequest(chatRequest);
+    const { streamGenerator, getToolCalls } = await aiService.processChatRequest(chatRequest);
 
     // Stream chunks to client and accumulate full response
     let fullResponse = '';
@@ -33,21 +34,56 @@ async function handleChatMessage(socket: Socket, payload: SendMessagePayload): P
       isComplete: true,
     } as MessageChunkPayload);
 
-    // Parse and send suggested replies
-    const suggestedReplies = getSuggestedReplies(fullResponse);
-    socket.emit(SocketEvents.SUGGESTED_REPLIES, {
-      replies: suggestedReplies,
-      mode: 'quick_reply',
-    } as SuggestedRepliesPayload);
+    // Get tool calls from LLM
+    const allToolCalls = getToolCalls();
 
-    // Get and send tool calls if present
-    const toolCalls = getToolCalls();
-    if (toolCalls && toolCalls.length > 0) {
-      console.log(`[WebSocket] Sending ${toolCalls.length} tool call(s) to ${socket.id}`);
+    // Separate tool calls by category
+    const uiToolCalls: any[] = [];
+    const writeToolCalls: any[] = [];
 
-      // Convert to payload format
+    if (allToolCalls && allToolCalls.length > 0) {
+      console.log(`[WebSocket] Processing ${allToolCalls.length} tool call(s)`);
+
+      for (const toolCall of allToolCalls) {
+        const schema = toolSchemasByName[toolCall.function.name];
+        if (!schema) {
+          console.warn(`[WebSocket] Unknown tool: ${toolCall.function.name}`);
+          continue;
+        }
+
+        if (schema.category === 'ui') {
+          uiToolCalls.push(toolCall);
+        } else if (schema.category === 'write') {
+          writeToolCalls.push(toolCall);
+        }
+        // 'read' tools would be handled here in the future
+      }
+    }
+
+    // Auto-execute UI tools (suggest_replies)
+    let suggestedReplies: string[] = [];
+    for (const uiTool of uiToolCalls) {
+      if (uiTool.function.name === 'suggest_replies') {
+        const params = JSON.parse(uiTool.function.arguments);
+        suggestedReplies = params.replies || [];
+        console.log(`[WebSocket] Extracted suggested replies from tool call:`, suggestedReplies);
+      }
+    }
+
+    // Send suggested replies to client
+    if (suggestedReplies.length > 0) {
+      socket.emit(SocketEvents.SUGGESTED_REPLIES, {
+        replies: suggestedReplies,
+        mode: 'quick_reply',
+      } as SuggestedRepliesPayload);
+    }
+
+    // Send write tools to client for approval
+    if (writeToolCalls.length > 0) {
+      console.log(`[WebSocket] Sending ${writeToolCalls.length} write tool(s) for approval`);
+
       const toolCallsPayload: ToolCallsPayload = {
-        calls: toolCalls.map(tc => ({
+        calls: writeToolCalls.map(tc => ({
           id: tc.id,
           name: tc.function.name,
           parameters: JSON.parse(tc.function.arguments)

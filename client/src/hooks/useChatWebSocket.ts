@@ -38,8 +38,6 @@ export function useChatWebSocket(options: UseChatWebSocketOptions = {}): UseChat
   const pendingSuggestedRepliesRef = useRef<string[]>([]);
   // Use ref to store pending tool calls during streaming
   const pendingToolCallsRef = useRef<any[]>([]);
-  // Track if we've hit the separator to stop processing chunks
-  const hitSeparatorRef = useRef<boolean>(false);
   // Use ref to store current workout context to ensure sendMessage always has latest context
   const workoutContextRef = useRef<WorkoutContext | undefined>(options.workoutContext);
 
@@ -75,30 +73,10 @@ export function useChatWebSocket(options: UseChatWebSocketOptions = {}): UseChat
         // Subscribe to message chunk events (streaming)
         const unsubChunk = chatWebSocket.onMessageChunk((payload) => {
           if (payload.isComplete) {
-            // Reset separator flag for next message
-            hitSeparatorRef.current = false;
+            // Streaming complete, do nothing
           } else {
             setIsStreaming(true);
-
-            // Once we've hit the separator, ignore all subsequent chunks
-            if (hitSeparatorRef.current) {
-              return;
-            }
-
-            setStreamingMessage(prev => {
-              const newText = prev + payload.text;
-
-              // Check if this chunk contains the separator
-              const separatorIndex = newText.indexOf('---');
-              if (separatorIndex !== -1) {
-                // Mark that we've hit the separator
-                hitSeparatorRef.current = true;
-                // Return only the message part, truncated at separator
-                return newText.substring(0, separatorIndex).trim();
-              }
-
-              return newText;
-            });
+            setStreamingMessage(prev => prev + payload.text);
           }
         });
         unsubscribeFns.push(unsubChunk);
@@ -140,17 +118,10 @@ export function useChatWebSocket(options: UseChatWebSocketOptions = {}): UseChat
                                  pendingSuggestedRepliesRef.current.length > 0;
 
               if (hasContent) {
-                // Strip suggested replies section (everything after "---")
-                let messageContent = currentStreamingMessage || '';
-                const separatorIndex = messageContent.indexOf('---');
-                if (separatorIndex !== -1) {
-                  messageContent = messageContent.substring(0, separatorIndex).trim();
-                }
-
                 const coachMessage: Message = {
                   id: `coach-${Date.now()}`,
                   role: 'coach',
-                  content: messageContent,
+                  content: currentStreamingMessage || '',
                   timestamp: new Date().toISOString(),
                   avatarPose: 'default-pose',
                   suggestedReplies: pendingSuggestedRepliesRef.current.length > 0
@@ -269,7 +240,6 @@ export function useChatWebSocket(options: UseChatWebSocketOptions = {}): UseChat
     setStreamingMessage('');
     pendingSuggestedRepliesRef.current = [];
     pendingToolCallsRef.current = [];
-    hitSeparatorRef.current = false;
   }, [options.initialMessage]);
 
   return {

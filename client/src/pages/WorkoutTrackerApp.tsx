@@ -223,7 +223,7 @@ export const WorkoutTrackerApp = (): JSX.Element => {
       case 'completed':
         return (
           <Badge className="bg-green-500 hover:bg-green-600">
-            <span className="[font-family:'Inter',Helvetica] font-medium text-white text-xs tracking-[0] leading-4">
+            <span className="font-medium text-white text-xs leading-4">
               Completed
             </span>
           </Badge>
@@ -231,7 +231,7 @@ export const WorkoutTrackerApp = (): JSX.Element => {
       case 'in-progress':
         return (
           <Badge className="bg-orange-500 hover:bg-orange-600">
-            <span className="[font-family:'Inter',Helvetica] font-medium text-white text-xs tracking-[0] leading-4">
+            <span className="font-medium text-white text-xs leading-4">
               In Progress
             </span>
           </Badge>
@@ -239,7 +239,7 @@ export const WorkoutTrackerApp = (): JSX.Element => {
       case 'planned':
         return (
           <Badge variant="outline" className="border-gray-300">
-            <span className="[font-family:'Inter',Helvetica] font-medium text-gray-600 text-xs tracking-[0] leading-4">
+            <span className="font-medium text-gray-600 text-xs leading-4">
               Planned
             </span>
           </Badge>
@@ -330,21 +330,21 @@ export const WorkoutTrackerApp = (): JSX.Element => {
                   <div className="flex items-start justify-between w-full">
                     <div className="flex flex-col items-start gap-[3.99px]">
                       <div className="flex items-center gap-[7.99px]">
-                        <span className="[font-family:'Inter',Helvetica] font-normal text-neutral-950 text-base tracking-[-0.31px] leading-6">
+                        <span className="font-normal text-neutral-950 text-base leading-6">
                           Week {week.weekNumber}
                         </span>
                         <Badge
                           variant="outline"
                           className="h-[21.08px] px-2 py-0.5 rounded-lg border-[0.55px] border-solid border-[#0000001a]"
                         >
-                          <span className="[font-family:'Inter',Helvetica] font-medium text-neutral-950 text-xs tracking-[0] leading-4">
+                          <span className="font-medium text-neutral-950 text-xs leading-4">
                             {week.phase}
                           </span>
                         </Badge>
                       </div>
                       <div className="flex items-center gap-2">
                         <CalendarIcon className="w-4 h-4" />
-                        <span className="[font-family:'Inter',Helvetica] font-normal text-[#717182] text-sm tracking-[-0.15px] leading-5">
+                        <span className="font-normal text-[#717182] text-sm leading-5">
                           {formatDateRange(week.startDate, week.endDate)}
                         </span>
                       </div>
@@ -353,13 +353,13 @@ export const WorkoutTrackerApp = (): JSX.Element => {
                       variant="secondary"
                       className="h-[21.08px] px-2 py-0.5 bg-[#eceef2] rounded-lg border-[0.55px] border-solid border-transparent"
                     >
-                      <span className="[font-family:'Inter',Helvetica] font-medium text-[#030213] text-xs tracking-[0] leading-4">
+                      <span className="font-medium text-[#030213] text-xs leading-4">
                         {completedSessions}/{totalSessions}
                       </span>
                     </Badge>
                   </div>
                   {week.description && (
-                    <p className="[font-family:'Inter',Helvetica] font-normal text-[#717182] text-sm tracking-[-0.15px] leading-5 pb-4">
+                    <p className="font-normal text-[#717182] text-sm leading-5 pb-4">
                       {week.description}
                     </p>
                   )}
@@ -384,13 +384,13 @@ export const WorkoutTrackerApp = (): JSX.Element => {
                       >
                         <div className="flex flex-col items-start gap-[3.99px] flex-1">
                           <div className="flex items-center justify-between w-full gap-[7.99px]">
-                            <h3 className="[font-family:'Inter',Helvetica] font-normal text-neutral-950 text-base tracking-[-0.31px] leading-6">
+                            <h3 className="font-normal text-neutral-950 text-base leading-6">
                               {session.name}
                             </h3>
                             {getStatusBadge(status)}
                           </div>
                           {((session.startedAt && hasCompletedSets) || session.completedDate) && (
-                            <p className="[font-family:'Inter',Helvetica] font-normal text-[#717182] text-sm tracking-[-0.15px] leading-5">
+                            <p className="font-normal text-[#717182] text-sm leading-5">
                               {session.completedDate
                                 ? `Completed ${formatDateTime(session.completedDate)}`
                                 : `Started ${formatDateTime(session.startedAt!)}`
@@ -400,12 +400,12 @@ export const WorkoutTrackerApp = (): JSX.Element => {
                           {(totalExercises > 0 || cardioText) && (
                             <div className="flex items-center gap-2">
                               {totalExercises > 0 && (
-                                <span className="[font-family:'Inter',Helvetica] font-normal text-[#717182] text-xs tracking-[0] leading-4">
+                                <span className="font-normal text-[#717182] text-xs leading-4">
                                   {totalExercises} {totalExercises === 1 ? 'exercise' : 'exercises'}
                                 </span>
                               )}
                               {cardioText && (
-                                <span className="[font-family:'Inter',Helvetica] font-normal text-[#717182] text-xs tracking-[0] leading-4">
+                                <span className="font-normal text-[#717182] text-xs leading-4">
                                   {totalExercises > 0 ? '+' : ''}{cardioText}
                                 </span>
                               )}

@@ -347,7 +347,13 @@ function executeReorderExercises(workoutData: Week[], params: ReorderExercisesPa
   const { session } = findWorkoutHierarchy(updatedData, params.weekNumber, params.sessionNumber);
 
   const oldIndex = params.exerciseNumber - 1;
-  const newIndex = params.newPosition - 1;
+  let newIndex = params.newPosition - 1;
+
+  // If moving to an earlier position, the newIndex is correct
+  // If moving to a later position, we need to adjust because splice removes first
+  if (oldIndex < newIndex) {
+    newIndex -= 1;
+  }
 
   const [exercise] = session!.exercises.splice(oldIndex, 1);
   session!.exercises.splice(newIndex, 0, exercise);

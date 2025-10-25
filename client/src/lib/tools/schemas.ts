@@ -4,9 +4,12 @@
  * See system prompt for global conventions (1-based indexing, position format, etc.)
  */
 
+export type ToolCategory = 'read' | 'write' | 'ui';
+
 export interface ToolSchema {
   name: string;
   description: string;
+  category: ToolCategory;
   input_schema: {
     type: 'object';
     properties: Record<string, any>;
@@ -21,6 +24,7 @@ export interface ToolSchema {
 export const modifyExerciseSchema: ToolSchema = {
   name: 'modify_exercise',
   description: 'Modify exercise properties',
+  category: 'write',
   input_schema: {
     type: 'object',
     properties: {
@@ -49,6 +53,7 @@ export const modifyExerciseSchema: ToolSchema = {
 export const addExerciseSchema: ToolSchema = {
   name: 'add_exercise',
   description: 'Add exercise to session',
+  category: 'write',
   input_schema: {
     type: 'object',
     properties: {
@@ -77,6 +82,7 @@ export const addExerciseSchema: ToolSchema = {
 export const removeExerciseSchema: ToolSchema = {
   name: 'remove_exercise',
   description: 'Remove exercise from session',
+  category: 'write',
   input_schema: {
     type: 'object',
     properties: {
@@ -91,6 +97,7 @@ export const removeExerciseSchema: ToolSchema = {
 export const reorderExercisesSchema: ToolSchema = {
   name: 'reorder_exercises',
   description: 'Move exercise to new position',
+  category: 'write',
   input_schema: {
     type: 'object',
     properties: {
@@ -110,6 +117,7 @@ export const reorderExercisesSchema: ToolSchema = {
 export const modifySessionSchema: ToolSchema = {
   name: 'modify_session',
   description: 'Modify session properties',
+  category: 'write',
   input_schema: {
     type: 'object',
     properties: {
@@ -132,6 +140,7 @@ export const modifySessionSchema: ToolSchema = {
 export const addSessionSchema: ToolSchema = {
   name: 'add_session',
   description: 'Add session to week',
+  category: 'write',
   input_schema: {
     type: 'object',
     properties: {
@@ -172,6 +181,7 @@ export const addSessionSchema: ToolSchema = {
 export const removeSessionSchema: ToolSchema = {
   name: 'remove_session',
   description: 'Remove session from week',
+  category: 'write',
   input_schema: {
     type: 'object',
     properties: {
@@ -185,6 +195,7 @@ export const removeSessionSchema: ToolSchema = {
 export const copySessionSchema: ToolSchema = {
   name: 'copy_session',
   description: 'Copy session to another week',
+  category: 'write',
   input_schema: {
     type: 'object',
     properties: {
@@ -204,6 +215,7 @@ export const copySessionSchema: ToolSchema = {
 export const modifyWeekSchema: ToolSchema = {
   name: 'modify_week',
   description: 'Modify week properties',
+  category: 'write',
   input_schema: {
     type: 'object',
     properties: {
@@ -225,6 +237,7 @@ export const modifyWeekSchema: ToolSchema = {
 export const addWeekSchema: ToolSchema = {
   name: 'add_week',
   description: 'Add weeks to program',
+  category: 'write',
   input_schema: {
     type: 'object',
     properties: {
@@ -279,12 +292,36 @@ export const addWeekSchema: ToolSchema = {
 export const removeWeekSchema: ToolSchema = {
   name: 'remove_week',
   description: 'Remove week from program',
+  category: 'write',
   input_schema: {
     type: 'object',
     properties: {
       weekNumber: { type: 'number' },
     },
     required: ['weekNumber'],
+  },
+};
+
+// ============================================================================
+// UI Tools
+// ============================================================================
+
+export const suggestRepliesSchema: ToolSchema = {
+  name: 'suggest_replies',
+  description: 'Suggest quick reply options for the user',
+  category: 'ui',
+  input_schema: {
+    type: 'object',
+    properties: {
+      replies: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Array of 1-3 short suggested replies (2-5 words each)',
+        minItems: 1,
+        maxItems: 3,
+      },
+    },
+    required: ['replies'],
   },
 };
 
@@ -304,6 +341,7 @@ export const allToolSchemas: ToolSchema[] = [
   modifyWeekSchema,
   addWeekSchema,
   removeWeekSchema,
+  suggestRepliesSchema,
 ];
 
 export const toolSchemasByName: Record<string, ToolSchema> = {
@@ -318,4 +356,5 @@ export const toolSchemasByName: Record<string, ToolSchema> = {
   modify_week: modifyWeekSchema,
   add_week: addWeekSchema,
   remove_week: removeWeekSchema,
+  suggest_replies: suggestRepliesSchema,
 };

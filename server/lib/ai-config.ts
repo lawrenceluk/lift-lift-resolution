@@ -20,27 +20,22 @@ TOOL CALLING CONVENTIONS:
 - All indices are 1-based (first week = 1, first session = 1, first exercise = 1)
 - position parameter: number or "end" to append
 - String fields support ranges ("8-10") and expressions ("70% 1RM", "bodyweight")
-- For targetLoad, use strings like "2-3 RIR", "bodyweight", "until failure"
+- For targetLoad, use RIR counts like "2-3 RIR" or "bodyweight" unless reps are not applicable
 - updates/modifications: only include fields you want to change
+- groupLabel: Used for supersets/circuits. Same letter = same group, different numbers = exercise order
+  * Examples: "A1" + "A2" = superset, "B1" + "B2" + "B3" = tri-set, "C1" = standalone
+  * When adding/modifying exercises, check existing groupLabels in the session
+  * If other exercises are grouped, consider grouping the new exercise appropriately
+  * If user asks to superset exercises, assign matching letters with sequential numbers
 
 IMPORTANT - Suggested Replies:
-- End EVERY response with 1-3 suggested replies the user can tap to respond
-- Format them on separate lines after your message like this:
----
-Suggested reply 1
-Suggested reply 2 (optional)
-Suggested reply 3 (optional)
-
-- Make suggested replies SHORT (2-5 words max)
-- Suggested replies should feel natural, like quick responses in a text conversation
-- Examples: "Tell me more", "Sounds good!", "Show me alternatives"
-
-Your response structure should ALWAYS be:
-[Your message here]
----
-[Suggested reply 1]
-[Suggested reply 2 (optional)]
-[Suggested reply 3 (optional)]`;
+- ALWAYS call the suggest_replies tool with 1-3 short reply options (2-5 words each)
+- Suggest replies that ADVANCE the conversation or provide USEFUL actions
+- AVOID generic/useless replies like "Okay", "Thanks", "Got it" - these don't add value
+- Good examples: "Tell me more", "Show alternatives", "Adjust intensity", "Skip this exercise"
+- Bad examples: "Okay, thanks", "Sounds good", "Alright" - too generic
+- Each reply should represent a meaningfully different direction for the conversation
+- You can combine the suggest_replies tool with other tools in a single response`;
 
   // Add workout context if available
   if (context) {
@@ -59,6 +54,7 @@ Exercises in this session:`;
 
       session.exercises?.forEach((ex: any, idx: number) => {
         systemPrompt += `\n${idx + 1}. ${ex.name}`;
+        if (ex.groupLabel) systemPrompt += ` [${ex.groupLabel}]`;
         systemPrompt += ` - ${ex.workingSets} sets × ${ex.reps} reps @ ${ex.targetLoad}`;
         if (ex.skipped) {
           systemPrompt += ` [SKIPPED]`;
@@ -122,10 +118,13 @@ Exercises in this session:`;
       const totalSessions = context.fullProgram.reduce((sum: number, w: any) => sum + (w.sessions?.length || 0), 0);
       systemPrompt += `\n- Total sessions: ${totalSessions}`;
 
-      // List all weeks with basic info
+      // List all sessions with compact format: session number + name
+      systemPrompt += `\n\nAll Sessions:`;
       context.fullProgram.forEach((w: any) => {
-        const completedSessions = w.sessions?.filter((s: any) => s.completed).length || 0;
-        systemPrompt += `\n  Week ${w.weekNumber}${w.phase ? ` (${w.phase})` : ''}: ${completedSessions}/${w.sessions?.length || 0} sessions completed`;
+        const sessionList = w.sessions?.map((s: any, idx: number) =>
+          `${idx + 1}. ${s.name || 'Unnamed'}${s.completed ? ' ✓' : ''}`
+        ).join(', ') || 'none';
+        systemPrompt += `\n  Week ${w.weekNumber}${w.phase ? ` (${w.phase})` : ''}: ${sessionList}`;
       });
     }
 

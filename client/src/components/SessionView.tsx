@@ -1,6 +1,7 @@
 import React from 'react';
 import { WorkoutSession, SetResult, Week } from '@/types/workout';
 import { ExerciseView } from './ExerciseView';
+import { ExerciseProgressGrid } from './ExerciseProgressGrid';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -34,9 +35,6 @@ export const SessionView: React.FC<SessionViewProps> = ({
   const allExercisesComplete = session.exercises.every(
     (ex) => ex.skipped || (ex.sets || []).filter((s) => s.completed).length >= ex.workingSets
   );
-  const completedExercises = session.exercises.filter(
-    (ex) => !ex.skipped && (ex.sets || []).filter((s) => s.completed).length >= ex.workingSets
-  ).length;
 
   return (
     <div className="min-h-screen bg-white pb-24 flex flex-col items-center">
@@ -49,14 +47,9 @@ export const SessionView: React.FC<SessionViewProps> = ({
             <h1 className="text-lg font-semibold text-gray-900">{session.name}</h1>
             <p className="text-sm text-gray-500">Week {weekNumber} • Session {Number(session.id.split('-').pop())}</p>
           </div>
-          <div className="flex flex-col items-end gap-1">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">
-                {completedExercises}/{session.exercises.length} exercises
-              </span>
-            </div>
-            {session.completed && <Badge className="bg-green-500">Completed</Badge>}
-            {!session.completed && session.startedAt && <Badge className="bg-orange-500">In Progress</Badge>}
+          <div className="flex flex-col items-end gap-2">
+            <ExerciseProgressGrid exercises={session.exercises} />
+            {session.completed && <Badge className="bg-green-500 text-xs">Completed</Badge>}
           </div>
         </div>
       </header>

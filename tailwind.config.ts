@@ -47,7 +47,11 @@ module.exports = {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
+        heading: ["Lexend Deca", "sans-serif"],
+        body: ["Red Hat Text", "sans-serif"],
+        mono: ["SUSE Mono", "monospace"],
         sans: [
+          "Red Hat Text",
           "ui-sans-serif",
           "system-ui",
           "sans-serif",

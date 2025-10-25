@@ -124,7 +124,17 @@ function buildToolCallPreview(toolCall: ToolCall, workoutData: Week[]): PreviewR
 }
 
 function buildModifyExercisePreview(params: any, workoutData: Week[]): PreviewResult {
-  const { weekNumber, sessionNumber, exerciseNumber, updates } = params;
+  const { weekNumber, sessionNumber, exerciseNumber, updates: rawUpdates } = params;
+
+  // Handle case where updates might be a stringified JSON
+  let updates = rawUpdates;
+  if (typeof updates === 'string') {
+    try {
+      updates = JSON.parse(updates);
+    } catch {
+      updates = {};
+    }
+  }
 
   // Find the exercise
   const week = workoutData.find(w => w.weekNumber === weekNumber);
@@ -175,13 +185,23 @@ function buildRemoveExercisePreview(params: any, workoutData: Week[]): PreviewRe
   return {
     title: `Remove: ${exerciseName}`,
     changes: [
-      { field: 'Location', after: `Week ${weekNumber}, Session ${sessionNumber}` }
+      { field: 'From', after: `Week ${weekNumber}, Session ${sessionNumber}` }
     ]
   };
 }
 
 function buildModifySessionPreview(params: any, workoutData: Week[]): PreviewResult {
-  const { weekNumber, sessionNumber, updates } = params;
+  const { weekNumber, sessionNumber, updates: rawUpdates } = params;
+
+  // Handle case where updates might be a stringified JSON
+  let updates = rawUpdates;
+  if (typeof updates === 'string') {
+    try {
+      updates = JSON.parse(updates);
+    } catch {
+      updates = {};
+    }
+  }
 
   const week = workoutData.find(w => w.weekNumber === weekNumber);
   const session = week?.sessions[sessionNumber - 1];
@@ -223,7 +243,7 @@ function buildRemoveSessionPreview(params: any, workoutData: Week[]): PreviewRes
   return {
     title: `Remove Session: ${sessionName}`,
     changes: [
-      { field: 'Location', after: `Week ${weekNumber}` }
+      { field: 'From', after: `Week ${weekNumber}` }
     ]
   };
 }
@@ -240,7 +260,7 @@ function buildReorderExercisesPreview(params: any, workoutData: Week[]): Preview
     title: `Reorder: ${exerciseName}`,
     changes: [
       { field: 'Current Position', before: String(exerciseNumber), after: String(newPosition) },
-      { field: 'Location', after: `Week ${weekNumber}, Session ${sessionNumber}` }
+      { field: 'From', after: `Week ${weekNumber}, Session ${sessionNumber}` }
     ]
   };
 }
@@ -264,7 +284,17 @@ function buildCopySessionPreview(params: any, workoutData: Week[]): PreviewResul
 }
 
 function buildModifyWeekPreview(params: any, workoutData: Week[]): PreviewResult {
-  const { weekNumber, updates } = params;
+  const { weekNumber, updates: rawUpdates } = params;
+
+  // Handle case where updates might be a stringified JSON
+  let updates = rawUpdates;
+  if (typeof updates === 'string') {
+    try {
+      updates = JSON.parse(updates);
+    } catch {
+      updates = {};
+    }
+  }
 
   const week = workoutData.find(w => w.weekNumber === weekNumber);
 

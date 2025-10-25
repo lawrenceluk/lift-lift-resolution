@@ -156,8 +156,8 @@
   border-radius: 50%;
   border: 3px solid rgba(0, 0, 0, 0.1);
   transform-origin: 50% 50%;
-  transform: perspective(200px) rotateX(66deg);
-  animation: spinner-wiggle 1.2s infinite;
+  transform: perspective(200px) rotateX(45deg);
+  animation: spinner-wiggle 1.6s infinite;
 }
 
 .spinner-loader:before,
@@ -285,7 +285,22 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-body;
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-heading;
+  }
+
+  code,
+  pre,
+  kbd {
+    @apply font-mono;
   }
 }

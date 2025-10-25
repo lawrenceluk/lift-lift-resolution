@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { MessageSquare, X, ChevronLeft, ChevronRight, Maximize2, Minus, Send, Eraser, Check } from 'lucide-react';
+import { MessageSquare, X, ChevronLeft, ChevronRight, Maximize2, Minus, Send, Eraser, Check, RefreshCcwDot } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -102,6 +102,7 @@ export const CoachChat = () => {
   // Create a "waiting for coach" placeholder when user sends message
   // This shows immediately before streaming starts
   const isWaitingForCoach = !isViewingHistory &&
+    currentMessage &&
     currentMessage.role === 'user' &&
     (isLoading || isStreaming);
 
@@ -215,7 +216,13 @@ export const CoachChat = () => {
           })
           .join('. ');
 
+        // Immediately advance to next message to show coach is thinking
+        // This creates the visual feedback before the next message arrives
+        // We increment the current index, which will be out of bounds until the new message arrives
+        setCurrentMessageIndex(prev => prev + 1);
+
         // Send confirmation back to LLM (this will be filtered from UI display)
+        // This will trigger streaming of the next coach message
         await sendChatMessageViaHook(`[SYSTEM] ${successDetails}. The changes have been successfully applied to the workout program.`);
       } else {
         // Build error message
@@ -303,7 +310,7 @@ export const CoachChat = () => {
               <div className="flex items-center gap-1">
                 {isConfirmingReset && (
                   <div className="flex items-center gap-1">
-                    <p className="text-sm text-gray-600">Reset conversation?</p>
+                    <p className="text-sm text-gray-600">New conversation?</p>
                     <Button variant="ghost" size="icon" onClick={handleReset} aria-label="Confirm">
                       <span className="text-sm">OK</span>
                     </Button>
@@ -318,7 +325,7 @@ export const CoachChat = () => {
                     aria-label="Reset conversation"
                     className="h-8 w-8"
                   >
-                    <Eraser className="h-5 w-5" />
+                    <RefreshCcwDot className="h-5 w-5" />
                   </Button>
                 )}
                 <Button
@@ -336,8 +343,8 @@ export const CoachChat = () => {
             {!isMinimized && (
               <div className="flex-1 overflow-y-auto min-h-0 overscroll-contain">
                 <div className="px-6 py-4">
-                  {/* Show waiting/streaming state when user just sent a message */}
-                  {isWaitingForCoach ? (
+                  {/* Show waiting/streaming state when loading, or when message is undefined (just advanced index) */}
+                  {isWaitingForCoach || !currentMessage ? (
                     <div className="flex items-start gap-4 w-full">
                       <div
                         className="hidden sm:block w-28 h-28 sm:w-36 sm:h-36 md:w-40 md:h-40 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden select-none pointer-events-none"
@@ -366,7 +373,7 @@ export const CoachChat = () => {
                         )}
                       </div>
                     </div>
-                  ) : currentMessage.role === 'coach' ? (
+                  ) : currentMessage && currentMessage.role === 'coach' ? (
                     <div className="flex items-start gap-4 w-full">
                       <div
                         className="hidden sm:block w-28 h-28 sm:w-36 sm:h-36 md:w-40 md:h-40 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden select-none pointer-events-none"
@@ -402,18 +409,18 @@ export const CoachChat = () => {
                         })()}
                       </div>
                     </div>
-                  ) : (
+                  ) : currentMessage ? (
                     <div className="w-full">
                       <Badge variant="outline" className="text-gray-900 mb-2">You</Badge>
                       <p className="text-gray-900 text-md leading-relaxed">
                         {currentMessage.content}
                       </p>
                     </div>
-                  )}
+                  ) : null}
                 </div>
 
                 {/* User Input Area - only shown when at latest message */}
-                {!isViewingHistory && currentMessage.role === 'coach' && !isLoading && !isStreaming && (
+                {!isViewingHistory && currentMessage && currentMessage.role === 'coach' && !isLoading && !isStreaming && (
                   <div className="border-t border-gray-200 bg-gray-50">
                     {/* Confirmation Buttons - shown when tool calls are present */}
                     {currentMessage.toolCalls && currentMessage.toolCalls.length > 0 ? (
