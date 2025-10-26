@@ -7,10 +7,12 @@ import { Badge } from './ui/badge';
 import { useChatWebSocket } from '@/hooks/useChatWebSocket';
 import { useWorkoutProgramContext } from '@/contexts/WorkoutProgramContext';
 import { findSession, findWeek, parseId } from '@/utils/idHelpers';
-import { ToolCallPreview } from '@/components/ToolCallPreview';
+import { ToolCallPreview, buildToolCallPreview } from '@/components/ToolCallPreview';
 import { executeToolCalls } from '@/lib/tools/executor';
+import { translateToGUIDs } from '@/lib/tools/translator';
+import { stripGUIDs } from '@/utils/guidHelpers';
 import type { WorkoutContext } from '@/types/chat';
-import type { ToolCall } from '@/types/chat';
+import type { ToolCall, ToolCallSnapshot } from '@/types/chat';
 
 type CoachAvatarPose =
   | 'default-pose'
@@ -73,6 +75,7 @@ export const CoachChat = () => {
     error,
     sendMessage: sendChatMessageViaHook,
     resetConversation,
+    updateMessage,
   } = useChatWebSocket({
     initialMessage: {
       id: '1',
@@ -98,6 +101,27 @@ export const CoachChat = () => {
       setCurrentMessageIndex(visibleMessages.length - 1);
     }
   }, [visibleMessages.length]); // Only trigger when length changes
+
+  // Capture execution snapshots for messages with toolCalls when they arrive
+  // This preserves the exact state when the operations were proposed
+  useEffect(() => {
+    if (!weeks) return;
+
+    conversationHistory.forEach(msg => {
+      // If message has tool calls but no execution snapshot yet, capture it
+      if (msg.toolCalls && msg.toolCalls.length > 0 && !msg.executionSnapshot) {
+        const snapshot: ToolCallSnapshot[] = msg.toolCalls.map(toolCall => {
+          const preview = buildToolCallPreview(toolCall, weeks);
+          return {
+            toolCallId: toolCall.id,
+            title: preview.title,
+            changes: preview.changes,
+          };
+        });
+        updateMessage(msg.id, { executionSnapshot: snapshot });
+      }
+    });
+  }, [conversationHistory, weeks, updateMessage]); // Run when conversation or weeks change
 
   // Create a "waiting for coach" placeholder when user sends message
   // This shows immediately before streaming starts
@@ -182,12 +206,20 @@ export const CoachChat = () => {
     setIsExecutingTools(true);
 
     try {
-      // Execute all tool calls atomically
-      const result = await executeToolCalls(toolCalls, weeks);
+      // Translate index-based tool calls to GUID-based
+      // This creates ephemeral GUIDs for deterministic, order-independent execution
+      // Note: Execution snapshot was already captured when tool calls arrived (via useEffect)
+      const { snapshot, translatedCalls } = translateToGUIDs(toolCalls, weeks);
+
+      // Execute all tool calls atomically on the GUID snapshot
+      const result = await executeToolCalls(translatedCalls, snapshot);
 
       if (result.success) {
+        // Strip ephemeral GUIDs from result before saving
+        const cleanData = stripGUIDs(result.data);
+
         // Update workout data in state and localStorage
-        updateWeeks(result.data);
+        updateWeeks(cleanData);
 
         // Build detailed success message for LLM with parameter details
         const successDetails = result.results
@@ -401,6 +433,7 @@ export const CoachChat = () => {
                               <ToolCallPreview
                                 toolCalls={currentMessage.toolCalls}
                                 workoutData={weeks}
+                                executionSnapshot={currentMessage.executionSnapshot}
                               />
                             );
                           } else {

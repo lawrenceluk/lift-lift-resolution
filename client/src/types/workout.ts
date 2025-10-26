@@ -1,4 +1,5 @@
 export interface SetResult {
+  guid?: string; // Ephemeral GUID for deterministic operations (not persisted)
   setNumber: number;
   reps: number;
   weight?: number;
@@ -10,6 +11,7 @@ export interface SetResult {
 
 export interface Exercise {
   id: string;
+  guid?: string; // Ephemeral GUID for deterministic operations (not persisted)
   name: string;
   groupLabel?: string;
   warmupSets: number;
@@ -35,6 +37,7 @@ export interface CardioBlock {
 
 export interface WorkoutSession {
   id: string;
+  guid?: string; // Ephemeral GUID for deterministic operations (not persisted)
   name: string;
   scheduledDate?: string;
   dayOfWeek?: string;
@@ -53,6 +56,7 @@ export type WorkoutStatus = 'planned' | 'in-progress' | 'completed';
 
 export interface Week {
   id: string;
+  guid?: string; // Ephemeral GUID for deterministic operations (not persisted)
   weekNumber: number;
   phase: string;
   startDate: string;

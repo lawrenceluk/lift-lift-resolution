@@ -13,11 +13,10 @@ import type { Exercise, WorkoutSession, Week, CardioBlock } from '@/types/workou
 
 /**
  * Parameters for modifying an existing exercise
+ * Uses GUID for deterministic targeting
  */
 export interface ModifyExerciseParams {
-  weekNumber: number;
-  sessionNumber: number;
-  exerciseNumber: number;
+  exerciseGuid: string;
   updates: {
     name?: string;
     reps?: string;
@@ -33,19 +32,18 @@ export interface ModifyExerciseParams {
 
 /**
  * Parameters for removing an exercise from a session
+ * Uses GUID for deterministic targeting
  */
 export interface RemoveExerciseParams {
-  weekNumber: number;
-  sessionNumber: number;
-  exerciseNumber: number;
+  exerciseGuid: string;
 }
 
 /**
  * Parameters for adding a new exercise to a session
+ * Uses session GUID for scope, position for insertion point
  */
 export interface AddExerciseParams {
-  weekNumber: number;
-  sessionNumber: number;
+  sessionGuid: string;
   position: number | 'end';
   exercise: {
     name: string;
@@ -61,11 +59,10 @@ export interface AddExerciseParams {
 
 /**
  * Parameters for reordering exercises within a session
+ * Uses exercise GUID for targeting, position for destination
  */
 export interface ReorderExercisesParams {
-  weekNumber: number;
-  sessionNumber: number;
-  exerciseNumber: number;
+  exerciseGuid: string;
   newPosition: number;
 }
 
@@ -75,10 +72,10 @@ export interface ReorderExercisesParams {
 
 /**
  * Parameters for modifying session-level properties
+ * Uses GUID for deterministic targeting
  */
 export interface ModifySessionParams {
-  weekNumber: number;
-  sessionNumber: number;
+  sessionGuid: string;
   updates: {
     name?: string;
     scheduledDate?: string;
@@ -91,10 +88,10 @@ export interface ModifySessionParams {
 
 /**
  * Parameters for removing an entire session from a week
+ * Uses GUID for deterministic targeting
  */
 export interface RemoveSessionParams {
-  weekNumber: number;
-  sessionNumber: number;
+  sessionGuid: string;
 }
 
 /**
@@ -112,20 +109,21 @@ export interface NewSessionData {
 
 /**
  * Parameters for adding a new session to a week
+ * Uses week GUID for scope, position for insertion point
  */
 export interface AddSessionParams {
-  weekNumber: number;
+  weekGuid: string;
   position: number | 'end';
   session: NewSessionData;
 }
 
 /**
  * Parameters for copying a session within or between weeks
+ * Uses GUIDs for source and target, position for insertion point
  */
 export interface CopySessionParams {
-  sourceWeekNumber: number;
-  sourceSessionNumber: number;
-  targetWeekNumber: number;
+  sourceSessionGuid: string;
+  targetWeekGuid: string;
   position: number | 'end';
 }
 
@@ -135,9 +133,10 @@ export interface CopySessionParams {
 
 /**
  * Parameters for modifying week-level properties
+ * Uses GUID for deterministic targeting
  */
 export interface ModifyWeekParams {
-  weekNumber: number;
+  weekGuid: string;
   updates: {
     phase?: string;
     startDate?: string;
@@ -168,9 +167,10 @@ export interface AddWeekParams {
 
 /**
  * Parameters for removing a week from the program
+ * Uses GUID for deterministic targeting
  */
 export interface RemoveWeekParams {
-  weekNumber: number;
+  weekGuid: string;
 }
 
 // ============================================================================

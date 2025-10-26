@@ -12,6 +12,21 @@ export interface Message {
   avatarPose?: string; // Only relevant for coach messages
   suggestedReplies?: string[]; // Only relevant for coach messages
   toolCalls?: ToolCall[]; // Tool calls from LLM (coach messages only)
+  executionSnapshot?: ToolCallSnapshot[]; // Captured preview of tool calls at execution time
+}
+
+/**
+ * Snapshot of a tool call preview at execution time
+ * Preserves the exact before/after state when the tool was executed
+ */
+export interface ToolCallSnapshot {
+  toolCallId: string;
+  title: string;
+  changes: Array<{
+    field: string;
+    before?: string;
+    after: string;
+  }>;
 }
 
 /**

@@ -2,11 +2,13 @@
  * Tool Execution Functions
  *
  * Validates and executes tool calls to modify workout programs.
+ * Uses ephemeral GUIDs for deterministic, order-independent execution.
  * Follows atomic, all-or-nothing execution with proper error handling.
  */
 
 import type { Week, Exercise, WorkoutSession } from '@/types/workout';
 import type { ToolCall } from '@/types/chat';
+import { findByGuid } from '@/utils/guidHelpers';
 import type {
   ModifyExerciseParams,
   AddExerciseParams,
@@ -75,47 +77,6 @@ function createWeekId(weekNumber: number): string {
 }
 
 /**
- * Find and validate week/session/exercise hierarchy
- * Returns found items or errors
- */
-function findWorkoutHierarchy(
-  workoutData: Week[],
-  weekNumber: number,
-  sessionNumber?: number,
-  exerciseNumber?: number
-): { week?: Week; session?: WorkoutSession; exercise?: Exercise; errors: string[] } {
-  const errors: string[] = [];
-
-  const week = workoutData.find(w => w.weekNumber === weekNumber);
-  if (!week) {
-    errors.push(`Week ${weekNumber} does not exist`);
-    return { errors };
-  }
-
-  if (sessionNumber === undefined) {
-    return { week, errors };
-  }
-
-  const session = week.sessions[sessionNumber - 1];
-  if (!session) {
-    errors.push(`Session ${sessionNumber} does not exist in Week ${weekNumber}`);
-    return { week, errors };
-  }
-
-  if (exerciseNumber === undefined) {
-    return { week, session, errors };
-  }
-
-  const exercise = session.exercises[exerciseNumber - 1];
-  if (!exercise) {
-    errors.push(`Exercise ${exerciseNumber} does not exist in Session ${sessionNumber}`);
-    return { week, session, errors };
-  }
-
-  return { week, session, exercise, errors };
-}
-
-/**
  * Renumber exercises in a session
  */
 function renumberExercises(session: WorkoutSession, weekNumber: number, sessionNumber: number, startIndex: number = 0): void {
@@ -154,8 +115,13 @@ function renumberWeeks(weeks: Week[], startIndex: number = 0): void {
 // ============================================================================
 
 function validateModifyExercise(params: ModifyExerciseParams, workoutData: Week[]): ValidationResult {
-  const { errors } = findWorkoutHierarchy(workoutData, params.weekNumber, params.sessionNumber, params.exerciseNumber);
-  if (errors.length > 0) return { valid: false, errors };
+  const errors: string[] = [];
+  const { exercise } = findByGuid(workoutData, params.exerciseGuid);
+
+  if (!exercise) {
+    errors.push(`Exercise with GUID ${params.exerciseGuid} not found`);
+    return { valid: false, errors };
+  }
 
   if (Object.keys(params.updates).length === 0) {
     errors.push('No updates provided');
@@ -177,15 +143,20 @@ function validateModifyExercise(params: ModifyExerciseParams, workoutData: Week[
 }
 
 function validateAddExercise(params: AddExerciseParams, workoutData: Week[]): ValidationResult {
-  const { session, errors } = findWorkoutHierarchy(workoutData, params.weekNumber, params.sessionNumber);
-  if (errors.length > 0) return { valid: false, errors };
+  const errors: string[] = [];
+  const { session } = findByGuid(workoutData, params.sessionGuid);
+
+  if (!session) {
+    errors.push(`Session with GUID ${params.sessionGuid} not found`);
+    return { valid: false, errors };
+  }
 
   if (!params.exercise.name) errors.push('Exercise name is required');
   if (!params.exercise.reps) errors.push('Exercise reps is required');
   if (!params.exercise.targetLoad) errors.push('Exercise targetLoad is required');
   if (params.exercise.workingSets === undefined) errors.push('Exercise workingSets is required');
 
-  const maxPosition = session!.exercises.length + 1;
+  const maxPosition = session.exercises.length + 1;
   if (params.position !== 'end' && (params.position < 1 || params.position > maxPosition)) {
     errors.push(`Invalid position ${params.position}. Must be 1-${maxPosition} or "end"`);
   }
@@ -194,19 +165,26 @@ function validateAddExercise(params: AddExerciseParams, workoutData: Week[]): Va
 }
 
 function validateRemoveExercise(params: RemoveExerciseParams, workoutData: Week[]): ValidationResult {
-  const { errors } = findWorkoutHierarchy(workoutData, params.weekNumber, params.sessionNumber, params.exerciseNumber);
+  const errors: string[] = [];
+  const { exercise } = findByGuid(workoutData, params.exerciseGuid);
+
+  if (!exercise) {
+    errors.push(`Exercise with GUID ${params.exerciseGuid} not found`);
+  }
+
   return { valid: errors.length === 0, errors };
 }
 
 function validateReorderExercises(params: ReorderExercisesParams, workoutData: Week[]): ValidationResult {
-  const { session, errors } = findWorkoutHierarchy(workoutData, params.weekNumber, params.sessionNumber);
-  if (errors.length > 0) return { valid: false, errors };
+  const errors: string[] = [];
+  const { exercise, parentSession } = findByGuid(workoutData, params.exerciseGuid);
 
-  if (!session!.exercises[params.exerciseNumber - 1]) {
-    errors.push(`Exercise ${params.exerciseNumber} does not exist`);
+  if (!exercise || !parentSession) {
+    errors.push(`Exercise with GUID ${params.exerciseGuid} not found`);
+    return { valid: false, errors };
   }
 
-  const maxPosition = session!.exercises.length;
+  const maxPosition = parentSession.exercises.length;
   if (params.newPosition < 1 || params.newPosition > maxPosition) {
     errors.push(`Invalid position ${params.newPosition}. Must be 1-${maxPosition}`);
   }
@@ -215,8 +193,13 @@ function validateReorderExercises(params: ReorderExercisesParams, workoutData: W
 }
 
 function validateModifySession(params: ModifySessionParams, workoutData: Week[]): ValidationResult {
-  const { errors } = findWorkoutHierarchy(workoutData, params.weekNumber, params.sessionNumber);
-  if (errors.length > 0) return { valid: false, errors };
+  const errors: string[] = [];
+  const { session } = findByGuid(workoutData, params.sessionGuid);
+
+  if (!session) {
+    errors.push(`Session with GUID ${params.sessionGuid} not found`);
+    return { valid: false, errors };
+  }
 
   if (Object.keys(params.updates).length === 0) {
     errors.push('No updates provided');
@@ -226,12 +209,17 @@ function validateModifySession(params: ModifySessionParams, workoutData: Week[])
 }
 
 function validateAddSession(params: AddSessionParams, workoutData: Week[]): ValidationResult {
-  const { week, errors } = findWorkoutHierarchy(workoutData, params.weekNumber);
-  if (errors.length > 0) return { valid: false, errors };
+  const errors: string[] = [];
+  const { week } = findByGuid(workoutData, params.weekGuid);
+
+  if (!week) {
+    errors.push(`Week with GUID ${params.weekGuid} not found`);
+    return { valid: false, errors };
+  }
 
   if (!params.session.name) errors.push('Session name is required');
 
-  const maxPosition = week!.sessions.length + 1;
+  const maxPosition = week.sessions.length + 1;
   if (params.position !== 'end' && (params.position < 1 || params.position > maxPosition)) {
     errors.push(`Invalid position ${params.position}. Must be 1-${maxPosition} or "end"`);
   }
@@ -240,32 +228,49 @@ function validateAddSession(params: AddSessionParams, workoutData: Week[]): Vali
 }
 
 function validateRemoveSession(params: RemoveSessionParams, workoutData: Week[]): ValidationResult {
-  const { errors } = findWorkoutHierarchy(workoutData, params.weekNumber, params.sessionNumber);
+  const errors: string[] = [];
+  const { session } = findByGuid(workoutData, params.sessionGuid);
+
+  if (!session) {
+    errors.push(`Session with GUID ${params.sessionGuid} not found`);
+  }
+
   return { valid: errors.length === 0, errors };
 }
 
 function validateCopySession(params: CopySessionParams, workoutData: Week[]): ValidationResult {
-  const sourceResult = findWorkoutHierarchy(workoutData, params.sourceWeekNumber, params.sourceSessionNumber);
-  if (sourceResult.errors.length > 0) {
-    return { valid: false, errors: sourceResult.errors.map(e => `Source: ${e}`) };
+  const errors: string[] = [];
+  const { session: sourceSession } = findByGuid(workoutData, params.sourceSessionGuid);
+  const { week: targetWeek } = findByGuid(workoutData, params.targetWeekGuid);
+
+  if (!sourceSession) {
+    errors.push(`Source session with GUID ${params.sourceSessionGuid} not found`);
   }
 
-  const targetResult = findWorkoutHierarchy(workoutData, params.targetWeekNumber);
-  if (targetResult.errors.length > 0) {
-    return { valid: false, errors: targetResult.errors.map(e => `Target: ${e}`) };
+  if (!targetWeek) {
+    errors.push(`Target week with GUID ${params.targetWeekGuid} not found`);
   }
 
-  const maxPosition = targetResult.week!.sessions.length + 1;
+  if (errors.length > 0) {
+    return { valid: false, errors };
+  }
+
+  const maxPosition = targetWeek!.sessions.length + 1;
   if (params.position !== 'end' && (params.position < 1 || params.position > maxPosition)) {
-    return { valid: false, errors: [`Invalid position ${params.position}. Must be 1-${maxPosition} or "end"`] };
+    errors.push(`Invalid position ${params.position}. Must be 1-${maxPosition} or "end"`);
   }
 
-  return { valid: true, errors: [] };
+  return { valid: errors.length === 0, errors };
 }
 
 function validateModifyWeek(params: ModifyWeekParams, workoutData: Week[]): ValidationResult {
-  const { errors } = findWorkoutHierarchy(workoutData, params.weekNumber);
-  if (errors.length > 0) return { valid: false, errors };
+  const errors: string[] = [];
+  const { week } = findByGuid(workoutData, params.weekGuid);
+
+  if (!week) {
+    errors.push(`Week with GUID ${params.weekGuid} not found`);
+    return { valid: false, errors };
+  }
 
   if (Object.keys(params.updates).length === 0) {
     errors.push('No updates provided');
@@ -290,7 +295,13 @@ function validateAddWeek(params: AddWeekParams, workoutData: Week[]): Validation
 }
 
 function validateRemoveWeek(params: RemoveWeekParams, workoutData: Week[]): ValidationResult {
-  const { errors } = findWorkoutHierarchy(workoutData, params.weekNumber);
+  const errors: string[] = [];
+  const { week } = findByGuid(workoutData, params.weekGuid);
+
+  if (!week) {
+    errors.push(`Week with GUID ${params.weekGuid} not found`);
+  }
+
   return { valid: errors.length === 0, errors };
 }
 
@@ -300,14 +311,14 @@ function validateRemoveWeek(params: RemoveWeekParams, workoutData: Week[]): Vali
 
 function executeModifyExercise(workoutData: Week[], params: ModifyExerciseParams): Week[] {
   const updatedData = deepClone(workoutData);
-  const { exercise } = findWorkoutHierarchy(updatedData, params.weekNumber, params.sessionNumber, params.exerciseNumber);
+  const { exercise } = findByGuid(updatedData, params.exerciseGuid);
   Object.assign(exercise!, params.updates);
   return updatedData;
 }
 
 function executeAddExercise(workoutData: Week[], params: AddExerciseParams): Week[] {
   const updatedData = deepClone(workoutData);
-  const { session } = findWorkoutHierarchy(updatedData, params.weekNumber, params.sessionNumber);
+  const { session, parentWeek } = findByGuid(updatedData, params.sessionGuid);
 
   const insertPosition = params.position === 'end' ? session!.exercises.length : params.position - 1;
 
@@ -323,30 +334,35 @@ function executeAddExercise(workoutData: Week[], params: AddExerciseParams): Wee
     groupLabel: params.exercise.groupLabel,
     sets: [],
     skipped: false,
-  }; 
+  };
 
   session!.exercises.splice(insertPosition, 0, newExercise);
-  renumberExercises(session!, params.weekNumber, params.sessionNumber, insertPosition);
+
+  // Renumber using week and session numbers
+  const sessionIndex = parentWeek!.sessions.indexOf(session!);
+  renumberExercises(session!, parentWeek!.weekNumber, sessionIndex + 1, insertPosition);
 
   return updatedData;
 }
 
 function executeRemoveExercise(workoutData: Week[], params: RemoveExerciseParams): Week[] {
   const updatedData = deepClone(workoutData);
-  const { session } = findWorkoutHierarchy(updatedData, params.weekNumber, params.sessionNumber);
+  const { exercise, parentSession, parentWeek } = findByGuid(updatedData, params.exerciseGuid);
 
-  const removeIndex = params.exerciseNumber - 1;
-  session!.exercises.splice(removeIndex, 1);
-  renumberExercises(session!, params.weekNumber, params.sessionNumber, removeIndex);
+  const removeIndex = parentSession!.exercises.indexOf(exercise!);
+  parentSession!.exercises.splice(removeIndex, 1);
+
+  const sessionIndex = parentWeek!.sessions.indexOf(parentSession!);
+  renumberExercises(parentSession!, parentWeek!.weekNumber, sessionIndex + 1, removeIndex);
 
   return updatedData;
 }
 
 function executeReorderExercises(workoutData: Week[], params: ReorderExercisesParams): Week[] {
   const updatedData = deepClone(workoutData);
-  const { session } = findWorkoutHierarchy(updatedData, params.weekNumber, params.sessionNumber);
+  const { exercise, parentSession, parentWeek } = findByGuid(updatedData, params.exerciseGuid);
 
-  const oldIndex = params.exerciseNumber - 1;
+  const oldIndex = parentSession!.exercises.indexOf(exercise!);
   let newIndex = params.newPosition - 1;
 
   // If moving to an earlier position, the newIndex is correct
@@ -355,23 +371,25 @@ function executeReorderExercises(workoutData: Week[], params: ReorderExercisesPa
     newIndex -= 1;
   }
 
-  const [exercise] = session!.exercises.splice(oldIndex, 1);
-  session!.exercises.splice(newIndex, 0, exercise);
-  renumberExercises(session!, params.weekNumber, params.sessionNumber);
+  const [exerciseToMove] = parentSession!.exercises.splice(oldIndex, 1);
+  parentSession!.exercises.splice(newIndex, 0, exerciseToMove);
+
+  const sessionIndex = parentWeek!.sessions.indexOf(parentSession!);
+  renumberExercises(parentSession!, parentWeek!.weekNumber, sessionIndex + 1);
 
   return updatedData;
 }
 
 function executeModifySession(workoutData: Week[], params: ModifySessionParams): Week[] {
   const updatedData = deepClone(workoutData);
-  const { session } = findWorkoutHierarchy(updatedData, params.weekNumber, params.sessionNumber);
+  const { session } = findByGuid(updatedData, params.sessionGuid);
   Object.assign(session!, params.updates);
   return updatedData;
 }
 
 function executeAddSession(workoutData: Week[], params: AddSessionParams): Week[] {
   const updatedData = deepClone(workoutData);
-  const { week } = findWorkoutHierarchy(updatedData, params.weekNumber);
+  const { week } = findByGuid(updatedData, params.weekGuid);
 
   const insertPosition = params.position === 'end' ? week!.sessions.length : params.position - 1;
 
@@ -407,23 +425,23 @@ function executeAddSession(workoutData: Week[], params: AddSessionParams): Week[
 
 function executeRemoveSession(workoutData: Week[], params: RemoveSessionParams): Week[] {
   const updatedData = deepClone(workoutData);
-  const { week } = findWorkoutHierarchy(updatedData, params.weekNumber);
+  const { session, parentWeek } = findByGuid(updatedData, params.sessionGuid);
 
-  const removeIndex = params.sessionNumber - 1;
-  week!.sessions.splice(removeIndex, 1);
-  renumberSessions(week!, removeIndex);
+  const removeIndex = parentWeek!.sessions.indexOf(session!);
+  parentWeek!.sessions.splice(removeIndex, 1);
+  renumberSessions(parentWeek!, removeIndex);
 
   return updatedData;
 }
 
 function executeCopySession(workoutData: Week[], params: CopySessionParams): Week[] {
   const updatedData = deepClone(workoutData);
-  const sourceResult = findWorkoutHierarchy(updatedData, params.sourceWeekNumber, params.sourceSessionNumber);
-  const targetResult = findWorkoutHierarchy(updatedData, params.targetWeekNumber);
+  const { session: sourceSession } = findByGuid(updatedData, params.sourceSessionGuid);
+  const { week: targetWeek } = findByGuid(updatedData, params.targetWeekGuid);
 
-  const insertPosition = params.position === 'end' ? targetResult.week!.sessions.length : params.position - 1;
+  const insertPosition = params.position === 'end' ? targetWeek!.sessions.length : params.position - 1;
 
-  const newSession: WorkoutSession = deepClone(sourceResult.session!);
+  const newSession: WorkoutSession = deepClone(sourceSession!);
   newSession.completed = false;
   newSession.startedAt = undefined;
   newSession.completedDate = undefined;
@@ -432,15 +450,15 @@ function executeCopySession(workoutData: Week[], params: CopySessionParams): Wee
     ex.skipped = false;
   });
 
-  targetResult.week!.sessions.splice(insertPosition, 0, newSession);
-  renumberSessions(targetResult.week!, insertPosition);
+  targetWeek!.sessions.splice(insertPosition, 0, newSession);
+  renumberSessions(targetWeek!, insertPosition);
 
   return updatedData;
 }
 
 function executeModifyWeek(workoutData: Week[], params: ModifyWeekParams): Week[] {
   const updatedData = deepClone(workoutData);
-  const { week } = findWorkoutHierarchy(updatedData, params.weekNumber);
+  const { week } = findByGuid(updatedData, params.weekGuid);
   Object.assign(week!, params.updates);
   return updatedData;
 }
@@ -489,10 +507,11 @@ function executeAddWeek(workoutData: Week[], params: AddWeekParams): Week[] {
 
 function executeRemoveWeek(workoutData: Week[], params: RemoveWeekParams): Week[] {
   const updatedData = deepClone(workoutData);
-  const weekIndex = updatedData.findIndex(w => w.weekNumber === params.weekNumber);
+  const { week } = findByGuid(updatedData, params.weekGuid);
 
-  if (weekIndex === -1) return updatedData;
+  if (!week) return updatedData;
 
+  const weekIndex = updatedData.indexOf(week);
   updatedData.splice(weekIndex, 1);
   renumberWeeks(updatedData, weekIndex);
 
@@ -534,6 +553,9 @@ export async function executeToolCalls(
   toolCalls: ToolCall[],
   workoutData: Week[]
 ): Promise<ToolExecutionResult> {
+  // Tool calls now use ephemeral GUIDs for targeting, so order doesn't matter
+  // No need for sorting - operations are deterministic and order-independent
+
   let updatedData = workoutData;
   const executionResults: ExecutionResult[] = [];
 

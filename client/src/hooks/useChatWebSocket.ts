@@ -17,6 +17,7 @@ interface UseChatWebSocketReturn {
   isWebSocketConnected: boolean;
   sendMessage: (content: string) => Promise<void>;
   resetConversation: () => void;
+  updateMessage: (messageId: string, updates: Partial<Message>) => void;
 }
 
 /**
@@ -242,6 +243,15 @@ export function useChatWebSocket(options: UseChatWebSocketOptions = {}): UseChat
     pendingToolCallsRef.current = [];
   }, [options.initialMessage]);
 
+  // Update a specific message by ID
+  const updateMessage = useCallback((messageId: string, updates: Partial<Message>) => {
+    setConversationHistory(prev =>
+      prev.map(msg =>
+        msg.id === messageId ? { ...msg, ...updates } : msg
+      )
+    );
+  }, []);
+
   return {
     conversationHistory,
     isLoading,
@@ -251,5 +261,6 @@ export function useChatWebSocket(options: UseChatWebSocketOptions = {}): UseChat
     isWebSocketConnected,
     sendMessage,
     resetConversation,
+    updateMessage,
   };
 }

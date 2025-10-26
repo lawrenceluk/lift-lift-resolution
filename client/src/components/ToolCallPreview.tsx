@@ -1,10 +1,11 @@
 import { Badge } from './ui/badge';
-import type { ToolCall } from '@/types/chat';
+import type { ToolCall, ToolCallSnapshot } from '@/types/chat';
 import type { Week } from '@/types/workout';
 
 interface ToolCallPreviewProps {
   toolCalls: ToolCall[];
   workoutData: Week[];
+  executionSnapshot?: ToolCallSnapshot[]; // If provided, use this instead of building from workoutData
 }
 
 interface PreviewChange {
@@ -21,8 +22,9 @@ interface PreviewResult {
 /**
  * Preview component showing what modifications will be made
  * Displays tool calls in a human-readable format before execution
+ * If executionSnapshot is provided, shows the historical snapshot instead of rebuilding from current state
  */
-export function ToolCallPreview({ toolCalls, workoutData }: ToolCallPreviewProps) {
+export function ToolCallPreview({ toolCalls, workoutData, executionSnapshot }: ToolCallPreviewProps) {
   if (!toolCalls || toolCalls.length === 0) {
     return null;
   }
@@ -31,7 +33,7 @@ export function ToolCallPreview({ toolCalls, workoutData }: ToolCallPreviewProps
     <div className="mt-3 border border-blue-200 rounded-lg bg-blue-50 p-3">
       <div className="flex items-center gap-2 mb-2">
         <Badge variant="outline" className="bg-blue-100 text-blue-900 border-blue-300">
-          Proposed Changes
+          {executionSnapshot ? 'Applied Changes' : 'Proposed Changes'}
         </Badge>
         {/* <span className="text-xs text-gray-600">
           {toolCalls.length} modification{toolCalls.length !== 1 ? 's' : ''}
@@ -40,7 +42,9 @@ export function ToolCallPreview({ toolCalls, workoutData }: ToolCallPreviewProps
 
       <div className="space-y-2">
         {toolCalls.map((toolCall, index) => {
-          const preview = buildToolCallPreview(toolCall, workoutData);
+          // If we have an execution snapshot, use it; otherwise build from current state
+          const preview = executionSnapshot?.find(s => s.toolCallId === toolCall.id)
+            || buildToolCallPreview(toolCall, workoutData);
 
           return (
             <div key={toolCall.id || index} className="bg-white rounded p-2 text-sm">
@@ -69,8 +73,9 @@ export function ToolCallPreview({ toolCalls, workoutData }: ToolCallPreviewProps
 
 /**
  * Build human-readable preview from tool call
+ * Exported so it can be used to capture execution snapshots
  */
-function buildToolCallPreview(toolCall: ToolCall, workoutData: Week[]): PreviewResult {
+export function buildToolCallPreview(toolCall: ToolCall, workoutData: Week[]): PreviewResult {
   try {
     const params = JSON.parse(toolCall.function.arguments);
     const toolName = toolCall.function.name;
@@ -225,11 +230,14 @@ function buildAddSessionPreview(params: any, _workoutData: Week[]): PreviewResul
   const { weekNumber, position, session } = params;
   const positionText = position === 'end' ? 'at end' : `at position ${position}`;
 
+  const changes = [];
+  if (session.exercises?.length > 0) {
+    changes.push({ field: 'Exercises', after: `${session.exercises?.length || 0} exercises` });
+  }
+
   return {
     title: `Add Session: ${session.name} (Week ${weekNumber}, ${positionText})`,
-    changes: [
-      { field: 'Exercises', after: `${session.exercises?.length || 0} exercises` }
-    ]
+    changes
   };
 }
 
