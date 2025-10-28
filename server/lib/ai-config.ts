@@ -100,6 +100,7 @@ Exercises in this session:`;
           }
         }
         if (ex.notes) systemPrompt += `\n   Exercise notes: ${ex.notes}`;
+        if (ex.userNotes) systemPrompt += `\n   User notes: ${ex.userNotes}`;
       });
     }
 

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useWorkoutProgram } from '@/hooks/useWorkoutProgram';
-import type { Week, SetResult } from '@/types/workout';
+import type { Week, SetResult, Exercise } from '@/types/workout';
 
 interface WorkoutProgramContextType {
   weeks: Week[] | null;
@@ -11,6 +11,8 @@ interface WorkoutProgramContextType {
   completeSession: (weekId: string, sessionId: string) => void;
   skipExercise: (weekId: string, sessionId: string, exerciseId: string) => void;
   unskipExercise: (weekId: string, sessionId: string, exerciseId: string) => void;
+  updateExerciseNotes: (weekId: string, sessionId: string, exerciseId: string, notes: string) => void;
+  updateExercise: (weekId: string, sessionId: string, exerciseId: string, updates: Partial<Exercise>) => void;
   importWeeks: (weeks: Week[]) => void;
   updateWeeks: (weeks: Week[]) => void;
 }

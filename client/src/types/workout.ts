@@ -20,6 +20,7 @@ export interface Exercise {
   targetLoad: string;
   restSeconds: number;
   notes?: string;
+  userNotes?: string;
   sets: SetResult[];
   skipped?: boolean;
 }

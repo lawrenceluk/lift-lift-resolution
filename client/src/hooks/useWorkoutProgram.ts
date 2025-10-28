@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Week, SetResult } from '@/types/workout';
+import { Week, SetResult, Exercise } from '@/types/workout';
 import { loadWeeks, saveWeeks } from '@/utils/localStorage';
 import { createSampleWeeks } from '@/data/sampleWorkout';
 
@@ -238,6 +238,70 @@ export const useWorkoutProgram = () => {
     [weeks, updateWeeks]
   );
 
+  const updateExerciseNotes = useCallback(
+    (weekId: string, sessionId: string, exerciseId: string, userNotes: string) => {
+      if (!weeks) return;
+
+      const updatedWeeks = weeks.map((week) => {
+        if (week.id !== weekId) return week;
+
+        return {
+          ...week,
+          sessions: week.sessions.map((session) => {
+            if (session.id !== sessionId) return session;
+
+            return {
+              ...session,
+              exercises: session.exercises.map((exercise) => {
+                if (exercise.id !== exerciseId) return exercise;
+
+                return {
+                  ...exercise,
+                  userNotes,
+                };
+              }),
+            };
+          }),
+        };
+      });
+
+      updateWeeks(updatedWeeks);
+    },
+    [weeks, updateWeeks]
+  );
+
+  const updateExercise = useCallback(
+    (weekId: string, sessionId: string, exerciseId: string, updates: Partial<Exercise>) => {
+      if (!weeks) return;
+
+      const updatedWeeks = weeks.map((week) => {
+        if (week.id !== weekId) return week;
+
+        return {
+          ...week,
+          sessions: week.sessions.map((session) => {
+            if (session.id !== sessionId) return session;
+
+            return {
+              ...session,
+              exercises: session.exercises.map((exercise) => {
+                if (exercise.id !== exerciseId) return exercise;
+
+                return {
+                  ...exercise,
+                  ...updates,
+                };
+              }),
+            };
+          }),
+        };
+      });
+
+      updateWeeks(updatedWeeks);
+    },
+    [weeks, updateWeeks]
+  );
+
   const importWeeks = useCallback(
     (newWeeks: Week[]) => {
       updateWeeks(newWeeks);
@@ -254,6 +318,8 @@ export const useWorkoutProgram = () => {
     completeSession,
     skipExercise,
     unskipExercise,
+    updateExerciseNotes,
+    updateExercise,
     importWeeks,
     updateWeeks,
   };

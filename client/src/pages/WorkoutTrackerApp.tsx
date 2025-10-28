@@ -17,7 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { getWorkoutStatus, parseId } from '@/utils/idHelpers';
 
 export const WorkoutTrackerApp = (): JSX.Element => {
-  const { weeks, addSet, updateSet, deleteSet, startSession, completeSession, skipExercise, unskipExercise, importWeeks: importWeeksHook } =
+  const { weeks, addSet, updateSet, deleteSet, startSession, completeSession, skipExercise, unskipExercise, updateExerciseNotes, updateExercise, importWeeks: importWeeksHook } =
     useWorkoutProgramContext();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -160,6 +160,12 @@ export const WorkoutTrackerApp = (): JSX.Element => {
           }
           onSkipExercise={(exerciseId) => skipExercise(week.id, session.id, exerciseId)}
           onUnskipExercise={(exerciseId) => unskipExercise(week.id, session.id, exerciseId)}
+          onUpdateExerciseNotes={(exerciseId, notes) =>
+            updateExerciseNotes(week.id, session.id, exerciseId, notes)
+          }
+          onUpdateExercise={(exerciseId, updates) =>
+            updateExercise(week.id, session.id, exerciseId, updates)
+          }
           onBack={() => setLocation(`/${week.id}`)}
           onCompleteSession={() => {
             completeSession(week.id, session.id);

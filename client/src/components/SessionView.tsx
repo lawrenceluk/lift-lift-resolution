@@ -1,5 +1,5 @@
 import React from 'react';
-import { WorkoutSession, SetResult, Week } from '@/types/workout';
+import { WorkoutSession, SetResult, Week, Exercise } from '@/types/workout';
 import { ExerciseView } from './ExerciseView';
 import { ExerciseProgressGrid } from './ExerciseProgressGrid';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,8 @@ interface SessionViewProps {
   onDeleteSet: (exerciseId: string, setNumber: number) => void;
   onSkipExercise: (exerciseId: string) => void;
   onUnskipExercise: (exerciseId: string) => void;
+  onUpdateExerciseNotes: (exerciseId: string, notes: string) => void;
+  onUpdateExercise: (exerciseId: string, updates: Partial<Exercise>) => void;
   onBack: () => void;
   onCompleteSession: () => void;
 }
@@ -29,6 +31,8 @@ export const SessionView: React.FC<SessionViewProps> = ({
   onDeleteSet,
   onSkipExercise,
   onUnskipExercise,
+  onUpdateExerciseNotes,
+  onUpdateExercise,
   onBack,
   onCompleteSession,
 }) => {
@@ -91,6 +95,8 @@ export const SessionView: React.FC<SessionViewProps> = ({
             onDeleteSet={(setNumber) => onDeleteSet(exercise.id, setNumber)}
             onSkip={() => onSkipExercise(exercise.id)}
             onUnskip={() => onUnskipExercise(exercise.id)}
+            onUpdateNotes={(notes) => onUpdateExerciseNotes(exercise.id, notes)}
+            onUpdateExercise={(updates) => onUpdateExercise(exercise.id, updates)}
           />
         ))}
 
