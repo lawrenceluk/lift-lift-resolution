@@ -100,23 +100,30 @@ export const SetLogger: React.FC<SetLoggerProps> = ({
 
   const handleAddSet = () => {
     const setNumber = exercise.sets.length + 1;
+
+    // Parse reps: use user input if provided, otherwise use placeholder, otherwise 0
+    // Note: 0 will display as "-" in the UI for non-traditional exercises
+    const parsedReps = newSetData.reps
+      ? parseInt(newSetData.reps)
+      : (placeholderData.reps ? parseInt(placeholderData.reps) : 0);
+
     const newSet: SetResult = {
       setNumber,
-      reps: parseInt(newSetData.reps) || parseInt(exercise.reps) || 0,
+      reps: parsedReps,
       weight: newSetData.weight ? parseFloat(newSetData.weight) : undefined,
       weightUnit: 'lbs',
       rir: newSetData.rir ? parseInt(newSetData.rir) : undefined,
       completed: true,
     };
-    
+
     // Trigger animation
     setIsCompleted(true);
-    
+
     // Add the set after animation completes
     setTimeout(() => {
       onAddSet(newSet);
     }, 500);
-    
+
     // Reset animation state
     setTimeout(() => {
       setIsCompleted(false);
@@ -162,7 +169,7 @@ export const SetLogger: React.FC<SetLoggerProps> = ({
           <div className="grid grid-cols-3 gap-2 text-sm">
             <div>
               <span className="text-xs text-gray-600">Reps:</span>
-              <p className="font-semibold">{set.reps}</p>
+              <p className="font-semibold">{set.reps === 0 ? '-' : set.reps}</p>
             </div>
             <div>
               <span className="text-xs text-gray-600">Weight:</span>
@@ -184,7 +191,7 @@ export const SetLogger: React.FC<SetLoggerProps> = ({
       {exercise.sets.length < exercise.workingSets && (
         <Card className="p-4 border-2 border-dashed border-gray-300 bg-gray-50">
           <p className="text-sm font-semibold mb-3">
-            Set {exercise.sets.length + 1}/{exercise.workingSets}
+            Set {exercise.sets.length + 1} of {exercise.workingSets}
           </p>
           <div className="grid grid-cols-3 gap-2 mb-3">
             <div>
@@ -197,7 +204,7 @@ export const SetLogger: React.FC<SetLoggerProps> = ({
                   setNewSetData({ ...newSetData, reps: e.target.value })
                 }
                 placeholder={placeholderData.reps || (() => {
-                  // Extract numeric portion from strings like "10-15 per leg"
+                  // Extract numeric portion from strings like "10-15 per leg" or "90 seconds"
                   const match = exercise.reps.match(/^[\d\s-]+/);
                   return match ? match[0].trim() : '';
                 })()}

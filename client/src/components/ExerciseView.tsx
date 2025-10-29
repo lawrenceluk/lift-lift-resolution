@@ -33,6 +33,7 @@ interface ExerciseViewProps {
   onUnskip: () => void;
   onUpdateNotes: (notes: string) => void;
   onUpdateExercise: (updates: Partial<Exercise>) => void;
+  onUpdateExerciseInAllSessions?: (originalName: string, updates: Partial<Exercise>) => void;
 }
 
 export const ExerciseView: React.FC<ExerciseViewProps> = ({
@@ -45,6 +46,7 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
   onUnskip,
   onUpdateNotes,
   onUpdateExercise,
+  onUpdateExerciseInAllSessions,
 }) => {
   const [isNotesDialogOpen, setIsNotesDialogOpen] = useState(false);
   const [notesText, setNotesText] = useState(exercise.userNotes || '');
@@ -117,7 +119,7 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={handleOpenNotesDialog}>
                     <StickyNote className={`w-4 h-4 mr-2`} />
-                    {exercise.userNotes ? 'Edit Note' : 'Add Note'}
+                    {exercise.userNotes ? 'Edit note' : 'Add note'}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleToggleSkip}>
                     {isSkipped ? (
@@ -128,14 +130,13 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
                     ) : (
                       <>
                         <CircleSlash2 className="w-4 h-4 mr-2" />
-                        Skip this time
+                        Skip
                       </>
                     )}
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => setIsEditDialogOpen(true)}>
                     <Pencil className="w-4 h-4 mr-2" />
-                    Edit Exercise
+                     Modify
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -190,9 +191,11 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
 
       <EditExerciseDialog
         exercise={exercise}
+        allWeeks={allWeeks}
         open={isEditDialogOpen}
         onOpenChange={setIsEditDialogOpen}
         onSave={onUpdateExercise}
+        onSaveAllSessions={onUpdateExerciseInAllSessions}
       />
     </Card>
   );

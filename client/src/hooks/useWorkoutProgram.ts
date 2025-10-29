@@ -302,6 +302,31 @@ export const useWorkoutProgram = () => {
     [weeks, updateWeeks]
   );
 
+  const updateExerciseInAllSessions = useCallback(
+    (originalName: string, updates: Partial<Exercise>) => {
+      if (!weeks) return;
+
+      const updatedWeeks = weeks.map((week) => ({
+        ...week,
+        sessions: week.sessions.map((session) => ({
+          ...session,
+          exercises: session.exercises.map((exercise) => {
+            if (exercise.name === originalName) {
+              return {
+                ...exercise,
+                ...updates,
+              };
+            }
+            return exercise;
+          }),
+        })),
+      }));
+
+      updateWeeks(updatedWeeks);
+    },
+    [weeks, updateWeeks]
+  );
+
   const importWeeks = useCallback(
     (newWeeks: Week[]) => {
       updateWeeks(newWeeks);
@@ -320,6 +345,7 @@ export const useWorkoutProgram = () => {
     unskipExercise,
     updateExerciseNotes,
     updateExercise,
+    updateExerciseInAllSessions,
     importWeeks,
     updateWeeks,
   };

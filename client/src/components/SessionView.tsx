@@ -18,6 +18,7 @@ interface SessionViewProps {
   onUnskipExercise: (exerciseId: string) => void;
   onUpdateExerciseNotes: (exerciseId: string, notes: string) => void;
   onUpdateExercise: (exerciseId: string, updates: Partial<Exercise>) => void;
+  onUpdateExerciseInAllSessions?: (originalName: string, updates: Partial<Exercise>) => void;
   onBack: () => void;
   onCompleteSession: () => void;
 }
@@ -33,6 +34,7 @@ export const SessionView: React.FC<SessionViewProps> = ({
   onUnskipExercise,
   onUpdateExerciseNotes,
   onUpdateExercise,
+  onUpdateExerciseInAllSessions,
   onBack,
   onCompleteSession,
 }) => {
@@ -97,6 +99,7 @@ export const SessionView: React.FC<SessionViewProps> = ({
             onUnskip={() => onUnskipExercise(exercise.id)}
             onUpdateNotes={(notes) => onUpdateExerciseNotes(exercise.id, notes)}
             onUpdateExercise={(updates) => onUpdateExercise(exercise.id, updates)}
+            onUpdateExerciseInAllSessions={onUpdateExerciseInAllSessions}
           />
         ))}
 

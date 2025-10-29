@@ -2,6 +2,8 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupWebSocket } from "./lib/websocket";
+import { processChatRequest } from "./lib/chat-handler";
+import type { ChatRequest } from "./lib/ai-service";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Health check endpoint
@@ -12,35 +14,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  // Chat endpoint (stub - hardcoded response for M5.2)
-  app.post("/api/chat", (req, res) => {
-    const { messages } = req.body;
+  // Chat endpoint (HTTP fallback for when WebSocket is unavailable)
+  app.post("/api/chat", async (req, res) => {
+    try {
+      const { messages, context } = req.body;
 
-    // Validation
-    if (!messages || !Array.isArray(messages)) {
-      return res.status(400).json({
-        error: "Invalid request: messages array is required"
+      // Validation
+      if (!messages || !Array.isArray(messages)) {
+        return res.status(400).json({
+          error: "Invalid request: messages array is required"
+        });
+      }
+
+      // Build chat request
+      const chatRequest: ChatRequest = {
+        messages,
+        context
+      };
+
+      // Process with shared handler
+      const response = await processChatRequest(chatRequest);
+
+      // Return in format expected by client
+      res.json({
+        message: response.fullResponse,
+        suggestedReplies: response.suggestedReplies,
+        inputMode: response.suggestedReplies.length > 0 ? 'options' : 'freeform',
+        toolCalls: response.writeToolCalls.length > 0 ? response.writeToolCalls : undefined,
+      });
+    } catch (error) {
+      console.error('[API] Error processing chat request:', error);
+      res.status(500).json({
+        error: error instanceof Error ? error.message : 'Internal server error'
       });
     }
-
-    // Hardcoded response (M5.2)
-    // Vary the suggested replies to see the animation
-    const replySets = [
-      ["That makes sense", "Tell me more", "What else?"],
-      ["Sounds good!", "I have a question", "Continue"],
-      ["Perfect", "Can you explain further?", "Next topic"],
-      ["Got it", "Interesting", "What about..."],
-    ];
-
-    const randomReplies = replySets[messages.length % replySets.length];
-
-    const response = {
-      message: "This is a hardcoded response! I received your message and I'm here to help with your workout.",
-      suggestedReplies: randomReplies,
-      inputMode: "options" as const
-    };
-
-    res.json(response);
   });
 
   // use storage to perform CRUD operations on the storage interface

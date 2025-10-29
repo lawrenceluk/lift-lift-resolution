@@ -13,6 +13,7 @@ interface WorkoutProgramContextType {
   unskipExercise: (weekId: string, sessionId: string, exerciseId: string) => void;
   updateExerciseNotes: (weekId: string, sessionId: string, exerciseId: string, notes: string) => void;
   updateExercise: (weekId: string, sessionId: string, exerciseId: string, updates: Partial<Exercise>) => void;
+  updateExerciseInAllSessions: (originalName: string, updates: Partial<Exercise>) => void;
   importWeeks: (weeks: Week[]) => void;
   updateWeeks: (weeks: Week[]) => void;
 }

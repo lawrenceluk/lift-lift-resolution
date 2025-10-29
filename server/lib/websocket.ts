@@ -1,7 +1,7 @@
 import { Server as HttpServer } from 'http';
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { AIService, ChatRequest } from './ai-service';
-import { toolSchemasByName } from '../../client/src/lib/tools/schemas';
+import { categorizeToolCalls } from './chat-handler';
 
 /**
  * Handle incoming chat message with AI service
@@ -20,13 +20,18 @@ async function handleChatMessage(socket: Socket, payload: SendMessagePayload): P
 
     // Stream chunks to client and accumulate full response
     let fullResponse = '';
+    let lastChunk = '';
     for await (const chunk of streamGenerator) {
       fullResponse += chunk;
+      lastChunk = chunk;
       socket.emit(SocketEvents.MESSAGE_CHUNK, {
         text: chunk,
         isComplete: false,
       } as MessageChunkPayload);
     }
+
+    // Force flush any remaining text with explicit delay
+    await new Promise(resolve => setTimeout(resolve, 100));
 
     // Send final chunk marker
     socket.emit(SocketEvents.MESSAGE_CHUNK, {
@@ -34,39 +39,25 @@ async function handleChatMessage(socket: Socket, payload: SendMessagePayload): P
       isComplete: true,
     } as MessageChunkPayload);
 
-    // Get tool calls from LLM
-    const allToolCalls = getToolCalls();
+    // Another delay to ensure text is fully rendered on client
+    await new Promise(resolve => setTimeout(resolve, 200));
 
-    // Separate tool calls by category
-    const uiToolCalls: any[] = [];
-    const writeToolCalls: any[] = [];
+    // Get and categorize tool calls from LLM
+    const allToolCalls = getToolCalls();
+    const { writeToolCalls, suggestedReplies } = categorizeToolCalls(allToolCalls);
 
     if (allToolCalls && allToolCalls.length > 0) {
       console.log(`[WebSocket] Processing ${allToolCalls.length} tool call(s)`);
 
-      for (const toolCall of allToolCalls) {
-        const schema = toolSchemasByName[toolCall.function.name];
-        if (!schema) {
-          console.warn(`[WebSocket] Unknown tool: ${toolCall.function.name}`);
-          continue;
-        }
+      // Emit progress indicator for tool calls
+      if (writeToolCalls.length > 0) {
+        socket.emit(SocketEvents.TOOL_CALL_PROGRESS, {
+          status: 'generating',
+          message: `Preparing ${writeToolCalls.length} workout modification${writeToolCalls.length > 1 ? 's' : ''}...`,
+        } as ToolCallProgressPayload);
 
-        if (schema.category === 'ui') {
-          uiToolCalls.push(toolCall);
-        } else if (schema.category === 'write') {
-          writeToolCalls.push(toolCall);
-        }
-        // 'read' tools would be handled here in the future
-      }
-    }
-
-    // Auto-execute UI tools (suggest_replies)
-    let suggestedReplies: string[] = [];
-    for (const uiTool of uiToolCalls) {
-      if (uiTool.function.name === 'suggest_replies') {
-        const params = JSON.parse(uiTool.function.arguments);
-        suggestedReplies = params.replies || [];
-        console.log(`[WebSocket] Extracted suggested replies from tool call:`, suggestedReplies);
+        // Small delay to ensure UI shows the progress message
+        await new Promise(resolve => setTimeout(resolve, 150));
       }
     }
 
@@ -117,6 +108,7 @@ export enum SocketEvents {
   MESSAGE_CHUNK = 'message_chunk',
   SUGGESTED_REPLIES = 'suggested_replies',
   TOOL_CALLS = 'tool_calls',
+  TOOL_CALL_PROGRESS = 'tool_call_progress',
   MESSAGE_COMPLETE = 'message_complete',
   ERROR = 'error',
   PONG = 'pong',
@@ -156,6 +148,11 @@ export interface ToolCallsPayload {
     name: string;
     parameters: Record<string, unknown>;
   }>;
+}
+
+export interface ToolCallProgressPayload {
+  status: 'generating' | 'complete';
+  message: string;
 }
 
 export interface MessageCompletePayload {

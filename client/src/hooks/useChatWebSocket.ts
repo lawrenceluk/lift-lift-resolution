@@ -103,6 +103,22 @@ export function useChatWebSocket(options: UseChatWebSocketOptions = {}): UseChat
         });
         unsubscribeFns.push(unsubToolCalls);
 
+        // Subscribe to tool call progress events
+        const unsubToolCallProgress = chatWebSocket.onToolCallProgress((payload) => {
+          console.log('[useChatWebSocket] Tool call progress:', payload);
+          if (payload.status === 'generating') {
+            // Append progress message to streaming text
+            setStreamingMessage(prev => {
+              // Only append if not already there
+              if (!prev.includes(payload.message)) {
+                return prev + '\n\n' + payload.message;
+              }
+              return prev;
+            });
+          }
+        });
+        unsubscribeFns.push(unsubToolCallProgress);
+
         // Subscribe to message complete events
         let messageCompleteTimeout: NodeJS.Timeout | null = null;
         const unsubComplete = chatWebSocket.onMessageComplete(() => {
@@ -220,6 +236,7 @@ export function useChatWebSocket(options: UseChatWebSocketOptions = {}): UseChat
           timestamp: new Date().toISOString(),
           avatarPose: 'default-pose',
           suggestedReplies: response.suggestedReplies,
+          toolCalls: response.toolCalls,
         };
 
         setConversationHistory(prev => [...prev, coachMessage]);

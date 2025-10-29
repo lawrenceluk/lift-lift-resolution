@@ -1,5 +1,5 @@
 import { io, Socket } from 'socket.io-client';
-import type { SendMessagePayload, MessageChunkPayload, SuggestedRepliesPayload, ToolCallsPayload, ErrorPayload } from '../../../server/lib/websocket';
+import type { SendMessagePayload, MessageChunkPayload, SuggestedRepliesPayload, ToolCallsPayload, ToolCallProgressPayload, ErrorPayload } from '../../../server/lib/websocket';
 
 /**
  * Socket.io event names (mirrored from server)
@@ -13,6 +13,7 @@ export enum SocketEvents {
   MESSAGE_CHUNK = 'message_chunk',
   SUGGESTED_REPLIES = 'suggested_replies',
   TOOL_CALLS = 'tool_calls',
+  TOOL_CALL_PROGRESS = 'tool_call_progress',
   MESSAGE_COMPLETE = 'message_complete',
   ERROR = 'error',
   PONG = 'pong',
@@ -132,6 +133,23 @@ export class ChatWebSocket {
     return () => {
       if (this.socket) {
         this.socket.off(SocketEvents.TOOL_CALLS, callback);
+      }
+    };
+  }
+
+  /**
+   * Subscribe to tool call progress updates
+   */
+  onToolCallProgress(callback: (payload: ToolCallProgressPayload) => void): () => void {
+    if (!this.socket) {
+      throw new Error('WebSocket is not initialized');
+    }
+
+    this.socket.on(SocketEvents.TOOL_CALL_PROGRESS, callback);
+
+    return () => {
+      if (this.socket) {
+        this.socket.off(SocketEvents.TOOL_CALL_PROGRESS, callback);
       }
     };
   }

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { MessageSquare, X, ChevronLeft, ChevronRight, Maximize2, Minus, Send, Eraser, Check, RefreshCcwDot } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Minus, Send, RefreshCcwDot, ArrowUpFromLine, ArrowDownFromLine } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,7 @@ import { ToolCallPreview, buildToolCallPreview } from '@/components/ToolCallPrev
 import { executeToolCalls } from '@/lib/tools/executor';
 import { translateToGUIDs } from '@/lib/tools/translator';
 import { stripGUIDs } from '@/utils/guidHelpers';
+import { formatCoachMessage } from '@/utils/markdownHelpers';
 import type { WorkoutContext } from '@/types/chat';
 import type { ToolCall, ToolCallSnapshot } from '@/types/chat';
 
@@ -26,7 +27,7 @@ type CoachAvatarPose =
 export const CoachChat = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
   const [customInput, setCustomInput] = useState('');
   const [isConfirmingReset, setIsConfirmingReset] = useState(false);
@@ -136,20 +137,20 @@ export const CoachChat = () => {
     setTimeout(() => {
       setIsOpen(false);
       setIsClosing(false);
-      setIsMinimized(false); // Reset minimized state on close
+      setIsExpanded(false); // Reset expanded state on close
       // Reset to latest message on close
       setCurrentMessageIndex(visibleMessages.length - 1);
     }, 200); // Match animation duration
   };
 
-  const handleMinimize = () => {
-    setIsMinimized(!isMinimized);
+  const handleToggleExpand = () => {
+    setIsExpanded(!isExpanded);
   };
 
   const handleOpen = () => {
     setIsOpen(true);
     setIsClosing(false);
-    setIsMinimized(false); // Reset minimized state on open
+    setIsExpanded(false); // Reset expanded state on open
   };
 
   const handleBackward = () => {
@@ -302,14 +303,14 @@ export const CoachChat = () => {
         <>
           {/* Dialog */}
           <div
-            className={`border border-gray-300 fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl z-50 max-w-2xl mx-auto flex flex-col ${
+            className={`border border-gray-300 fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl z-50 max-w-2xl mx-auto flex flex-col transition-[height] duration-300 ease-in-out ${
               isClosing ? 'animate-slide-down' : 'animate-slide-up'
             }`}
-            style={{ height: isMinimized ? 'auto' : '50vh' }}
+            style={{ height: isExpanded ? '90vh' : '50vh' }}
           >
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 flex-shrink-0">
-              {!isMinimized ? (visibleMessages.length > 1 ? <div className="flex items-center gap-1">
+              {visibleMessages.length > 1 ? <div className="flex items-center gap-1">
                 {/* Navigation Arrows */}
                 <Button
                   variant="ghost"
@@ -337,7 +338,7 @@ export const CoachChat = () => {
                     {currentMessageIndex + 1}/{visibleMessages.length}
                   </span>
                 )}
-              </div> : <div></div>) : <div className="text-sm font-bold text-gray-600">Chat with Coach</div>}
+              </div> : <div></div>}
 
               <div className="flex items-center gap-1">
                 {isConfirmingReset && (
@@ -349,7 +350,7 @@ export const CoachChat = () => {
                   </div>
                 )}
                 {/* Reset button - only show when there are more than just the initial message */}
-                {!isConfirmingReset && visibleMessages.length > 1 && !isMinimized && (
+                {!isConfirmingReset && visibleMessages.length > 1 && (
                   <Button
                     variant="ghost"
                     size="icon"
@@ -360,20 +361,30 @@ export const CoachChat = () => {
                     <RefreshCcwDot className="h-5 w-5" />
                   </Button>
                 )}
+                {/* Expand/Shrink button */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleToggleExpand}
+                  aria-label={isExpanded ? "Shrink chat" : "Expand chat"}
+                  className="h-8 w-8"
+                >
+                  {isExpanded ? <ArrowDownFromLine className="h-5 w-5" /> : <ArrowUpFromLine className="h-5 w-5" />}
+                </Button>
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={handleClose}
-                  aria-label={isMinimized ? "Expand chat" : "Minimize chat"}
+                  aria-label="Close chat"
+                  className="h-8 w-8"
                 >
-                  {isMinimized ? <Maximize2 className="h-5 w-5" /> : <Minus className="h-5 w-5" />}
+                  <Minus className="h-5 w-5" />
                 </Button>
               </div>
             </div>
 
-            {/* Message Area - JRPG Style - only shown when not minimized */}
-            {!isMinimized && (
-              <div className="flex-1 overflow-y-auto min-h-0 overscroll-contain">
+            {/* Message Area - JRPG Style */}
+            <div className="flex-1 overflow-y-auto min-h-0 overscroll-contain">
                 <div className="px-6 py-4">
                   {/* Show waiting/streaming state when loading, or when message is undefined (just advanced index) */}
                   {isWaitingForCoach || !currentMessage ? (
@@ -394,8 +405,8 @@ export const CoachChat = () => {
                       <div className="gap-2">
                         <Badge variant="outline" className="text-gray-900 mb-2">Coach</Badge>
                         {streamingMessage ? (
-                          <p className="text-gray-900 text-md leading-relaxed whitespace-pre-wrap">
-                            {streamingMessage}
+                          <p className="text-gray-900 text-md leading-relaxed">
+                            {formatCoachMessage(streamingMessage)}
                             <span className="inline-block w-2 h-4 ml-1 bg-gray-900 animate-pulse" />
                           </p>
                         ) : (
@@ -422,8 +433,8 @@ export const CoachChat = () => {
                       </div>
                       <div className="gap-2 flex-1">
                         <Badge variant="outline" className="text-gray-900 mb-2">Coach</Badge>
-                        <p className="text-gray-900 text-md leading-relaxed whitespace-pre-wrap">
-                          {currentMessage.content}
+                        <p className="text-gray-900 text-md leading-relaxed">
+                          {formatCoachMessage(currentMessage.content)}
                         </p>
 
                         {/* Tool Call Preview - Show modifications before user confirms */}
@@ -533,7 +544,6 @@ export const CoachChat = () => {
                   </div>
                 )}
               </div>
-            )}
           </div>
         </>
       )}
