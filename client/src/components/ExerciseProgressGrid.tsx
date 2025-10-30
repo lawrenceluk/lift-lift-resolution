@@ -9,8 +9,9 @@ export const ExerciseProgressGrid: React.FC<ExerciseProgressGridProps> = ({ exer
   const getExerciseStatus = (exercise: Exercise) => {
     if (exercise.skipped) return 'skipped';
     const completedSets = (exercise.sets || []).filter((s) => s.completed).length;
-    if (completedSets === 0) return 'empty';
-    if (completedSets >= exercise.workingSets) return 'complete';
+    const skippedSets = (exercise.sets || []).filter((s) => s.skipped).length;
+    if (completedSets === 0 && skippedSets === 0) return 'empty';
+    if ((completedSets + skippedSets) >= exercise.workingSets) return 'complete';
     return 'partial';
   };
 

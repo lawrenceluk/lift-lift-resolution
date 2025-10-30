@@ -101,228 +101,161 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
     sendMessage(`I want to replace ${exercise.name} in this workout`);
   };
 
-  // Compact collapsed view for completed exercises
-  if (isCollapsed && isComplete) {
+  // Reusable action buttons component
+  const ActionButtons = () => {
+    // For complete or skipped exercises, only show expand/collapse button
+    if (isComplete || isSkipped) {
+      return (
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="h-8 w-8 text-gray-400 hover:text-gray-600"
+          >
+            {isCollapsed ? <ChevronDown className="w-5 h-5" /> : <ChevronUp className="w-5 h-5" />}
+          </Button>
+        </div>
+      );
+    }
+
+    // For active exercises, show all action buttons
     return (
-      <Card className="mb-4 bg-gray-50 border-gray-200">
-        <CardHeader className="py-3">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 flex-1">
-              {exercise.groupLabel && (
-                <Badge variant="outline" className="text-xs font-mono">
-                  {exercise.groupLabel}
-                </Badge>
-              )}
-              <Badge className="bg-green-500">Complete</Badge>
-              <h3 className="text-sm font-medium text-gray-700">
-                {exercise.name}
-              </h3>
-            </div>
-            <div className="flex items-center gap-1">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-gray-400 hover:text-gray-600"
-                  >
-                    <MoreVertical className="w-5 h-5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={handleOpenNotesDialog}>
-                    <StickyNote className={`w-4 h-4 mr-2`} />
-                    {exercise.userNotes ? 'Edit note' : 'Add note'}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleToggleSkip}>
-                    <CircleSlash2 className="w-4 h-4 mr-2" />
-                    Skip
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setIsEditDialogOpen(true)}>
-                    <Pencil className="w-4 h-4 mr-2" />
-                    Modify
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsCollapsed(false)}
-                className="h-8 w-8 text-gray-400 hover:text-gray-600"
-              >
-                <ChevronDown className="w-5 h-5" />
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-
-        <Dialog open={isNotesDialogOpen} onOpenChange={setIsNotesDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Exercise Notes</DialogTitle>
-              <DialogDescription>
-                Add personal notes for this exercise (e.g., equipment used, variations, or reminders).
-              </DialogDescription>
-            </DialogHeader>
-            <Textarea
-              value={notesText}
-              onChange={(e) => setNotesText(e.target.value)}
-              placeholder="e.g., Used dumbbells instead of barbell..."
-              className="min-h-[100px]"
-            />
-            <DialogFooter>
-              <Button variant="outline" onClick={handleCancelNotes}>
-                Cancel
-              </Button>
-              <Button onClick={handleSaveNotes}>
-                Save
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        <EditExerciseDialog
-          exercise={exercise}
-          allWeeks={allWeeks}
-          open={isEditDialogOpen}
-          onOpenChange={setIsEditDialogOpen}
-          onSave={onUpdateExercise}
-          onSaveAllSessions={onUpdateExerciseInAllSessions}
-        />
-      </Card>
+      <div className="flex items-center gap-1">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleOpenNotesDialog}
+          className={`h-8 w-8 hover:text-gray-600 ${exercise.userNotes ? 'text-blue-500' : 'text-gray-400'}`}
+        >
+          <StickyNote className="w-5 h-5" />
+        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-gray-400 hover:text-gray-600"
+            >
+              <MoreVertical className="w-5 h-5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={handleToggleSkip}>
+              <CircleSlash2 className="w-4 h-4 mr-2" />
+              Skip
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setIsEditDialogOpen(true)}>
+              <Pencil className="w-4 h-4 mr-2" />
+              Modify
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleReplaceExercise}>
+              <ArrowLeftRight className="w-4 h-4 mr-2" />
+              Replace
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     );
-  }
+  };
 
   return (
-    <Card className={`mb-4 ${isSkipped ? 'opacity-60 border-gray-300' : ''}`}>
-      <CardHeader className="pb-3">
-        <div className="flex flex-col items-start justify-between gap-2">
-          <div className="flex items-center gap-2">
-            {exercise.groupLabel && (
-                <Badge variant="outline" className="text-xs font-mono">
-                  {exercise.groupLabel}
-                </Badge>
-              )}
-            {isSkipped && (
-              <Badge variant="destructive" className="bg-gray-500">Skipped</Badge>
-            )}
-            {!isSkipped && isComplete && (
-              <Badge className="bg-green-500">Complete</Badge>
-            )}
-            {!isSkipped && !isComplete && <Badge variant="outline" className="text-xs font-mono">
-                {totalSets} sets
-              </Badge>
-            }
-          </div>
-          <div className="flex-1 w-full">
+    <>
+      {isCollapsed && isComplete ? (
+        // Compact collapsed view for completed exercises
+        <Card className="mb-4 bg-gray-50 border-gray-200">
+          <CardHeader className="py-3">
             <div className="flex items-center justify-between gap-2">
-              <h3 className="text-lg font-semibold text-gray-900">
-                {exercise.name}
-              </h3>
-              <div className="flex items-center gap-1">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-gray-400 hover:text-gray-600"
-                    >
-                      <MoreVertical className="w-5 h-5" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={handleOpenNotesDialog}>
-                      <StickyNote className={`w-4 h-4 mr-2`} />
-                      {exercise.userNotes ? 'Edit note' : 'Add note'}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleToggleSkip}>
-                      {isSkipped ? (
-                        <>
-                          <RotateCw className="w-4 h-4 mr-2" />
-                          Unskip
-                        </>
-                      ) : (
-                        <>
-                          <CircleSlash2 className="w-4 h-4 mr-2" />
-                          Skip
-                        </>
-                      )}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setIsEditDialogOpen(true)}>
-                      <Pencil className="w-4 h-4 mr-2" />
-                       Modify
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                {isComplete && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setIsCollapsed(true)}
-                    className="h-8 w-8 text-gray-400 hover:text-gray-600"
-                  >
-                    <ChevronUp className="w-5 h-5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={handleOpenNotesDialog}>
-                    <StickyNote className={`w-4 h-4 mr-2`} />
-                    {exercise.userNotes ? 'Edit note' : 'Add note'}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleToggleSkip}>
-                    {isSkipped ? (
-                      <>
-                        <RotateCw className="w-4 h-4 mr-2" />
-                        Unskip
-                      </>
-                    ) : (
-                      <>
-                        <CircleSlash2 className="w-4 h-4 mr-2" />
-                        Skip
-                      </>
-                    )}
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => setIsEditDialogOpen(true)}>
-                    <Pencil className="w-4 h-4 mr-2" />
-                     Modify
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleReplaceExercise}>
-                    <ArrowLeftRight className="w-4 h-4 mr-2" />
-                    Replace
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <div className="flex items-center gap-2 flex-1">
+                {exercise.groupLabel && (
+                  <Badge variant="outline" className="text-xs font-mono">
+                    {exercise.groupLabel}
+                  </Badge>
+                )}
+                <Badge className="bg-green-500">Complete</Badge>
+                <div className="flex flex-col">
+                  <h3 className="text-sm font-medium text-gray-700">
+                    {exercise.name}
+                  </h3>
+                  <p className="text-xs text-gray-500">
+                    {completedSets > 0 && skippedSets > 0
+                      ? `${completedSets}/${totalSets} sets completed, ${skippedSets} skipped`
+                      : skippedSets > 0
+                      ? `${skippedSets}/${totalSets} sets skipped`
+                      : `${completedSets}/${totalSets} sets completed`
+                    }
+                  </p>
+                </div>
+              </div>
+              <ActionButtons />
             </div>
-          </div>
+          </CardHeader>
+        </Card>
+      ) : (
+        // Expanded view
+        <div className="relative">
+          <Card className={`mb-4 ${isSkipped ? 'opacity-60 border-gray-300' : ''}`}>
+          <CardHeader className="pb-3">
+            <div className="flex flex-col items-start justify-between gap-2">
+              <div className="flex items-center gap-2">
+                {exercise.groupLabel && (
+                  <Badge variant="outline" className="text-xs font-mono">
+                    {exercise.groupLabel}
+                  </Badge>
+                )}
+                {isSkipped && (
+                  <Badge variant="destructive" className="bg-gray-500">Skipped</Badge>
+                )}
+                {!isSkipped && isComplete && (
+                  <Badge className="bg-green-500">Complete</Badge>
+                )}
+                {!isSkipped && !isComplete && (
+                  <Badge variant="outline" className="text-xs font-mono">
+                    {totalSets} sets
+                  </Badge>
+                )}
+              </div>
+              <div className="flex-1 w-full">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    {exercise.name}
+                  </h3>
+                  <ActionButtons />
+                </div>
+              </div>
+            </div>
+            {exercise.userNotes && (
+              <div className="mt-2 p-2 bg-blue-50 rounded border border-blue-200">
+                <p className="text-sm text-blue-900">{exercise.userNotes}</p>
+              </div>
+            )}
+          </CardHeader>
+          {!isSkipped && (
+            <CardContent>
+              {exercise.notes && (
+                <p className="text-sm text-gray-600 italic">{exercise.notes}</p>
+              )}
+              <SetLogger
+                exercise={exercise}
+                allWeeks={allWeeks}
+                onAddSet={onAddSet}
+                onUpdateSet={onUpdateSet}
+                onDeleteSet={onDeleteSet}
+              />
+            </CardContent>
+          )}
+        </Card>
         </div>
-        {exercise.notes && (
-          <p className="text-sm text-gray-600 italic">{exercise.notes}</p>
-        )}
-        {exercise.userNotes && (
-          <div className="mt-2 p-2 bg-blue-50 rounded border border-blue-200">
-            <p className="text-sm text-blue-900">{exercise.userNotes}</p>
-          </div>
-        )}
-      </CardHeader>
-      {!isSkipped && (
-        <CardContent>
-          <SetLogger
-            exercise={exercise}
-            allWeeks={allWeeks}
-            onAddSet={onAddSet}
-            onUpdateSet={onUpdateSet}
-            onDeleteSet={onDeleteSet}
-          />
-        </CardContent>
       )}
 
+      {/* Shared dialogs for both views */}
       <Dialog open={isNotesDialogOpen} onOpenChange={setIsNotesDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Exercise Notes</DialogTitle>
             <DialogDescription>
-              Add personal notes for this exercise (e.g., equipment used, variations, or reminders).
+              Add your notes for this exercise (e.g., variations or reminders).
             </DialogDescription>
           </DialogHeader>
           <Textarea
@@ -350,6 +283,6 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
         onSave={onUpdateExercise}
         onSaveAllSessions={onUpdateExerciseInAllSessions}
       />
-    </Card>
+    </>
   );
 };

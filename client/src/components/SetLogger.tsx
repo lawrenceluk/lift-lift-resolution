@@ -210,9 +210,6 @@ export const SetLogger: React.FC<SetLoggerProps> = ({
                   <p className="font-semibold">{set.rir ?? '-'}</p>
                 </div>
               </div>
-              {set.notes && (
-                <p className="text-xs text-gray-600 mt-2 italic">{set.notes}</p>
-              )}
             </>
           ) : (
             <p className="text-xs text-gray-500 mt-2">This set was skipped.</p>

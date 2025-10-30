@@ -38,9 +38,11 @@ export const SessionView: React.FC<SessionViewProps> = ({
   onBack,
   onCompleteSession,
 }) => {
-  const allExercisesComplete = session.exercises.every(
-    (ex) => ex.skipped || (ex.sets || []).filter((s) => s.completed).length >= ex.workingSets
-  );
+  const allExercisesComplete = session.exercises.every((ex) => {
+    const completedSets = (ex.sets || []).filter((s) => s.completed).length;
+    const skippedSets = (ex.sets || []).filter((s) => s.skipped).length;
+    return ex.skipped || (completedSets + skippedSets) >= ex.workingSets;
+  });
 
   return (
     <div className="min-h-screen bg-white pb-24 flex flex-col items-center">
