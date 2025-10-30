@@ -107,12 +107,22 @@ export const SetLogger: React.FC<SetLoggerProps> = ({
       ? parseInt(newSetData.reps)
       : (placeholderData.reps ? parseInt(placeholderData.reps) : 0);
 
+    // Parse weight: use user input if provided, otherwise use placeholder, otherwise undefined
+    const parsedWeight = newSetData.weight
+      ? parseFloat(newSetData.weight)
+      : (placeholderData.weight ? parseFloat(placeholderData.weight) : undefined);
+
+    // Parse RIR: use user input if provided, otherwise use placeholder, otherwise undefined
+    const parsedRir = newSetData.rir
+      ? parseInt(newSetData.rir)
+      : (placeholderData.rir ? parseInt(placeholderData.rir) : undefined);
+
     const newSet: SetResult = {
       setNumber,
       reps: parsedReps,
-      weight: newSetData.weight ? parseFloat(newSetData.weight) : undefined,
+      weight: parsedWeight,
       weightUnit: 'lbs',
-      rir: newSetData.rir ? parseInt(newSetData.rir) : undefined,
+      rir: parsedRir,
       completed: true,
     };
 
