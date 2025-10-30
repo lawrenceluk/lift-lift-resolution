@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from './ui/badge';
 import { useChatWebSocket } from '@/hooks/useChatWebSocket';
 import { useWorkoutProgramContext } from '@/contexts/WorkoutProgramContext';
+import { useCoachChatContext } from '@/contexts/CoachChatContext';
 import { findSession, findWeek, parseId } from '@/utils/idHelpers';
 import { ToolCallPreview, buildToolCallPreview } from '@/components/ToolCallPreview';
 import { executeToolCalls } from '@/lib/tools/executor';
@@ -25,6 +26,7 @@ type CoachAvatarPose =
   | 'standing-at-attention';
 
 export const CoachChat = () => {
+  const { isOpen: contextIsOpen, openCoach, closeCoach: contextCloseCoach, pendingMessage, clearPendingMessage } = useCoachChatContext();
   const [isOpen, setIsOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -36,6 +38,21 @@ export const CoachChat = () => {
   const { weeks, updateWeeks } = useWorkoutProgramContext();
   const [location] = useLocation();
   const [isExecutingTools, setIsExecutingTools] = useState(false);
+
+  // Sync context state with local state
+  useEffect(() => {
+    if (contextIsOpen && !isOpen) {
+      handleOpen();
+    }
+  }, [contextIsOpen, isOpen]);
+
+  // Handle pending messages
+  useEffect(() => {
+    if (pendingMessage && isOpen) {
+      sendChatMessageViaHook(pendingMessage);
+      clearPendingMessage();
+    }
+  }, [pendingMessage, isOpen]);
 
   // Extract workout context based on current URL
   const workoutContext: WorkoutContext | undefined = useMemo(() => {
@@ -140,6 +157,7 @@ export const CoachChat = () => {
       setIsExpanded(false); // Reset expanded state on close
       // Reset to latest message on close
       setCurrentMessageIndex(visibleMessages.length - 1);
+      contextCloseCoach();
     }, 200); // Match animation duration
   };
 
