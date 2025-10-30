@@ -9,6 +9,7 @@ import { WorkoutTrackerApp } from "@/pages/WorkoutTrackerApp";
 import { HowItWorks } from "@/pages/HowItWorks";
 import { CoachChat } from "@/components/CoachChat";
 import { WorkoutProgramProvider } from "@/contexts/WorkoutProgramContext";
+import { CoachChatProvider } from "@/contexts/CoachChatContext";
 
 function Router() {
   return (
@@ -29,10 +30,12 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <WorkoutProgramProvider>
-          <Toaster />
-          <Router />
-          {/* Global Coach Chat - persists across routes */}
-          <CoachChat />
+          <CoachChatProvider>
+            <Toaster />
+            <Router />
+            {/* Global Coach Chat - persists across routes */}
+            <CoachChat />
+          </CoachChatProvider>
         </WorkoutProgramProvider>
       </TooltipProvider>
     </QueryClientProvider>

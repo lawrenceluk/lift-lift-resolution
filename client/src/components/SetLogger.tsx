@@ -107,12 +107,22 @@ export const SetLogger: React.FC<SetLoggerProps> = ({
       ? parseInt(newSetData.reps)
       : (placeholderData.reps ? parseInt(placeholderData.reps) : 0);
 
+    // Parse weight: use user input if provided, otherwise use placeholder, otherwise undefined
+    const parsedWeight = newSetData.weight
+      ? parseFloat(newSetData.weight)
+      : (placeholderData.weight ? parseFloat(placeholderData.weight) : undefined);
+
+    // Parse RIR: use user input if provided, otherwise use placeholder, otherwise undefined
+    const parsedRir = newSetData.rir
+      ? parseInt(newSetData.rir)
+      : (placeholderData.rir ? parseInt(placeholderData.rir) : undefined);
+
     const newSet: SetResult = {
       setNumber,
       reps: parsedReps,
-      weight: newSetData.weight ? parseFloat(newSetData.weight) : undefined,
+      weight: parsedWeight,
       weightUnit: 'lbs',
-      rir: newSetData.rir ? parseInt(newSetData.rir) : undefined,
+      rir: parsedRir,
       completed: true,
     };
 
@@ -128,6 +138,20 @@ export const SetLogger: React.FC<SetLoggerProps> = ({
     setTimeout(() => {
       setIsCompleted(false);
     }, 750);
+  };
+
+  const handleSkipSet = () => {
+    const setNumber = exercise.sets.length + 1;
+
+    const newSet: SetResult = {
+      setNumber,
+      reps: 0,
+      weightUnit: 'lbs',
+      completed: false,
+      skipped: true,
+    };
+
+    onAddSet(newSet);
   };
 
   const targetReps = exercise.reps.includes('-')
@@ -151,11 +175,14 @@ export const SetLogger: React.FC<SetLoggerProps> = ({
       </div>
 
       {exercise.sets.map((set) => (
-        <Card key={set.setNumber} className="p-3 bg-green-50 border-green-200">
+        <Card key={set.setNumber} className={set.skipped ? "p-3 bg-gray-50 border-gray-300" : "p-3 bg-green-50 border-green-200"}>
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5 text-green-600" />
+              <CheckCircle2 className={set.skipped ? "w-5 h-5 text-gray-400" : "w-5 h-5 text-green-600"} />
               <span className="text-sm font-semibold">Set {set.setNumber}</span>
+              {set.skipped && (
+                <span className="text-xs text-gray-500 italic">Skipped</span>
+              )}
             </div>
             <Button
               variant="ghost"
@@ -166,33 +193,45 @@ export const SetLogger: React.FC<SetLoggerProps> = ({
               <X className="w-4 h-4" />
             </Button>
           </div>
-          <div className="grid grid-cols-3 gap-2 text-sm">
-            <div>
-              <span className="text-xs text-gray-600">Reps:</span>
-              <p className="font-semibold">{set.reps === 0 ? '-' : set.reps}</p>
-            </div>
-            <div>
-              <span className="text-xs text-gray-600">Weight:</span>
-              <p className="font-semibold">
-                {set.weight ? `${set.weight} ${set.weightUnit}` : 'BW'}
-              </p>
-            </div>
-            <div>
-              <span className="text-xs text-gray-600">RIR:</span>
-              <p className="font-semibold">{set.rir ?? '-'}</p>
-            </div>
-          </div>
-          {set.notes && (
-            <p className="text-xs text-gray-600 mt-2 italic">{set.notes}</p>
+          {!set.skipped && (
+            <>
+              <div className="grid grid-cols-3 gap-2 text-sm">
+                <div>
+                  <span className="text-xs text-gray-600">Reps:</span>
+                  <p className="font-semibold">{set.reps === 0 ? '-' : set.reps}</p>
+                </div>
+                <div>
+                  <span className="text-xs text-gray-600">Weight:</span>
+                  <p className="font-semibold">
+                    {set.weight ? `${set.weight} ${set.weightUnit}` : 'BW'}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-xs text-gray-600">RIR:</span>
+                  <p className="font-semibold">{set.rir ?? '-'}</p>
+                </div>
+              </div>
+              {set.notes && (
+                <p className="text-xs text-gray-600 mt-2 italic">{set.notes}</p>
+              )}
+            </>
           )}
         </Card>
       ))}
 
       {exercise.sets.length < exercise.workingSets && (
         <Card className="p-4 border-2 border-dashed border-gray-300 bg-gray-50">
-          <p className="text-sm font-semibold mb-3">
-            Set {exercise.sets.length + 1} of {exercise.workingSets}
-          </p>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-semibold">
+              Set {exercise.sets.length + 1} of {exercise.workingSets}
+            </p>
+            <button
+              onClick={handleSkipSet}
+              className="text-xs text-gray-500 hover:text-gray-700 underline"
+            >
+              skip
+            </button>
+          </div>
           <div className="grid grid-cols-3 gap-2 mb-3">
             <div>
               <label className="text-xs text-gray-600 block mb-1">Reps</label>
@@ -203,6 +242,7 @@ export const SetLogger: React.FC<SetLoggerProps> = ({
                 onChange={(e) =>
                   setNewSetData({ ...newSetData, reps: e.target.value })
                 }
+                onClick={(e) => e.currentTarget.select()}
                 placeholder={placeholderData.reps || (() => {
                   // Extract numeric portion from strings like "10-15 per leg" or "90 seconds"
                   const match = exercise.reps.match(/^[\d\s-]+/);
@@ -220,6 +260,7 @@ export const SetLogger: React.FC<SetLoggerProps> = ({
                 onChange={(e) =>
                   setNewSetData({ ...newSetData, weight: e.target.value })
                 }
+                onClick={(e) => e.currentTarget.select()}
                 placeholder={placeholderData.weight || 'lbs'}
                 className="h-12 text-base"
               />
@@ -233,6 +274,7 @@ export const SetLogger: React.FC<SetLoggerProps> = ({
                 onChange={(e) =>
                   setNewSetData({ ...newSetData, rir: e.target.value })
                 }
+                onClick={(e) => e.currentTarget.select()}
                 placeholder={placeholderData.rir || (() => {
                   // Extract RIR from targetLoad (e.g., "2-3 RIR" -> "2-3")
                   const match = exercise.targetLoad.match(/(\d+(?:-\d+)?)\s*RIR/i);

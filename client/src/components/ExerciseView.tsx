@@ -5,7 +5,10 @@ import { EditExerciseDialog } from './EditExerciseDialog';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CircleSlash2, RotateCw, StickyNote, MoreVertical, Pencil, ChevronDown, ChevronUp } from 'lucide-react';
+
+import { CircleSlash2, RotateCw, StickyNote, MoreVertical, Pencil, ChevronDown, ChevronUp, ArrowLeftRight } from 'lucide-react';
+import { useCoachChatContext } from '@/contexts/CoachChatContext';
+
 import {
   Dialog,
   DialogContent,
@@ -51,11 +54,15 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
   const [isNotesDialogOpen, setIsNotesDialogOpen] = useState(false);
   const [notesText, setNotesText] = useState(exercise.userNotes || '');
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const { sendMessage } = useCoachChatContext();
+
 
   const completedSets = exercise.sets.filter((s) => s.completed).length;
+  const skippedSets = exercise.sets.filter((s) => s.skipped).length;
   const totalSets = exercise.workingSets;
-  const isComplete = completedSets >= totalSets;
+  const isComplete = (completedSets + skippedSets) >= totalSets;
   const isSkipped = exercise.skipped;
 
   // Auto-collapse when all sets are complete
@@ -88,6 +95,10 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
   const handleCancelNotes = () => {
     setNotesText(exercise.userNotes || '');
     setIsNotesDialogOpen(false);
+  };
+  
+  const handleReplaceExercise = () => {
+    sendMessage(`I want to replace ${exercise.name} in this workout`);
   };
 
   // Compact collapsed view for completed exercises
@@ -182,7 +193,6 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
     );
   }
 
-  // Full expanded view
   return (
     <Card className={`mb-4 ${isSkipped ? 'opacity-60 border-gray-300' : ''}`}>
       <CardHeader className="pb-3">
@@ -253,8 +263,36 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
                   >
                     <ChevronUp className="w-5 h-5" />
                   </Button>
-                )}
-              </div>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleOpenNotesDialog}>
+                    <StickyNote className={`w-4 h-4 mr-2`} />
+                    {exercise.userNotes ? 'Edit note' : 'Add note'}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleToggleSkip}>
+                    {isSkipped ? (
+                      <>
+                        <RotateCw className="w-4 h-4 mr-2" />
+                        Unskip
+                      </>
+                    ) : (
+                      <>
+                        <CircleSlash2 className="w-4 h-4 mr-2" />
+                        Skip
+                      </>
+                    )}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setIsEditDialogOpen(true)}>
+                    <Pencil className="w-4 h-4 mr-2" />
+                     Modify
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleReplaceExercise}>
+                    <ArrowLeftRight className="w-4 h-4 mr-2" />
+                    Replace
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>
