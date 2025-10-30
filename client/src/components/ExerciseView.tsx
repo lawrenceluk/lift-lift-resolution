@@ -123,11 +123,6 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={handleReplaceExercise}>
-                    <ArrowLeftRight className="w-4 h-4 mr-2" />
-                    Replace
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleOpenNotesDialog}>
                     <StickyNote className={`w-4 h-4 mr-2`} />
                     {exercise.userNotes ? 'Edit note' : 'Add note'}
@@ -145,9 +140,14 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
                       </>
                     )}
                   </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => setIsEditDialogOpen(true)}>
                     <Pencil className="w-4 h-4 mr-2" />
                      Modify
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleReplaceExercise}>
+                    <ArrowLeftRight className="w-4 h-4 mr-2" />
+                    Replace
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
