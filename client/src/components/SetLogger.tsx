@@ -203,6 +203,7 @@ export const SetLogger: React.FC<SetLoggerProps> = ({
                 onChange={(e) =>
                   setNewSetData({ ...newSetData, reps: e.target.value })
                 }
+                onClick={(e) => e.currentTarget.select()}
                 placeholder={placeholderData.reps || (() => {
                   // Extract numeric portion from strings like "10-15 per leg" or "90 seconds"
                   const match = exercise.reps.match(/^[\d\s-]+/);
@@ -220,6 +221,7 @@ export const SetLogger: React.FC<SetLoggerProps> = ({
                 onChange={(e) =>
                   setNewSetData({ ...newSetData, weight: e.target.value })
                 }
+                onClick={(e) => e.currentTarget.select()}
                 placeholder={placeholderData.weight || 'lbs'}
                 className="h-12 text-base"
               />
@@ -233,6 +235,7 @@ export const SetLogger: React.FC<SetLoggerProps> = ({
                 onChange={(e) =>
                   setNewSetData({ ...newSetData, rir: e.target.value })
                 }
+                onClick={(e) => e.currentTarget.select()}
                 placeholder={placeholderData.rir || (() => {
                   // Extract RIR from targetLoad (e.g., "2-3 RIR" -> "2-3")
                   const match = exercise.targetLoad.match(/(\d+(?:-\d+)?)\s*RIR/i);
