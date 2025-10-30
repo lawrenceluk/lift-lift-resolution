@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Exercise, SetResult, Week } from '@/types/workout';
 import { SetLogger } from './SetLogger';
 import { EditExerciseDialog } from './EditExerciseDialog';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CircleSlash2, RotateCw, StickyNote, MoreVertical, Pencil, ArrowLeftRight } from 'lucide-react';
+
+import { CircleSlash2, RotateCw, StickyNote, MoreVertical, Pencil, ChevronDown, ChevronUp, ArrowLeftRight } from 'lucide-react';
 import { useCoachChatContext } from '@/contexts/CoachChatContext';
+
 import {
   Dialog,
   DialogContent,
@@ -52,13 +54,25 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
   const [isNotesDialogOpen, setIsNotesDialogOpen] = useState(false);
   const [notesText, setNotesText] = useState(exercise.userNotes || '');
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const { sendMessage } = useCoachChatContext();
+
 
   const completedSets = exercise.sets.filter((s) => s.completed).length;
   const skippedSets = exercise.sets.filter((s) => s.skipped).length;
   const totalSets = exercise.workingSets;
   const isComplete = (completedSets + skippedSets) >= totalSets;
   const isSkipped = exercise.skipped;
+
+  // Auto-collapse when all sets are complete
+  useEffect(() => {
+    if (isComplete && !isSkipped) {
+      setIsCollapsed(true);
+    } else {
+      setIsCollapsed(false);
+    }
+  }, [isComplete, isSkipped]);
 
   const handleToggleSkip = () => {
     if (isSkipped) {
@@ -82,10 +96,102 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
     setNotesText(exercise.userNotes || '');
     setIsNotesDialogOpen(false);
   };
-
+  
   const handleReplaceExercise = () => {
     sendMessage(`I want to replace ${exercise.name} in this workout`);
   };
+
+  // Compact collapsed view for completed exercises
+  if (isCollapsed && isComplete) {
+    return (
+      <Card className="mb-4 bg-gray-50 border-gray-200">
+        <CardHeader className="py-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 flex-1">
+              {exercise.groupLabel && (
+                <Badge variant="outline" className="text-xs font-mono">
+                  {exercise.groupLabel}
+                </Badge>
+              )}
+              <Badge className="bg-green-500">Complete</Badge>
+              <h3 className="text-sm font-medium text-gray-700">
+                {exercise.name}
+              </h3>
+            </div>
+            <div className="flex items-center gap-1">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-gray-400 hover:text-gray-600"
+                  >
+                    <MoreVertical className="w-5 h-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleOpenNotesDialog}>
+                    <StickyNote className={`w-4 h-4 mr-2`} />
+                    {exercise.userNotes ? 'Edit note' : 'Add note'}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleToggleSkip}>
+                    <CircleSlash2 className="w-4 h-4 mr-2" />
+                    Skip
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setIsEditDialogOpen(true)}>
+                    <Pencil className="w-4 h-4 mr-2" />
+                    Modify
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsCollapsed(false)}
+                className="h-8 w-8 text-gray-400 hover:text-gray-600"
+              >
+                <ChevronDown className="w-5 h-5" />
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+
+        <Dialog open={isNotesDialogOpen} onOpenChange={setIsNotesDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Exercise Notes</DialogTitle>
+              <DialogDescription>
+                Add personal notes for this exercise (e.g., equipment used, variations, or reminders).
+              </DialogDescription>
+            </DialogHeader>
+            <Textarea
+              value={notesText}
+              onChange={(e) => setNotesText(e.target.value)}
+              placeholder="e.g., Used dumbbells instead of barbell..."
+              className="min-h-[100px]"
+            />
+            <DialogFooter>
+              <Button variant="outline" onClick={handleCancelNotes}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveNotes}>
+                Save
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <EditExerciseDialog
+          exercise={exercise}
+          allWeeks={allWeeks}
+          open={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+          onSave={onUpdateExercise}
+          onSaveAllSessions={onUpdateExerciseInAllSessions}
+        />
+      </Card>
+    );
+  }
 
   return (
     <Card className={`mb-4 ${isSkipped ? 'opacity-60 border-gray-300' : ''}`}>
@@ -113,14 +219,49 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
               <h3 className="text-lg font-semibold text-gray-900">
                 {exercise.name}
               </h3>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
+              <div className="flex items-center gap-1">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-gray-400 hover:text-gray-600"
+                    >
+                      <MoreVertical className="w-5 h-5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={handleOpenNotesDialog}>
+                      <StickyNote className={`w-4 h-4 mr-2`} />
+                      {exercise.userNotes ? 'Edit note' : 'Add note'}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleToggleSkip}>
+                      {isSkipped ? (
+                        <>
+                          <RotateCw className="w-4 h-4 mr-2" />
+                          Unskip
+                        </>
+                      ) : (
+                        <>
+                          <CircleSlash2 className="w-4 h-4 mr-2" />
+                          Skip
+                        </>
+                      )}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setIsEditDialogOpen(true)}>
+                      <Pencil className="w-4 h-4 mr-2" />
+                       Modify
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                {isComplete && (
                   <Button
                     variant="ghost"
                     size="icon"
+                    onClick={() => setIsCollapsed(true)}
                     className="h-8 w-8 text-gray-400 hover:text-gray-600"
                   >
-                    <MoreVertical className="w-5 h-5" />
+                    <ChevronUp className="w-5 h-5" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
