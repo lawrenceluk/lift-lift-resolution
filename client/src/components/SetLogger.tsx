@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { SetResult, Exercise, Week } from '@/types/workout';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { CheckCircle2, X, Check } from 'lucide-react';
+import { CheckCircle2, X, Check, CircleSlash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 
@@ -178,11 +178,10 @@ export const SetLogger: React.FC<SetLoggerProps> = ({
         <Card key={set.setNumber} className={set.skipped ? "p-3 bg-gray-50 border-gray-300" : "p-3 bg-green-50 border-green-200"}>
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
-              <CheckCircle2 className={set.skipped ? "w-5 h-5 text-gray-400" : "w-5 h-5 text-green-600"} />
+              {set.completed ?
+                <CheckCircle2 className={"w-5 h-5 text-green-600"} /> :
+                <CircleSlash2 className={"w-5 h-5 text-gray-400"} />}
               <span className="text-sm font-semibold">Set {set.setNumber}</span>
-              {set.skipped && (
-                <span className="text-xs text-gray-500 italic">Skipped</span>
-              )}
             </div>
             <Button
               variant="ghost"
@@ -193,7 +192,7 @@ export const SetLogger: React.FC<SetLoggerProps> = ({
               <X className="w-4 h-4" />
             </Button>
           </div>
-          {!set.skipped && (
+          {!set.skipped ? (
             <>
               <div className="grid grid-cols-3 gap-2 text-sm">
                 <div>
@@ -215,6 +214,8 @@ export const SetLogger: React.FC<SetLoggerProps> = ({
                 <p className="text-xs text-gray-600 mt-2 italic">{set.notes}</p>
               )}
             </>
+          ) : (
+            <p className="text-xs text-gray-500 mt-2">This set was skipped.</p>
           )}
         </Card>
       ))}
@@ -229,7 +230,7 @@ export const SetLogger: React.FC<SetLoggerProps> = ({
               onClick={handleSkipSet}
               className="text-xs text-gray-500 hover:text-gray-700 underline"
             >
-              skip
+              Skip
             </button>
           </div>
           <div className="grid grid-cols-3 gap-2 mb-3">
