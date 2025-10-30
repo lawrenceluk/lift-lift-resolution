@@ -55,8 +55,9 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
   const { sendMessage } = useCoachChatContext();
 
   const completedSets = exercise.sets.filter((s) => s.completed).length;
+  const skippedSets = exercise.sets.filter((s) => s.skipped).length;
   const totalSets = exercise.workingSets;
-  const isComplete = completedSets >= totalSets;
+  const isComplete = (completedSets + skippedSets) >= totalSets;
   const isSkipped = exercise.skipped;
 
   const handleToggleSkip = () => {

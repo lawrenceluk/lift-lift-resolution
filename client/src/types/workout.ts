@@ -6,6 +6,7 @@ export interface SetResult {
   weightUnit: 'lbs' | 'kg';
   rir?: number;
   completed: boolean;
+  skipped?: boolean;
   notes?: string;
 }
 
