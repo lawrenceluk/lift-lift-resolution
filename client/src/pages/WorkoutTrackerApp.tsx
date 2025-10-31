@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CalendarIcon, MoreVerticalIcon, Upload, Download, HelpCircle, ArrowLeft, Search } from 'lucide-react';
 import { useLocation, useRoute } from 'wouter';
 import { Badge } from '@/components/ui/badge';
@@ -12,7 +12,9 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useWorkoutProgramContext } from '@/contexts/WorkoutProgramContext';
 import { SessionView } from '@/components/SessionView';
-import { exportWeeks, importWeeks, loadCurrentWeekIndex, saveCurrentWeekIndex } from '@/utils/localStorage';
+import { ImportModal } from '@/components/ImportModal';
+import { ExportModal } from '@/components/ExportModal';
+import { loadCurrentWeekIndex, saveCurrentWeekIndex } from '@/utils/localStorage';
 import { useToast } from '@/hooks/use-toast';
 import { getWorkoutStatus, parseId } from '@/utils/idHelpers';
 
@@ -25,7 +27,9 @@ export const WorkoutTrackerApp = (): JSX.Element => {
   // Check if we're on a workout route (either week or session)
   const [matchWorkout, workoutParams] = useRoute('/:id');
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  // Modal state
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
 
   // Determine current week index from URL or localStorage
   const [currentWeekIndex, setCurrentWeekIndex] = useState(() => {
@@ -87,35 +91,12 @@ export const WorkoutTrackerApp = (): JSX.Element => {
     setLocation(`/${sessionId}`);
   };
 
-  const handleExport = () => {
-    exportWeeks(weeks);
+  const handleImport = (importedWeeks: any[]) => {
+    importWeeksHook(importedWeeks);
     toast({
-      title: 'Program exported',
-      description: 'Your workout program has been downloaded as JSON.',
+      title: 'Program imported',
+      description: 'Your workout program has been loaded successfully.',
     });
-  };
-
-  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    try {
-      const importedWeeks = await importWeeks(file);
-      importWeeksHook(importedWeeks);
-      toast({
-        title: 'Program imported',
-        description: 'Your workout program has been loaded successfully.',
-      });
-    } catch (error) {
-      toast({
-        title: 'Import failed',
-        description: 'Failed to import workout program. Please check the file.',
-        variant: 'destructive',
-      });
-    }
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
   };
 
   // Handle workout route (either week or session)
@@ -256,14 +237,6 @@ export const WorkoutTrackerApp = (): JSX.Element => {
 
   return (
     <div className="bg-white w-full min-h-screen flex flex-col items-center">
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="application/json"
-        onChange={handleImport}
-        className="hidden"
-      />
-
       <header className="flex flex-col w-full max-w-2xl items-start pt-4 pb-2 px-4 bg-[#fffffff2] border-b-[0.55px] border-solid border-[#0000001a] sticky top-0 z-10">
         <div className="flex h-9 items-center justify-between w-full">
           <div className="flex items-center gap-3">
@@ -293,11 +266,11 @@ export const WorkoutTrackerApp = (): JSX.Element => {
                 <HelpCircle className="w-4 h-4 mr-2" />
                 How it works
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleExport}>
+              <DropdownMenuItem onClick={() => setExportModalOpen(true)}>
                 <Download className="w-4 h-4 mr-2" />
                 Export Program
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
+              <DropdownMenuItem onClick={() => setImportModalOpen(true)}>
                 <Upload className="w-4 h-4 mr-2" />
                 Import Program
               </DropdownMenuItem>
@@ -436,6 +409,18 @@ export const WorkoutTrackerApp = (): JSX.Element => {
           );
         })()}
       </main>
+
+      {/* Modals */}
+      <ImportModal
+        open={importModalOpen}
+        onOpenChange={setImportModalOpen}
+        onImport={handleImport}
+      />
+      <ExportModal
+        open={exportModalOpen}
+        onOpenChange={setExportModalOpen}
+        weeks={weeks}
+      />
 
       {/* Coach Chat is now rendered globally in App.tsx */}
     </div>
