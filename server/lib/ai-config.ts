@@ -1,6 +1,67 @@
 import { WorkoutContext } from './ai-service';
 
 /**
+ * Helper function to format exercise details with set-by-set progress
+ */
+function formatExerciseDetails(exercises: any[]): string {
+  let output = '';
+
+  exercises?.forEach((ex: any, idx: number) => {
+    output += `\n${idx + 1}. ${ex.name}`;
+    if (ex.groupLabel) output += ` [${ex.groupLabel}]`;
+
+    if (ex.skipped) {
+      output += ` - ${ex.workingSets} sets × ${ex.reps} @ ${ex.targetLoad} [SKIPPED]`;
+    } else {
+      output += ` - Target: ${ex.workingSets} sets × ${ex.reps} @ ${ex.targetLoad}`;
+
+      // Show detailed set-by-set data if any sets are logged
+      if (ex.sets && ex.sets.length > 0) {
+        const completedSets = ex.sets.filter((s: any) => s.completed).length;
+        output += ` [${completedSets}/${ex.workingSets} logged]`;
+
+        // Add detailed set information
+        ex.sets.forEach((set: any) => {
+          const setPrefix = `\n   Set ${set.setNumber}:`;
+          if (set.completed) {
+            output += setPrefix;
+            output += ` ${set.reps} reps`;
+            if (set.weight !== undefined) {
+              output += ` @ ${set.weight} ${set.weightUnit}`;
+            }
+            if (set.rir !== undefined) {
+              output += `, RIR ${set.rir}`;
+            }
+            if (set.notes) {
+              output += ` (${set.notes})`;
+            }
+            output += ` ✓`;
+          }
+        });
+
+        // Show which sets are pending
+        const pendingSets = ex.workingSets - ex.sets.length;
+        if (pendingSets > 0) {
+          const nextSetNum = ex.sets.length + 1;
+          output += `\n   Set ${nextSetNum}`;
+          if (pendingSets > 1) {
+            output += `-${ex.workingSets}`;
+          }
+          output += `: [pending]`;
+        }
+      } else {
+        output += ` [no sets logged yet]`;
+      }
+    }
+
+    if (ex.notes) output += `\n   Exercise notes: ${ex.notes}`;
+    if (ex.userNotes) output += `\n   User notes: ${ex.userNotes}`;
+  });
+
+  return output;
+}
+
+/**
  * Build context-aware system prompt for the workout coach
  */
 export function buildSystemPrompt(context?: WorkoutContext): string {
@@ -51,65 +112,32 @@ Status: ${session.completed ? 'Completed' : session.startedAt ? 'In Progress' : 
 ${session.scheduledDate ? `Scheduled: ${session.scheduledDate}` : ''}
 
 Exercises in this session:`;
-
-      session.exercises?.forEach((ex: any, idx: number) => {
-        systemPrompt += `\n${idx + 1}. ${ex.name}`;
-        if (ex.groupLabel) systemPrompt += ` [${ex.groupLabel}]`;
-        systemPrompt += ` - ${ex.workingSets} sets × ${ex.reps} reps @ ${ex.targetLoad}`;
-        if (ex.skipped) {
-          systemPrompt += ` [SKIPPED]`;
-        } else {
-          systemPrompt += ` - Target: ${ex.workingSets} sets × ${ex.reps} reps @ ${ex.targetLoad}`;
-
-          // Show detailed set-by-set data if any sets are logged
-          if (ex.sets && ex.sets.length > 0) {
-            const completedSets = ex.sets.filter((s: any) => s.completed).length;
-            systemPrompt += ` [${completedSets}/${ex.workingSets} logged]`;
-
-            // Add detailed set information
-            ex.sets.forEach((set: any) => {
-              const setPrefix = `\n   Set ${set.setNumber}:`;
-              if (set.completed) {
-                systemPrompt += setPrefix;
-                systemPrompt += ` ${set.reps} reps`;
-                if (set.weight !== undefined) {
-                  systemPrompt += ` @ ${set.weight} ${set.weightUnit}`;
-                }
-                if (set.rir !== undefined) {
-                  systemPrompt += `, RIR ${set.rir}`;
-                }
-                if (set.notes) {
-                  systemPrompt += ` (${set.notes})`;
-                }
-                systemPrompt += ` ✓`;
-              }
-            });
-
-            // Show which sets are pending
-            const pendingSets = ex.workingSets - ex.sets.length;
-            if (pendingSets > 0) {
-              const nextSetNum = ex.sets.length + 1;
-              systemPrompt += `\n   Set ${nextSetNum}`;
-              if (pendingSets > 1) {
-                systemPrompt += `-${ex.workingSets}`;
-              }
-              systemPrompt += `: [pending]`;
-            }
-          } else {
-            systemPrompt += ` [no sets logged yet]`;
-          }
-        }
-        if (ex.notes) systemPrompt += `\n   Exercise notes: ${ex.notes}`;
-        if (ex.userNotes) systemPrompt += `\n   User notes: ${ex.userNotes}`;
-      });
+      systemPrompt += formatExerciseDetails(session.exercises);
     }
 
-    // SECONDARY: Current week context
+    // SECONDARY: Current week context (with detailed session info)
     if (context.currentWeek) {
       const week = context.currentWeek;
-      systemPrompt += `\n\nCurrent Week: Week ${week.weekNumber}`;
-      if (week.phase) systemPrompt += ` (${week.phase})`;
-      systemPrompt += `\nSessions in this week: ${week.sessions?.length || 0}`;
+      systemPrompt += `\n\n📅 CURRENT WEEK (User is viewing this NOW):
+Week ${week.weekNumber}`;
+      if (week.phase) systemPrompt += ` - ${week.phase}`;
+      if (week.startDate && week.endDate) {
+        systemPrompt += `\n${week.startDate} to ${week.endDate}`;
+      }
+      systemPrompt += `\nTotal sessions: ${week.sessions?.length || 0}`;
+
+      // Show detailed info for each session in the week
+      if (week.sessions && week.sessions.length > 0) {
+        week.sessions.forEach((session: any, idx: number) => {
+          systemPrompt += `\n\n--- Session ${idx + 1}: ${session.name || 'Unnamed'} (${session.id})
+Status: ${session.completed ? 'Completed ✓' : session.startedAt ? 'In Progress' : 'Not Started'}`;
+          if (session.scheduledDate) systemPrompt += `\nScheduled: ${session.scheduledDate}`;
+          if (session.completedDate) systemPrompt += `\nCompleted: ${session.completedDate}`;
+
+          systemPrompt += `\n\nExercises:`;
+          systemPrompt += formatExerciseDetails(session.exercises);
+        });
+      }
     }
 
     // TERTIARY: Full program (compressed for context limit awareness)

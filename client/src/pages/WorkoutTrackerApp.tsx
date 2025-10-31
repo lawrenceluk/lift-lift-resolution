@@ -267,8 +267,16 @@ export const WorkoutTrackerApp = (): JSX.Element => {
       <header className="flex flex-col w-full max-w-2xl items-start pt-4 pb-2 px-4 bg-[#fffffff2] border-b-[0.55px] border-solid border-[#0000001a] sticky top-0 z-10">
         <div className="flex h-9 items-center justify-between w-full">
           <div className="flex items-center gap-3">
-            {matchWorkout && workoutParams?.id && (
-              <Button variant="ghost" size="icon" className="h-9 w-9" onClick={goToHome}>
+            {matchWorkout && workoutParams?.id && parseId(workoutParams.id)?.sessionNumber && (
+              <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => {
+                const parsed = parseId(workoutParams.id);
+                if (parsed?.weekNumber) {
+                  const week = weeks.find((w) => w.weekNumber === parsed.weekNumber);
+                  if (week) {
+                    setLocation(`/${week.id}`);
+                  }
+                }
+              }}>
                 <ArrowLeft className="w-5 h-5" />
               </Button>
             )}
