@@ -1,13 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Exercise, SetResult, Week } from '@/types/workout';
 import { SetLogger } from './SetLogger';
 import { EditExerciseDialog } from './EditExerciseDialog';
+import { ExerciseHistoryDialog } from './ExerciseHistoryDialog';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
-import { CircleSlash2, RotateCw, StickyNote, MoreVertical, Pencil, ChevronDown, ChevronUp, ArrowLeftRight } from 'lucide-react';
+import { CircleSlash2, StickyNote, MoreVertical, Pencil, ChevronDown, ChevronUp, ArrowLeftRight, History } from 'lucide-react';
 import { useCoachChatContext } from '@/contexts/CoachChatContext';
+import { findExerciseHistory } from '@/utils/exerciseHistory';
 
 import {
   Dialog,
@@ -37,6 +39,7 @@ interface ExerciseViewProps {
   onUpdateNotes: (notes: string) => void;
   onUpdateExercise: (updates: Partial<Exercise>) => void;
   onUpdateExerciseInAllSessions?: (originalName: string, updates: Partial<Exercise>) => void;
+  onUpdateExerciseNotesById?: (exerciseId: string, notes: string) => void;
 }
 
 export const ExerciseView: React.FC<ExerciseViewProps> = ({
@@ -50,13 +53,27 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
   onUpdateNotes,
   onUpdateExercise,
   onUpdateExerciseInAllSessions,
+  onUpdateExerciseNotesById,
 }) => {
   const [isNotesDialogOpen, setIsNotesDialogOpen] = useState(false);
   const [notesText, setNotesText] = useState(exercise.userNotes || '');
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
 
   const [isCollapsed, setIsCollapsed] = useState(false);
   const { sendMessage } = useCoachChatContext();
+
+  // Memoize exercise history to avoid recalculating on every render
+  const exerciseHistory = useMemo(
+    () => findExerciseHistory(allWeeks || null, exercise.name, exercise.id),
+    [allWeeks, exercise.name, exercise.id]
+  );
+
+  // Check if this exercise has historical data (memoized)
+  const hasHistory = useMemo(
+    () => exerciseHistory.length > 0,
+    [exerciseHistory]
+  );
 
 
   const completedSets = exercise.sets.filter((s) => s.completed).length;
@@ -154,6 +171,15 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
               <ArrowLeftRight className="w-4 h-4 mr-2" />
               Replace
             </DropdownMenuItem>
+            {hasHistory && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setIsHistoryDialogOpen(true)}>
+                  <History className="w-4 h-4 mr-2" />
+                  History
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -226,8 +252,14 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
               </div>
             </div>
             {exercise.userNotes && (
-              <div className="mt-2 p-2 bg-blue-50 rounded border border-blue-200">
-                <p className="text-sm text-blue-900">{exercise.userNotes}</p>
+              <div
+                className="mt-2 p-2 bg-blue-50 rounded border border-blue-200 cursor-pointer hover:bg-blue-100 transition-colors group"
+                onClick={handleOpenNotesDialog}
+              >
+                <div className="flex items-start gap-2">
+                  <p className="text-sm text-blue-900 flex-1">{exercise.userNotes}</p>
+                  <Pencil className="h-3 w-3 text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-0.5" />
+                </div>
               </div>
             )}
           </CardHeader>
@@ -282,6 +314,14 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
         onOpenChange={setIsEditDialogOpen}
         onSave={onUpdateExercise}
         onSaveAllSessions={onUpdateExerciseInAllSessions}
+      />
+
+      <ExerciseHistoryDialog
+        exerciseName={exercise.name}
+        history={exerciseHistory}
+        open={isHistoryDialogOpen}
+        onOpenChange={setIsHistoryDialogOpen}
+        onUpdateNote={onUpdateExerciseNotesById}
       />
     </>
   );

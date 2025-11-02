@@ -102,6 +102,7 @@ export const SessionView: React.FC<SessionViewProps> = ({
             onUpdateNotes={(notes) => onUpdateExerciseNotes(exercise.id, notes)}
             onUpdateExercise={(updates) => onUpdateExercise(exercise.id, updates)}
             onUpdateExerciseInAllSessions={onUpdateExerciseInAllSessions}
+            onUpdateExerciseNotesById={onUpdateExerciseNotes}
           />
         ))}
 
