@@ -313,9 +313,28 @@ function executeModifyExercise(workoutData: Week[], params: ModifyExerciseParams
   const updatedData = deepClone(workoutData);
   const { exercise } = findByGuid(updatedData, params.exerciseGuid);
 
-  // If the exercise name is being changed, clear any existing sets
-  // (sets are tied to the specific exercise, not transferable to a renamed exercise)
+  // Clear existing sets if the exercise is being substantially changed
+  let shouldClearSets = false;
+
+  // Case 1: Exercise name changed (different exercise entirely)
   if (params.updates.name && params.updates.name !== exercise!.name) {
+    shouldClearSets = true;
+  }
+
+  // Case 2: Load type changed (bodyweight <-> weighted)
+  if (params.updates.targetLoad && params.updates.targetLoad !== exercise!.targetLoad) {
+    const currentIsBodyweight = exercise!.targetLoad.toLowerCase().includes('bodyweight') ||
+                                exercise!.targetLoad.toLowerCase() === 'bw';
+    const newIsBodyweight = params.updates.targetLoad.toLowerCase().includes('bodyweight') ||
+                           params.updates.targetLoad.toLowerCase() === 'bw';
+
+    // Only clear if load type actually changed (not just "225 lbs" -> "235 lbs")
+    if (currentIsBodyweight !== newIsBodyweight) {
+      shouldClearSets = true;
+    }
+  }
+
+  if (shouldClearSets) {
     exercise!.sets = [];
   }
 
