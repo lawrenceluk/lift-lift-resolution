@@ -287,9 +287,14 @@ export const useWorkoutProgram = () => {
               exercises: session.exercises.map((exercise) => {
                 if (exercise.id !== exerciseId) return exercise;
 
+                // If the exercise name is being changed, clear any existing sets
+                const clearedUpdates = updates.name && updates.name !== exercise.name
+                  ? { ...updates, sets: [] }
+                  : updates;
+
                 return {
                   ...exercise,
-                  ...updates,
+                  ...clearedUpdates,
                 };
               }),
             };
@@ -312,9 +317,14 @@ export const useWorkoutProgram = () => {
           ...session,
           exercises: session.exercises.map((exercise) => {
             if (exercise.name === originalName) {
+              // If the exercise name is being changed, clear any existing sets
+              const clearedUpdates = updates.name && updates.name !== exercise.name
+                ? { ...updates, sets: [] }
+                : updates;
+
               return {
                 ...exercise,
-                ...updates,
+                ...clearedUpdates,
               };
             }
             return exercise;

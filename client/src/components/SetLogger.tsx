@@ -48,23 +48,40 @@ export const SetLogger: React.FC<SetLoggerProps> = ({
     // First priority: pre-fill with the most recent set from current exercise's session
     if (exercise.sets.length > 0) {
       const lastSet = exercise.sets[exercise.sets.length - 1];
-      setNewSetData({
-        reps: lastSet.reps.toString(),
-        weight: lastSet.weight ? lastSet.weight.toString() : '',
-        rir: lastSet.rir ? lastSet.rir.toString() : '',
-      });
-      // Also set placeholders for visual consistency
-      setPlaceholderData({
-        reps: lastSet.reps.toString(),
-        weight: lastSet.weight ? lastSet.weight.toString() : '',
-        rir: lastSet.rir ? lastSet.rir.toString() : '',
-      });
-      return;
+
+      // Validate that this set data makes sense for the current exercise
+      // Check if exercise is bodyweight - if so, only use sets that were also bodyweight
+      const isBodyweight = exercise.targetLoad.toLowerCase().includes('bodyweight') ||
+                          exercise.targetLoad.toLowerCase() === 'bw';
+      const setHasWeight = lastSet.weight && lastSet.weight > 0;
+
+      // Only use this set data if load types are compatible
+      if (isBodyweight && setHasWeight) {
+        // Bodyweight exercise but set has weight - this is wrong, skip to historical lookup
+        // Don't return early, fall through to historical search
+      } else {
+        setNewSetData({
+          reps: lastSet.reps.toString(),
+          weight: lastSet.weight ? lastSet.weight.toString() : '',
+          rir: lastSet.rir ? lastSet.rir.toString() : '',
+        });
+        // Also set placeholders for visual consistency
+        setPlaceholderData({
+          reps: lastSet.reps.toString(),
+          weight: lastSet.weight ? lastSet.weight.toString() : '',
+          rir: lastSet.rir ? lastSet.rir.toString() : '',
+        });
+        return;
+      }
     }
 
     // Second priority: greedy backwards search for the latest completed set
     // from a previous session (use as placeholder only, don't pre-fill)
-    if (!allWeeks) return;
+    if (!allWeeks) {
+      // No historical data available, clear any stale placeholders
+      setPlaceholderData({ reps: '', weight: '', rir: '' });
+      return;
+    }
 
     const currentSessionId = exercise.id.split('-exercise-')[0];
 
@@ -106,7 +123,10 @@ export const SetLogger: React.FC<SetLoggerProps> = ({
         }
       }
     }
-  }, [exercise.sets, exercise.id, exercise.name, allWeeks]);
+
+    // If we reach here, no historical data was found - clear placeholders
+    setPlaceholderData({ reps: '', weight: '', rir: '' });
+  }, [exercise.sets, exercise.id, exercise.name, allWeeks, exercise.targetLoad]);
 
   const handleAddSet = () => {
     const setNumber = exercise.sets.length + 1;

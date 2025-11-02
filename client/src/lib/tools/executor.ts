@@ -312,6 +312,13 @@ function validateRemoveWeek(params: RemoveWeekParams, workoutData: Week[]): Vali
 function executeModifyExercise(workoutData: Week[], params: ModifyExerciseParams): Week[] {
   const updatedData = deepClone(workoutData);
   const { exercise } = findByGuid(updatedData, params.exerciseGuid);
+
+  // If the exercise name is being changed, clear any existing sets
+  // (sets are tied to the specific exercise, not transferable to a renamed exercise)
+  if (params.updates.name && params.updates.name !== exercise!.name) {
+    exercise!.sets = [];
+  }
+
   Object.assign(exercise!, params.updates);
   return updatedData;
 }
