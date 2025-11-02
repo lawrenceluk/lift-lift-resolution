@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { useLocation } from 'wouter';
 import { ArrowLeft, Copy, Check, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useWorkoutProgram } from '@/hooks/useWorkoutProgram';
-import { importWeeks } from '@/utils/localStorage';
+import { ImportModal } from '@/components/ImportModal';
 
 const generatePrompt = (preferences: {
   duration: string;
@@ -92,8 +92,7 @@ export const HowItWorks: React.FC = () => {
   const { toast } = useToast();
   const { importWeeks: importWeeksHook } = useWorkoutProgram();
   const [copied, setCopied] = useState(false);
-  const [pastedJson, setPastedJson] = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importModalOpen, setImportModalOpen] = useState(false);
   const [preferences, setPreferences] = useState({
     duration: '4 weeks',
     goal: 'hypertrophy',
@@ -102,19 +101,6 @@ export const HowItWorks: React.FC = () => {
     equipment: 'full gym',
     constraints: '',
   });
-
-  const cleanJsonString = (jsonStr: string): string => {
-    // Remove markdown code block wrappers if present
-    let cleaned = jsonStr.trim();
-
-    // Remove ```json or ``` from start and ``` from end
-    if (cleaned.startsWith('```')) {
-      cleaned = cleaned.replace(/^```(?:json)?\n?/, '');
-      cleaned = cleaned.replace(/\n?```$/, '');
-    }
-
-    return cleaned.trim();
-  };
 
   const handleCopyPrompt = async () => {
     const prompt = generatePrompt(preferences);
@@ -135,74 +121,17 @@ export const HowItWorks: React.FC = () => {
     }
   };
 
-  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    try {
-      const importedWeeks = await importWeeks(file);
-      importWeeksHook(importedWeeks);
-      toast({
-        title: 'Program imported',
-        description: 'Your workout program has been loaded successfully.',
-      });
-      setLocation('/');
-    } catch (error) {
-      toast({
-        title: 'Import failed',
-        description: 'Failed to import workout program. Please check the file.',
-        variant: 'destructive',
-      });
-    }
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
-  const handleImportFromPaste = () => {
-    if (!pastedJson.trim()) {
-      toast({
-        title: 'No JSON provided',
-        description: 'Please paste your workout program JSON.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    try {
-      const cleanedJson = cleanJsonString(pastedJson);
-      const importedWeeks = JSON.parse(cleanedJson);
-
-      // Basic validation
-      if (!Array.isArray(importedWeeks)) {
-        throw new Error('Invalid format: expected an array of weeks');
-      }
-
-      importWeeksHook(importedWeeks);
-      toast({
-        title: 'Program imported',
-        description: 'Your workout program has been loaded successfully.',
-      });
-      setLocation('/');
-    } catch (error) {
-      toast({
-        title: 'Import failed',
-        description: error instanceof Error ? error.message : 'Failed to parse JSON. Please check the format.',
-        variant: 'destructive',
-      });
-    }
+  const handleImport = (importedWeeks: any[]) => {
+    importWeeksHook(importedWeeks);
+    toast({
+      title: 'Program imported',
+      description: 'Your workout program has been loaded successfully.',
+    });
+    setLocation('/');
   };
 
   return (
     <div className="min-h-screen bg-white flex flex-col items-center">
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="application/json"
-        onChange={handleImport}
-        className="hidden"
-      />
-
       <header className="bg-white sticky top-0 z-10 border-b border-gray-200 px-4 py-3 w-full max-w-2xl">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => setLocation('/')} className="h-9 w-9">
@@ -248,11 +177,21 @@ export const HowItWorks: React.FC = () => {
             </div>
 
             <div className="space-y-2">
+              <h3 className="font-semibold text-sm">Using the coach</h3>
+              <p className="text-sm text-gray-700">
+                The coach button is available throughout the app and knows what you're currently viewing.
+                Ask questions about your program, request exercise modifications, or get form cues. The coach
+                can adjust your workouts on the fly—just ask to swap an exercise, change rep ranges, or modify
+                any part of your program.
+              </p>
+            </div>
+
+            <div className="space-y-2">
               <h3 className="font-semibold text-sm">Backing up your data</h3>
               <p className="text-sm text-gray-700">
-                Your workout data is stored locally in your browser. Use the "Export Program" option to
-                download a JSON backup that includes all your logged sets and progress. You can import this
-                file later to restore your data or transfer it to another device.
+                Your workout data is stored locally in your browser. Use "Export Program" to save a JSON backup
+                that includes all your logged sets and progress. You can download the file or copy the JSON to
+                your clipboard. Import it later to restore your data or transfer it to another device.
               </p>
             </div>
           </section>
@@ -352,22 +291,8 @@ export const HowItWorks: React.FC = () => {
               </Button>
 
               <p className="text-sm text-gray-700">
-                After the AI generates the JSON, you can either paste it directly below or save it to a file and import it.
+                After the AI generates the JSON, click "Import Program" below to upload the file or paste the JSON directly.
               </p>
-
-              <div className="space-y-2">
-                <Label htmlFor="jsonPaste" className="text-sm">Paste JSON from AI</Label>
-                <Textarea
-                  id="jsonPaste"
-                  value={pastedJson}
-                  onChange={(e) => setPastedJson(e.target.value)}
-                  placeholder="Paste your workout program JSON here... (code blocks like ```json are automatically handled)"
-                  className="min-h-[120px] font-mono text-xs"
-                />
-                <Button onClick={handleImportFromPaste} className="w-full" disabled={!pastedJson.trim()}>
-                  Import from pasted JSON
-                </Button>
-              </div>
             </div>
 
             <div className="space-y-2">
@@ -387,9 +312,9 @@ export const HowItWorks: React.FC = () => {
 
           <div className="space-y-3">
             <div className="text-center">
-              <Button onClick={() => fileInputRef.current?.click()} variant="outline" className="w-full">
+              <Button onClick={() => setImportModalOpen(true)} variant="default" className="w-full">
                 <Upload className="w-4 h-4 mr-2" />
-                Import from file
+                Import Program
               </Button>
             </div>
             <Button onClick={() => setLocation('/')} variant="outline" className="w-full">
@@ -398,6 +323,13 @@ export const HowItWorks: React.FC = () => {
           </div>
         </div>
       </main>
+
+      {/* Import Modal */}
+      <ImportModal
+        open={importModalOpen}
+        onOpenChange={setImportModalOpen}
+        onImport={handleImport}
+      />
     </div>
   );
 };
