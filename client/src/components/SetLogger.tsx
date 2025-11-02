@@ -77,20 +77,30 @@ export const SetLogger: React.FC<SetLoggerProps> = ({
         // Skip current session
         if (session.id === currentSessionId) continue;
 
-        // Look for exercises with matching name
+        // Look for exercises with matching name AND compatible targetLoad
         for (const ex of session.exercises) {
           if (ex.name === exercise.name && ex.sets && ex.sets.length > 0) {
-            // Find the last completed set
-            const completedSets = ex.sets.filter(s => s.completed);
-            if (completedSets.length > 0) {
-              const lastSet = completedSets[completedSets.length - 1];
-              // Only set placeholders, don't pre-fill the form
-              setPlaceholderData({
-                reps: lastSet.reps.toString(),
-                weight: lastSet.weight ? lastSet.weight.toString() : '',
-                rir: lastSet.rir ? lastSet.rir.toString() : '',
-              });
-              return; // Found it, exit early
+            // Check if targetLoad is compatible
+            // Both should be bodyweight, or both should be weighted
+            const currentIsBodyweight = exercise.targetLoad.toLowerCase().includes('bodyweight') ||
+                                       exercise.targetLoad.toLowerCase() === 'bw';
+            const historicalIsBodyweight = ex.targetLoad.toLowerCase().includes('bodyweight') ||
+                                          ex.targetLoad.toLowerCase() === 'bw';
+
+            // Only use historical data if load types match
+            if (currentIsBodyweight === historicalIsBodyweight) {
+              // Find the last completed set
+              const completedSets = ex.sets.filter(s => s.completed);
+              if (completedSets.length > 0) {
+                const lastSet = completedSets[completedSets.length - 1];
+                // Only set placeholders, don't pre-fill the form
+                setPlaceholderData({
+                  reps: lastSet.reps.toString(),
+                  weight: lastSet.weight ? lastSet.weight.toString() : '',
+                  rir: lastSet.rir ? lastSet.rir.toString() : '',
+                });
+                return; // Found it, exit early
+              }
             }
           }
         }
