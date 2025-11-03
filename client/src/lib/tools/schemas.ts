@@ -303,6 +303,39 @@ export const removeWeekSchema: ToolSchema = {
 };
 
 // ============================================================================
+// Read Tools
+// ============================================================================
+
+export const getWorkoutDataSchema: ToolSchema = {
+  name: 'get_workout_data',
+  description: 'Fetch detailed workout data to answer questions about progress, volume, or history across weeks',
+  category: 'read',
+  input_schema: {
+    type: 'object',
+    properties: {
+      scope: {
+        type: 'string',
+        enum: ['full_program', 'specific_week', 'specific_session'],
+        description: 'Scope of data to fetch: full_program (all weeks), specific_week (one week), or specific_session (one session)',
+      },
+      weekNumber: {
+        type: 'number',
+        description: 'Week number (required for specific_week or specific_session scope)',
+      },
+      sessionNumber: {
+        type: 'number',
+        description: 'Session number within week (required for specific_session scope)',
+      },
+      includeSetData: {
+        type: 'boolean',
+        description: 'Include detailed set-by-set data (default: true)',
+      },
+    },
+    required: ['scope'],
+  },
+};
+
+// ============================================================================
 // UI Tools
 // ============================================================================
 
@@ -341,6 +374,7 @@ export const allToolSchemas: ToolSchema[] = [
   modifyWeekSchema,
   addWeekSchema,
   removeWeekSchema,
+  getWorkoutDataSchema,
   suggestRepliesSchema,
 ];
 
@@ -356,5 +390,6 @@ export const toolSchemasByName: Record<string, ToolSchema> = {
   modify_week: modifyWeekSchema,
   add_week: addWeekSchema,
   remove_week: removeWeekSchema,
+  get_workout_data: getWorkoutDataSchema,
   suggest_replies: suggestRepliesSchema,
 };
