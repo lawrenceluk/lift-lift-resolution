@@ -82,9 +82,9 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
   const isComplete = (completedSets + skippedSets) >= totalSets;
   const isSkipped = exercise.skipped;
 
-  // Auto-collapse when all sets are complete
+  // Auto-collapse when all sets are complete or when skipped
   useEffect(() => {
-    if (isComplete && !isSkipped) {
+    if (isComplete || isSkipped) {
       setIsCollapsed(true);
     } else {
       setIsCollapsed(false);
@@ -120,23 +120,6 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
 
   // Reusable action buttons component
   const ActionButtons = () => {
-    // For complete or skipped exercises, only show expand/collapse button
-    if (isComplete || isSkipped) {
-      return (
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="h-8 w-8 text-gray-400 hover:text-gray-600"
-          >
-            {isCollapsed ? <ChevronDown className="w-5 h-5" /> : <ChevronUp className="w-5 h-5" />}
-          </Button>
-        </div>
-      );
-    }
-
-    // For active exercises, show all action buttons
     return (
       <div className="flex items-center gap-1">
         <Button
@@ -158,19 +141,47 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={handleToggleSkip}>
-              <CircleSlash2 className="w-4 h-4 mr-2" />
-              Skip
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setIsEditDialogOpen(true)}>
-              <Pencil className="w-4 h-4 mr-2" />
-              Modify
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleReplaceExercise}>
-              <ArrowLeftRight className="w-4 h-4 mr-2" />
-              Replace
-            </DropdownMenuItem>
+            {isSkipped ? (
+              <DropdownMenuItem onClick={handleToggleSkip}>
+                <CircleSlash2 className="w-4 h-4 mr-2" />
+                Unskip
+              </DropdownMenuItem>
+            ) : !isComplete && (
+              <DropdownMenuItem onClick={handleToggleSkip}>
+                <CircleSlash2 className="w-4 h-4 mr-2" />
+                Skip
+              </DropdownMenuItem>
+            )}
+            {(isComplete || isSkipped) && (
+              <>
+                <DropdownMenuItem onClick={() => setIsCollapsed(!isCollapsed)}>
+                  {isCollapsed ? (
+                    <>
+                      <ChevronDown className="w-4 h-4 mr-2" />
+                      Expand
+                    </>
+                  ) : (
+                    <>
+                      <ChevronUp className="w-4 h-4 mr-2" />
+                      Collapse
+                    </>
+                  )}
+                </DropdownMenuItem>
+              </>
+            )}
+            {!isComplete && !isSkipped && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setIsEditDialogOpen(true)}>
+                  <Pencil className="w-4 h-4 mr-2" />
+                  Modify
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleReplaceExercise}>
+                  <ArrowLeftRight className="w-4 h-4 mr-2" />
+                  Replace
+                </DropdownMenuItem>
+              </>
+            )}
             {hasHistory && (
               <>
                 <DropdownMenuSeparator />
@@ -188,9 +199,9 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
 
   return (
     <>
-      {isCollapsed && isComplete ? (
-        // Compact collapsed view for completed exercises
-        <Card className="mb-4 bg-gray-50 border-gray-200">
+      {isCollapsed && (isComplete || isSkipped) ? (
+        // Compact collapsed view for completed or skipped exercises
+        <Card className={`mb-4 ${isSkipped ? 'bg-gray-50 border-gray-300' : 'bg-gray-50 border-gray-200'}`}>
           <CardHeader className="py-3">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 flex-1">
@@ -199,19 +210,25 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
                     {exercise.groupLabel}
                   </Badge>
                 )}
-                <Badge className="bg-green-500">Complete</Badge>
+                {isSkipped ? (
+                  <Badge variant="destructive" className="bg-gray-500">Skipped</Badge>
+                ) : (
+                  <Badge className="bg-green-500">Complete</Badge>
+                )}
                 <div className="flex flex-col">
                   <h3 className="text-sm font-medium text-gray-700">
                     {exercise.name}
                   </h3>
-                  <p className="text-xs text-gray-500">
-                    {completedSets > 0 && skippedSets > 0
-                      ? `${completedSets}/${totalSets} sets completed, ${skippedSets} skipped`
-                      : skippedSets > 0
-                      ? `${skippedSets}/${totalSets} sets skipped`
-                      : `${completedSets}/${totalSets} sets completed`
-                    }
-                  </p>
+                  {!isSkipped && (
+                    <p className="text-xs text-gray-500">
+                      {completedSets > 0 && skippedSets > 0
+                        ? `${completedSets}/${totalSets} sets completed, ${skippedSets} skipped`
+                        : skippedSets > 0
+                        ? `${skippedSets}/${totalSets} sets skipped`
+                        : `${completedSets}/${totalSets} sets completed`
+                      }
+                    </p>
+                  )}
                 </div>
               </div>
               <ActionButtons />
@@ -263,11 +280,11 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
               </div>
             )}
           </CardHeader>
-          {!isSkipped && (
-            <CardContent>
-              {exercise.notes && (
-                <p className="text-sm text-gray-600 italic">{exercise.notes}</p>
-              )}
+          <CardContent>
+            {exercise.notes && (
+              <p className="text-sm text-gray-600 italic">{exercise.notes}</p>
+            )}
+            {!isSkipped && (
               <SetLogger
                 exercise={exercise}
                 allWeeks={allWeeks}
@@ -275,8 +292,8 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
                 onUpdateSet={onUpdateSet}
                 onDeleteSet={onDeleteSet}
               />
-            </CardContent>
-          )}
+            )}
+          </CardContent>
         </Card>
         </div>
       )}

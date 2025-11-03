@@ -145,7 +145,7 @@ export const ExerciseHistoryDialog: React.FC<ExerciseHistoryDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-3xl py-8 max-h-[80vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Exercise History: {exerciseName}</DialogTitle>
           <DialogDescription>
@@ -237,7 +237,7 @@ export const ExerciseHistoryDialog: React.FC<ExerciseHistoryDialogProps> = ({
             {/* History Table - Scrollable */}
             {sortedHistory.length > 1 && (
               <div className="flex flex-col min-h-0">
-                <h3 className="font-semibold text-sm text-gray-700 mb-3 flex-shrink-0">All Sessions</h3>
+                <h3 className="font-semibold text-sm text-gray-700 mb-3 flex-shrink-0">Session Log</h3>
                 <div className="overflow-y-auto flex-1 -mx-6 md:mx-0">
                   <Table>
                     <TableHeader>
@@ -255,14 +255,14 @@ export const ExerciseHistoryDialog: React.FC<ExerciseHistoryDialogProps> = ({
                           <TableRow
                             key={index}
                             onClick={() => setSelectedEntry(entry)}
-                            className={`cursor-pointer transition-colors ${
+                            className={`cursor-pointer transition-colors py-3 ${
                               isSelected ? 'bg-blue-50' : 'hover:bg-gray-50'
                             }`}
                           >
-                            <TableCell className="font-medium py-2 text-sm pl-6 md:pl-4">
+                            <TableCell className="font-medium text-sm pl-6 md:pl-4">
                               {formatDateWithWeek(entry)}
                             </TableCell>
-                            <TableCell className="py-2 text-sm">
+                            <TableCell className="text-sm">
                               <span className="inline-flex items-center gap-1">
                                 {entry.sessionName}
                                 {hasNote && (
@@ -270,7 +270,7 @@ export const ExerciseHistoryDialog: React.FC<ExerciseHistoryDialogProps> = ({
                                 )}
                               </span>
                             </TableCell>
-                            <TableCell className="py-2 text-sm font-medium pr-6 md:pr-4">
+                            <TableCell className="text-sm font-medium pr-6 md:pr-4">
                               {calculateVolume(entry)}
                             </TableCell>
                           </TableRow>
