@@ -138,42 +138,23 @@ IMPORTANT - Suggested Replies:
   if (context) {
     systemPrompt += `\n\n=== WORKOUT PROGRAM CONTEXT ===`;
 
-    // PRIORITY: Current session (what user is looking at right now)
-    // This is the ONLY place we include detailed set-by-set data in initial context
-    if (context.currentSession) {
-      console.log('context.currentSession\n\n', JSON.stringify(context.currentSession));
-      const session = context.currentSession;
-      systemPrompt += `\n\n🎯 CURRENT WORKOUT SESSION (User is viewing this NOW):
-Session: ${session.name || 'Unnamed'} (${session.id})
-Status: ${session.completed ? 'Completed' : session.startedAt ? 'In Progress' : 'Not Started'}
-${session.scheduledDate ? `Scheduled: ${session.scheduledDate}` : ''}
+    // Detect if user is viewing week-level (no specific session) vs session-level
+    const isWeekView = context.currentWeek && !context.currentSession;
 
-Exercises in this session:`;
-      // Include set details ONLY for current session
-      systemPrompt += formatExerciseDetails(session.exercises, true);
-    }
-
-    // SECONDARY: Current week context (compressed - other sessions in the week)
-    if (context.currentWeek) {
-      const week = context.currentWeek;
-      systemPrompt += `\n\n📅 CURRENT WEEK:
-Week ${week.weekNumber}`;
+    if (isWeekView) {
+      // User is viewing WEEK LEVEL - show all sessions with compressed detail
+      systemPrompt += `\n\n📅 USER IS VIEWING WEEK LEVEL SCREEN`;
+      const week = context.currentWeek!;
+      systemPrompt += `\n\nWeek ${week.weekNumber}`;
       if (week.phase) systemPrompt += ` - ${week.phase}`;
       if (week.startDate && week.endDate) {
         systemPrompt += `\n${week.startDate} to ${week.endDate}`;
       }
       systemPrompt += `\nTotal sessions: ${week.sessions?.length || 0}`;
 
-      // Show compressed info for other sessions in the week (excluding current session)
+      // Show all sessions with compressed format
       if (week.sessions && week.sessions.length > 0) {
         week.sessions.forEach((session: any, idx: number) => {
-          // Skip current session - it's already detailed above
-          if (context.currentSession && session.id === context.currentSession.id) {
-            systemPrompt += `\n\n--- Session ${idx + 1}: ${session.name || 'Unnamed'} - [See CURRENT WORKOUT SESSION above for full details]`;
-            return;
-          }
-
-          // Compressed format for other sessions
           systemPrompt += `\n\n--- Session ${idx + 1}: ${session.name || 'Unnamed'} (${session.id})
 Status: ${session.completed ? 'Completed ✓' : session.startedAt ? 'In Progress' : 'Not Started'}`;
           if (session.scheduledDate) systemPrompt += `\nScheduled: ${session.scheduledDate}`;
@@ -182,6 +163,50 @@ Status: ${session.completed ? 'Completed ✓' : session.startedAt ? 'In Progress
           systemPrompt += `\nExercises:`;
           systemPrompt += formatExerciseSummary(session.exercises);
         });
+      }
+    } else if (context.currentSession) {
+      // User is viewing SESSION LEVEL - show detailed current session + compressed others
+      systemPrompt += `\n\n🎯 USER IS VIEWING SESSION LEVEL SCREEN`;
+      console.log('context.currentSession\n\n', JSON.stringify(context.currentSession));
+      const session = context.currentSession;
+      systemPrompt += `\n\nCurrent Session: ${session.name || 'Unnamed'} (${session.id})
+Status: ${session.completed ? 'Completed' : session.startedAt ? 'In Progress' : 'Not Started'}
+${session.scheduledDate ? `Scheduled: ${session.scheduledDate}` : ''}
+
+Exercises in this session:`;
+      // Include set details ONLY for current session
+      systemPrompt += formatExerciseDetails(session.exercises, true);
+
+      // Show other sessions in the week (compressed)
+      if (context.currentWeek) {
+        const week = context.currentWeek;
+        systemPrompt += `\n\n📅 OTHER SESSIONS IN CURRENT WEEK:
+Week ${week.weekNumber}`;
+        if (week.phase) systemPrompt += ` - ${week.phase}`;
+        if (week.startDate && week.endDate) {
+          systemPrompt += `\n${week.startDate} to ${week.endDate}`;
+        }
+        systemPrompt += `\nTotal sessions: ${week.sessions?.length || 0}`;
+
+        // Show compressed info for other sessions in the week (excluding current session)
+        if (week.sessions && week.sessions.length > 0) {
+          week.sessions.forEach((session: any, idx: number) => {
+            // Skip current session - it's already detailed above
+            if (context.currentSession && session.id === context.currentSession.id) {
+              systemPrompt += `\n\n--- Session ${idx + 1}: ${session.name || 'Unnamed'} - [See current session above]`;
+              return;
+            }
+
+            // Compressed format for other sessions
+            systemPrompt += `\n\n--- Session ${idx + 1}: ${session.name || 'Unnamed'} (${session.id})
+Status: ${session.completed ? 'Completed ✓' : session.startedAt ? 'In Progress' : 'Not Started'}`;
+            if (session.scheduledDate) systemPrompt += `\nScheduled: ${session.scheduledDate}`;
+            if (session.completedDate) systemPrompt += `\nCompleted: ${session.completedDate}`;
+
+            systemPrompt += `\nExercises:`;
+            systemPrompt += formatExerciseSummary(session.exercises);
+          });
+        }
       }
     }
 
@@ -204,9 +229,13 @@ Status: ${session.completed ? 'Completed ✓' : session.startedAt ? 'In Progress
 
     systemPrompt += `\n\n=== END CONTEXT ===
 
-IMPORTANT: The context above provides ONLY summary data for efficiency. For questions requiring detailed set-by-set information, historical performance data, or volume calculations, you MUST use the get_workout_data tool to fetch comprehensive data.
+IMPORTANT: The context above provides ONLY summary data for efficiency. For questions requiring detailed set-by-set information, historical performance data, or volume calculations, you MUST use the appropriate read tool to fetch comprehensive data.
 
-When the user asks questions, prioritize information from the CURRENT WORKOUT SESSION they're viewing. Be specific and reference actual exercises, sets, and reps from their program. Today is ${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}.`;
+USER VIEW CONTEXT:
+- If "VIEWING WEEK LEVEL SCREEN": User sees all sessions in the week overview. Tailor responses to week-level planning, session selection, and weekly progress.
+- If "VIEWING SESSION LEVEL SCREEN": User is focused on a specific session. Tailor responses to that session's exercises, sets, and immediate performance.
+
+When the user asks questions, prioritize information from their current view. Be specific and reference actual exercises, sets, and reps from their program. Today is ${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}.`;
   }
 
   console.log('systemPrompt\n\n', systemPrompt);
