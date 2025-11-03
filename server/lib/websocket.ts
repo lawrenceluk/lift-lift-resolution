@@ -2,6 +2,7 @@ import { Server as HttpServer } from 'http';
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { AIService, ChatRequest } from './ai-service';
 import { categorizeToolCalls } from './chat-handler';
+import { executeReadTool } from './read-tools';
 
 /**
  * Handle incoming chat message with AI service
@@ -11,12 +12,12 @@ async function handleChatMessage(socket: Socket, payload: SendMessagePayload): P
 
   try {
     const aiService = new AIService();
-    const chatRequest: ChatRequest = {
+    let chatRequest: ChatRequest = {
       messages: payload.messages,
       context: payload.context
     };
 
-    const { streamGenerator, getToolCalls } = await aiService.processChatRequest(chatRequest);
+    let { streamGenerator, getToolCalls } = await aiService.processChatRequest(chatRequest);
 
     // Stream chunks to client and accumulate full response
     let fullResponse = '';
@@ -43,8 +44,87 @@ async function handleChatMessage(socket: Socket, payload: SendMessagePayload): P
     await new Promise(resolve => setTimeout(resolve, 200));
 
     // Get and categorize tool calls from LLM
-    const allToolCalls = getToolCalls();
-    const { writeToolCalls, suggestedReplies } = categorizeToolCalls(allToolCalls);
+    let allToolCalls = getToolCalls();
+    let { writeToolCalls, readToolCalls, suggestedReplies } = categorizeToolCalls(allToolCalls);
+
+    // Handle read tools: execute them server-side and make follow-up request
+    if (readToolCalls.length > 0) {
+      console.log(`[WebSocket] Executing ${readToolCalls.length} read tool(s) server-side`);
+
+      // Emit progress indicator
+      socket.emit(SocketEvents.TOOL_CALL_PROGRESS, {
+        status: 'generating',
+        message: `Fetching workout data...`,
+      } as ToolCallProgressPayload);
+
+      // Execute all read tools and collect results
+      const toolResults: string[] = [];
+      for (const toolCall of readToolCalls) {
+        try {
+          const params = JSON.parse(toolCall.function.arguments);
+          const result = executeReadTool(toolCall.function.name, params, chatRequest.context!);
+          toolResults.push(`Tool: ${toolCall.function.name}\nResult:\n${result}`);
+          console.log(`[WebSocket] Executed ${toolCall.function.name}`);
+        } catch (error) {
+          console.error(`[WebSocket] Error executing read tool ${toolCall.function.name}:`, error);
+          toolResults.push(`Tool: ${toolCall.function.name}\nError: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      }
+
+      // Add tool results as a new message and make follow-up request
+      const messagesWithToolResults = [
+        ...chatRequest.messages,
+        {
+          id: `coach-${Date.now()}`,
+          role: 'coach' as const,
+          content: fullResponse,
+          timestamp: new Date().toISOString(),
+        },
+        {
+          id: `tool-results-${Date.now()}`,
+          role: 'user' as const,
+          content: `[Tool Results]\n\n${toolResults.join('\n\n---\n\n')}`,
+          timestamp: new Date().toISOString(),
+        },
+      ];
+
+      console.log('[WebSocket] Making follow-up request with tool results');
+      const followUpRequest: ChatRequest = {
+        messages: messagesWithToolResults,
+        context: chatRequest.context,
+      };
+
+      const followUp = await aiService.processChatRequest(followUpRequest);
+
+      // Stream follow-up response
+      fullResponse = '';
+      for await (const chunk of followUp.streamGenerator) {
+        fullResponse += chunk;
+        socket.emit(SocketEvents.MESSAGE_CHUNK, {
+          text: chunk,
+          isComplete: false,
+        } as MessageChunkPayload);
+      }
+
+      // Send final chunk marker for follow-up
+      socket.emit(SocketEvents.MESSAGE_CHUNK, {
+        text: '',
+        isComplete: true,
+      } as MessageChunkPayload);
+
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      // Get tool calls from follow-up (should be write/ui tools now)
+      allToolCalls = followUp.getToolCalls();
+      const categorized = categorizeToolCalls(allToolCalls);
+      writeToolCalls = categorized.writeToolCalls;
+      suggestedReplies = categorized.suggestedReplies;
+
+      // If there are still read tools, ignore them (infinite loop protection)
+      if (categorized.readToolCalls.length > 0) {
+        console.warn('[WebSocket] LLM requested read tools again after receiving results - ignoring');
+      }
+    }
 
     if (allToolCalls && allToolCalls.length > 0) {
       console.log(`[WebSocket] Processing ${allToolCalls.length} tool call(s)`);
