@@ -1,65 +1,5 @@
 import { WorkoutContext } from './ai-service';
-
-/**
- * Helper function to format exercise details with set-by-set progress
- */
-function formatExerciseDetails(exercises: any[]): string {
-  let output = '';
-
-  exercises?.forEach((ex: any, idx: number) => {
-    output += `\n${idx + 1}. ${ex.name}`;
-    if (ex.groupLabel) output += ` [${ex.groupLabel}]`;
-
-    if (ex.skipped) {
-      output += ` - ${ex.workingSets} sets × ${ex.reps} @ ${ex.targetLoad} [SKIPPED]`;
-    } else {
-      output += ` - Target: ${ex.workingSets} sets × ${ex.reps} @ ${ex.targetLoad}`;
-
-      // Show detailed set-by-set data if any sets are logged
-      if (ex.sets && ex.sets.length > 0) {
-        const completedSets = ex.sets.filter((s: any) => s.completed).length;
-        output += ` [${completedSets}/${ex.workingSets} logged]`;
-
-        // Add detailed set information
-        ex.sets.forEach((set: any) => {
-          const setPrefix = `\n   Set ${set.setNumber}:`;
-          if (set.completed) {
-            output += setPrefix;
-            output += ` ${set.reps} reps`;
-            if (set.weight !== undefined) {
-              output += ` @ ${set.weight} ${set.weightUnit}`;
-            }
-            if (set.rir !== undefined) {
-              output += `, RIR ${set.rir}`;
-            }
-            if (set.notes) {
-              output += ` (${set.notes})`;
-            }
-            output += ` ✓`;
-          }
-        });
-
-        // Show which sets are pending
-        const pendingSets = ex.workingSets - ex.sets.length;
-        if (pendingSets > 0) {
-          const nextSetNum = ex.sets.length + 1;
-          output += `\n   Set ${nextSetNum}`;
-          if (pendingSets > 1) {
-            output += `-${ex.workingSets}`;
-          }
-          output += `: [pending]`;
-        }
-      } else {
-        output += ` [no sets logged yet]`;
-      }
-    }
-
-    if (ex.notes) output += `\n   Exercise notes: ${ex.notes}`;
-    if (ex.userNotes) output += `\n   User notes: ${ex.userNotes}`;
-  });
-
-  return output;
-}
+import { formatExerciseDetails, formatExerciseSummary } from './formatters';
 
 /**
  * Build context-aware system prompt for the workout coach
@@ -78,12 +18,23 @@ You have tools available to modify the user's workout program. When the user ask
 USE THE APPROPRIATE TOOL to make the modification. The user will see a preview and can approve or reject your changes. Be proactive about using tools when the user clearly wants to modify their program.
 
 IMPORTANT - You Can Fetch Detailed Workout Data:
-When the user asks questions that require analyzing their full workout history, progress across weeks, or detailed set-by-set data:
-- Use the get_workout_data tool to fetch comprehensive data
-- This tool executes server-side instantly (no user confirmation needed)
-- Scopes: 'full_program' (all weeks), 'specific_week', or 'specific_session'
-- Example use cases: "What's my total volume this month?", "Show my progress on squats", "How many sets have I completed?"
-- The basic context provided contains only the current week/session - use this tool for broader analysis
+The basic context provides ONLY summary information. When you need detailed data, choose the right read tool:
+
+1. get_current_week_detail - For week-specific questions (PREFERRED for efficiency)
+   - Use when: Questions about the current week's sessions, comparing exercises within the week
+   - Returns: Detailed set-by-set data for ALL sessions in current week only
+   - Examples: "How's my week going?", "Compare my bench sessions this week", "Total volume this week"
+   - Most efficient - keeps context small for follow-up questions
+
+2. get_workout_data - For cross-week analysis or historical data
+   - Use when: Questions spanning multiple weeks or specific historical lookups
+   - Scopes: 'full_program' (all weeks), 'specific_week' (one week), 'specific_session' (one session)
+   - Examples: "What's my total volume this month?", "Show squat progress over all weeks", "Compare Week 1 vs Week 4"
+   - WARNING: 'full_program' adds ALL program data to conversation context - use sparingly
+
+Both tools execute server-side instantly (no user confirmation needed).
+Both return comprehensive set-by-set data that is NOT in the basic context.
+DEFAULT to get_current_week_detail unless the question explicitly requires cross-week data.
 
 TOOL CALLING CONVENTIONS:
 - All indices are 1-based (first week = 1, first session = 1, first exercise = 1)
@@ -110,31 +61,21 @@ IMPORTANT - Suggested Replies:
   if (context) {
     systemPrompt += `\n\n=== WORKOUT PROGRAM CONTEXT ===`;
 
-    // PRIORITY: Current session (what user is looking at right now)
-    if (context.currentSession) {
-      console.log('context.currentSession\n\n', JSON.stringify(context.currentSession));
-      const session = context.currentSession;
-      systemPrompt += `\n\n🎯 CURRENT WORKOUT SESSION (User is viewing this NOW):
-Session: ${session.name || 'Unnamed'} (${session.id})
-Status: ${session.completed ? 'Completed' : session.startedAt ? 'In Progress' : 'Not Started'}
-${session.scheduledDate ? `Scheduled: ${session.scheduledDate}` : ''}
+    // Detect if user is viewing week-level (no specific session) vs session-level
+    const isWeekView = context.currentWeek && !context.currentSession;
 
-Exercises in this session:`;
-      systemPrompt += formatExerciseDetails(session.exercises);
-    }
-
-    // SECONDARY: Current week context (with detailed session info)
-    if (context.currentWeek) {
-      const week = context.currentWeek;
-      systemPrompt += `\n\n📅 CURRENT WEEK (User is viewing this NOW):
-Week ${week.weekNumber}`;
+    if (isWeekView) {
+      // User is viewing WEEK LEVEL - show all sessions with compressed detail
+      systemPrompt += `\n\n📅 USER IS VIEWING WEEK LEVEL SCREEN`;
+      const week = context.currentWeek!;
+      systemPrompt += `\n\nWeek ${week.weekNumber}`;
       if (week.phase) systemPrompt += ` - ${week.phase}`;
       if (week.startDate && week.endDate) {
         systemPrompt += `\n${week.startDate} to ${week.endDate}`;
       }
       systemPrompt += `\nTotal sessions: ${week.sessions?.length || 0}`;
 
-      // Show detailed info for each session in the week
+      // Show all sessions with compressed format
       if (week.sessions && week.sessions.length > 0) {
         week.sessions.forEach((session: any, idx: number) => {
           systemPrompt += `\n\n--- Session ${idx + 1}: ${session.name || 'Unnamed'} (${session.id})
@@ -142,33 +83,89 @@ Status: ${session.completed ? 'Completed ✓' : session.startedAt ? 'In Progress
           if (session.scheduledDate) systemPrompt += `\nScheduled: ${session.scheduledDate}`;
           if (session.completedDate) systemPrompt += `\nCompleted: ${session.completedDate}`;
 
-          systemPrompt += `\n\nExercises:`;
-          systemPrompt += formatExerciseDetails(session.exercises);
+          systemPrompt += `\nExercises:`;
+          systemPrompt += formatExerciseSummary(session.exercises);
         });
+      }
+    } else if (context.currentSession) {
+      // User is viewing SESSION LEVEL - show detailed current session + compressed others
+      systemPrompt += `\n\n🎯 USER IS VIEWING SESSION LEVEL SCREEN`;
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[ai-config] context.currentSession', JSON.stringify(context.currentSession));
+      }
+      const session = context.currentSession;
+      systemPrompt += `\n\nCurrent Session: ${session.name || 'Unnamed'} (${session.id})
+Status: ${session.completed ? 'Completed' : session.startedAt ? 'In Progress' : 'Not Started'}
+${session.scheduledDate ? `Scheduled: ${session.scheduledDate}` : ''}
+
+Exercises in this session:`;
+      // Include set details ONLY for current session
+      systemPrompt += formatExerciseDetails(session.exercises, true);
+
+      // Show other sessions in the week (compressed)
+      if (context.currentWeek) {
+        const week = context.currentWeek;
+        systemPrompt += `\n\n📅 OTHER SESSIONS IN CURRENT WEEK:
+Week ${week.weekNumber}`;
+        if (week.phase) systemPrompt += ` - ${week.phase}`;
+        if (week.startDate && week.endDate) {
+          systemPrompt += `\n${week.startDate} to ${week.endDate}`;
+        }
+        systemPrompt += `\nTotal sessions: ${week.sessions?.length || 0}`;
+
+        // Show compressed info for other sessions in the week (excluding current session)
+        if (week.sessions && week.sessions.length > 0) {
+          week.sessions.forEach((session: any, idx: number) => {
+            // Skip current session - it's already detailed above
+            if (context.currentSession && session.id === context.currentSession.id) {
+              systemPrompt += `\n\n--- Session ${idx + 1}: ${session.name || 'Unnamed'} - [See current session above]`;
+              return;
+            }
+
+            // Compressed format for other sessions
+            systemPrompt += `\n\n--- Session ${idx + 1}: ${session.name || 'Unnamed'} (${session.id})
+Status: ${session.completed ? 'Completed ✓' : session.startedAt ? 'In Progress' : 'Not Started'}`;
+            if (session.scheduledDate) systemPrompt += `\nScheduled: ${session.scheduledDate}`;
+            if (session.completedDate) systemPrompt += `\nCompleted: ${session.completedDate}`;
+
+            systemPrompt += `\nExercises:`;
+            systemPrompt += formatExerciseSummary(session.exercises);
+          });
+        }
       }
     }
 
-    // TERTIARY: Full program (compressed for context limit awareness)
+    // TERTIARY: Full program (ultra-compressed for efficiency)
     if (context.fullProgram && context.fullProgram.length > 0) {
-      systemPrompt += `\n\nFull Program Overview:`;
-      systemPrompt += `\n- Total weeks: ${context.fullProgram.length}`;
       const totalSessions = context.fullProgram.reduce((sum: number, w: any) => sum + (w.sessions?.length || 0), 0);
-      systemPrompt += `\n- Total sessions: ${totalSessions}`;
+      systemPrompt += `\n\nProgram: ${context.fullProgram.length} weeks, ${totalSessions} sessions total`;
 
-      // List all sessions with compact format: session number + name
-      systemPrompt += `\n\nAll Sessions:`;
-      context.fullProgram.forEach((w: any) => {
-        const sessionList = w.sessions?.map((s: any, idx: number) =>
-          `${idx + 1}. ${s.name || 'Unnamed'}${s.completed ? ' ✓' : ''}`
-        ).join(', ') || 'none';
-        systemPrompt += `\n  Week ${w.weekNumber}${w.phase ? ` (${w.phase})` : ''}: ${sessionList}`;
-      });
+      // Ultra-compressed week list with phases
+      const weekSummary = context.fullProgram
+        .map((w: any) => `${w.weekNumber}${w.phase ? `(${w.phase})` : ''}`)
+        .join(', ');
+      systemPrompt += `\nWeeks: ${weekSummary}`;
     }
 
-    systemPrompt += `\n\n=== END CONTEXT ===\n\nWhen the user asks questions, prioritize information from the CURRENT WORKOUT SESSION they're viewing. Be specific and reference actual exercises, sets, and reps from their program. Today is ${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}.`;
+    systemPrompt += `\n\n=== END CONTEXT ===
+
+IMPORTANT: The context above provides ONLY summary data for efficiency. For questions requiring detailed set-by-set information, historical performance data, or volume calculations, you MUST use the appropriate read tool to fetch comprehensive data.
+
+USER VIEW CONTEXT:
+- If "VIEWING WEEK LEVEL SCREEN": User sees all sessions in the week overview. Tailor responses to week-level planning, session selection, and weekly progress.
+- If "VIEWING SESSION LEVEL SCREEN": User is focused on a specific session. Tailor responses to that session's exercises, sets, and immediate performance.
+
+When the user asks questions, prioritize information from their current view. Be specific and reference actual exercises, sets, and reps from their program. Today is ${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}.`;
   }
 
-  console.log('systemPrompt\n\n', systemPrompt);
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[ai-config] Built system prompt', {
+      length: systemPrompt.length,
+      hasContext: !!context,
+      hasSession: !!context?.currentSession,
+      hasWeek: !!context?.currentWeek,
+    });
+  }
 
   return systemPrompt;
 }
