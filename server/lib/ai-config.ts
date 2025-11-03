@@ -2,8 +2,10 @@ import { WorkoutContext } from './ai-service';
 
 /**
  * Helper function to format exercise details with set-by-set progress
+ * @param exercises - Array of exercises to format
+ * @param includeSetDetails - Whether to include detailed set-by-set data (default: false)
  */
-function formatExerciseDetails(exercises: any[]): string {
+function formatExerciseDetails(exercises: any[], includeSetDetails: boolean = false): string {
   let output = '';
 
   exercises?.forEach((ex: any, idx: number) => {
@@ -15,39 +17,39 @@ function formatExerciseDetails(exercises: any[]): string {
     } else {
       output += ` - Target: ${ex.workingSets} sets × ${ex.reps} @ ${ex.targetLoad}`;
 
-      // Show detailed set-by-set data if any sets are logged
+      // Show completion status
       if (ex.sets && ex.sets.length > 0) {
         const completedSets = ex.sets.filter((s: any) => s.completed).length;
         output += ` [${completedSets}/${ex.workingSets} logged]`;
 
-        // Add detailed set information
-        ex.sets.forEach((set: any) => {
-          const setPrefix = `\n   Set ${set.setNumber}:`;
-          if (set.completed) {
-            output += setPrefix;
-            output += ` ${set.reps} reps`;
-            if (set.weight !== undefined) {
-              output += ` @ ${set.weight} ${set.weightUnit}`;
+        // Only show detailed set-by-set data if requested
+        if (includeSetDetails) {
+          ex.sets.forEach((set: any) => {
+            if (set.completed) {
+              output += `\n   Set ${set.setNumber}: ${set.reps} reps`;
+              if (set.weight !== undefined) {
+                output += ` @ ${set.weight} ${set.weightUnit}`;
+              }
+              if (set.rir !== undefined) {
+                output += `, RIR ${set.rir}`;
+              }
+              if (set.notes) {
+                output += ` (${set.notes})`;
+              }
+              output += ` ✓`;
             }
-            if (set.rir !== undefined) {
-              output += `, RIR ${set.rir}`;
-            }
-            if (set.notes) {
-              output += ` (${set.notes})`;
-            }
-            output += ` ✓`;
-          }
-        });
+          });
 
-        // Show which sets are pending
-        const pendingSets = ex.workingSets - ex.sets.length;
-        if (pendingSets > 0) {
-          const nextSetNum = ex.sets.length + 1;
-          output += `\n   Set ${nextSetNum}`;
-          if (pendingSets > 1) {
-            output += `-${ex.workingSets}`;
+          // Show which sets are pending
+          const pendingSets = ex.workingSets - ex.sets.length;
+          if (pendingSets > 0) {
+            const nextSetNum = ex.sets.length + 1;
+            output += `\n   Set ${nextSetNum}`;
+            if (pendingSets > 1) {
+              output += `-${ex.workingSets}`;
+            }
+            output += `: [pending]`;
           }
-          output += `: [pending]`;
         }
       } else {
         output += ` [no sets logged yet]`;
@@ -59,6 +61,21 @@ function formatExerciseDetails(exercises: any[]): string {
   });
 
   return output;
+}
+
+/**
+ * Helper function to format exercise summary (compressed, no set details)
+ */
+function formatExerciseSummary(exercises: any[]): string {
+  if (!exercises || exercises.length === 0) return ' none';
+
+  return exercises.map((ex: any) => {
+    const completedSets = ex.sets?.filter((s: any) => s.completed).length || 0;
+    const status = ex.skipped ? '[SKIPPED]' :
+                   completedSets > 0 ? `[${completedSets}/${ex.workingSets} logged]` :
+                   '[not started]';
+    return `\n  - ${ex.name}: ${ex.workingSets}×${ex.reps} @ ${ex.targetLoad} ${status}`;
+  }).join('');
 }
 
 /**
@@ -78,12 +95,12 @@ You have tools available to modify the user's workout program. When the user ask
 USE THE APPROPRIATE TOOL to make the modification. The user will see a preview and can approve or reject your changes. Be proactive about using tools when the user clearly wants to modify their program.
 
 IMPORTANT - You Can Fetch Detailed Workout Data:
-When the user asks questions that require analyzing their full workout history, progress across weeks, or detailed set-by-set data:
-- Use the get_workout_data tool to fetch comprehensive data
+The basic context provides ONLY summary information about the current week/session. When you need detailed data, use the get_workout_data tool:
+- Use this tool proactively for ANY question requiring detailed set-by-set data, historical progress, or volume analysis
 - This tool executes server-side instantly (no user confirmation needed)
 - Scopes: 'full_program' (all weeks), 'specific_week', or 'specific_session'
-- Example use cases: "What's my total volume this month?", "Show my progress on squats", "How many sets have I completed?"
-- The basic context provided contains only the current week/session - use this tool for broader analysis
+- Example use cases: "What's my total volume this month?", "Show my progress on squats", "How many sets have I completed?", "What weight did I use last time?"
+- The tool returns comprehensive set-by-set data that is NOT in the basic context
 
 TOOL CALLING CONVENTIONS:
 - All indices are 1-based (first week = 1, first session = 1, first exercise = 1)
@@ -111,6 +128,7 @@ IMPORTANT - Suggested Replies:
     systemPrompt += `\n\n=== WORKOUT PROGRAM CONTEXT ===`;
 
     // PRIORITY: Current session (what user is looking at right now)
+    // This is the ONLY place we include detailed set-by-set data in initial context
     if (context.currentSession) {
       console.log('context.currentSession\n\n', JSON.stringify(context.currentSession));
       const session = context.currentSession;
@@ -120,13 +138,14 @@ Status: ${session.completed ? 'Completed' : session.startedAt ? 'In Progress' : 
 ${session.scheduledDate ? `Scheduled: ${session.scheduledDate}` : ''}
 
 Exercises in this session:`;
-      systemPrompt += formatExerciseDetails(session.exercises);
+      // Include set details ONLY for current session
+      systemPrompt += formatExerciseDetails(session.exercises, true);
     }
 
-    // SECONDARY: Current week context (with detailed session info)
+    // SECONDARY: Current week context (compressed - other sessions in the week)
     if (context.currentWeek) {
       const week = context.currentWeek;
-      systemPrompt += `\n\n📅 CURRENT WEEK (User is viewing this NOW):
+      systemPrompt += `\n\n📅 CURRENT WEEK:
 Week ${week.weekNumber}`;
       if (week.phase) systemPrompt += ` - ${week.phase}`;
       if (week.startDate && week.endDate) {
@@ -134,16 +153,23 @@ Week ${week.weekNumber}`;
       }
       systemPrompt += `\nTotal sessions: ${week.sessions?.length || 0}`;
 
-      // Show detailed info for each session in the week
+      // Show compressed info for other sessions in the week (excluding current session)
       if (week.sessions && week.sessions.length > 0) {
         week.sessions.forEach((session: any, idx: number) => {
+          // Skip current session - it's already detailed above
+          if (context.currentSession && session.id === context.currentSession.id) {
+            systemPrompt += `\n\n--- Session ${idx + 1}: ${session.name || 'Unnamed'} - [See CURRENT WORKOUT SESSION above for full details]`;
+            return;
+          }
+
+          // Compressed format for other sessions
           systemPrompt += `\n\n--- Session ${idx + 1}: ${session.name || 'Unnamed'} (${session.id})
 Status: ${session.completed ? 'Completed ✓' : session.startedAt ? 'In Progress' : 'Not Started'}`;
           if (session.scheduledDate) systemPrompt += `\nScheduled: ${session.scheduledDate}`;
           if (session.completedDate) systemPrompt += `\nCompleted: ${session.completedDate}`;
 
-          systemPrompt += `\n\nExercises:`;
-          systemPrompt += formatExerciseDetails(session.exercises);
+          systemPrompt += `\nExercises:`;
+          systemPrompt += formatExerciseSummary(session.exercises);
         });
       }
     }
@@ -165,7 +191,11 @@ Status: ${session.completed ? 'Completed ✓' : session.startedAt ? 'In Progress
       });
     }
 
-    systemPrompt += `\n\n=== END CONTEXT ===\n\nWhen the user asks questions, prioritize information from the CURRENT WORKOUT SESSION they're viewing. Be specific and reference actual exercises, sets, and reps from their program. Today is ${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}.`;
+    systemPrompt += `\n\n=== END CONTEXT ===
+
+IMPORTANT: The context above provides ONLY summary data for efficiency. For questions requiring detailed set-by-set information, historical performance data, or volume calculations, you MUST use the get_workout_data tool to fetch comprehensive data.
+
+When the user asks questions, prioritize information from the CURRENT WORKOUT SESSION they're viewing. Be specific and reference actual exercises, sets, and reps from their program. Today is ${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}.`;
   }
 
   console.log('systemPrompt\n\n', systemPrompt);
