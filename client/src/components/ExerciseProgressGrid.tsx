@@ -30,11 +30,8 @@ export const ExerciseProgressGrid: React.FC<ExerciseProgressGridProps> = ({ exer
     }
   };
 
-  const totalExercises = exercises.length;
-  const cols = totalExercises >= 8 ? Math.ceil(totalExercises / 2) : Math.min(8, Math.max(3, totalExercises));
-
   return (
-    <div className={`w-fit`} style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gap: '0.375rem', gridAutoFlow: 'row' }}>
+    <div className="flex flex-row gap-1.5">
       {exercises.map((exercise, index) => {
         const status = getExerciseStatus(exercise);
         return (

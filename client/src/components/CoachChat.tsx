@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Minus, Send, RefreshCcwDot, ArrowUpFromLine, ArrowDownFromLine } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Minus, Send, RefreshCcwDot, ArrowUpFromLine, ArrowDownFromLine, Minimize2, Maximize2 } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -308,7 +308,7 @@ export const CoachChat = () => {
       {!isOpen && (
         <Button
           onClick={handleOpen}
-          className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg border border-gray-400 bg-white backdrop-blur-lg bg-opacity-80 transition-shadow cursor-pointer hover:bg-gray-100"
+          className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg border border-gray-350 bg-white backdrop-blur-lg bg-opacity-80 transition-shadow cursor-pointer hover:bg-gray-100"
           size="icon"
           aria-label="Open coach chat"
         >
@@ -387,7 +387,7 @@ export const CoachChat = () => {
                   aria-label={isExpanded ? "Shrink chat" : "Expand chat"}
                   className="h-8 w-8"
                 >
-                  {isExpanded ? <ArrowDownFromLine className="h-5 w-5" /> : <ArrowUpFromLine className="h-5 w-5" />}
+                  {isExpanded ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
                 </Button>
                 <Button
                   variant="ghost"

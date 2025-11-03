@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Week, SetResult, Exercise } from '@/types/workout';
 import { loadWeeks, saveWeeks } from '@/utils/localStorage';
 import { createSampleWeeks } from '@/data/sampleWorkout';
+import { createSessionId, createExerciseId } from '@/utils/idHelpers';
 
 export const useWorkoutProgram = () => {
   const [weeks, setWeeks] = useState<Week[] | null>(null);
@@ -164,6 +165,64 @@ export const useWorkoutProgram = () => {
               ...session,
               completed: true,
               completedDate: new Date().toISOString(),
+            };
+          }),
+        };
+      });
+
+      updateWeeks(updatedWeeks);
+    },
+    [weeks, updateWeeks]
+  );
+
+  const deleteSession = useCallback(
+    (weekId: string, sessionId: string) => {
+      if (!weeks) return;
+
+      const updatedWeeks = weeks.map((week) => {
+        if (week.id !== weekId) return week;
+
+        // Remove the session and renumber remaining sessions
+        const filteredSessions = week.sessions.filter((s) => s.id !== sessionId);
+        const renumberedSessions = filteredSessions.map((session, index) => {
+          const sessionNumber = index + 1;
+
+          return {
+            ...session,
+            id: createSessionId(week.weekNumber, sessionNumber),
+            exercises: session.exercises.map((exercise, exIndex) => ({
+              ...exercise,
+              id: createExerciseId(week.weekNumber, sessionNumber, exIndex + 1),
+            })),
+          };
+        });
+
+        return {
+          ...week,
+          sessions: renumberedSessions,
+        };
+      });
+
+      updateWeeks(updatedWeeks);
+    },
+    [weeks, updateWeeks]
+  );
+
+  const updateSession = useCallback(
+    (weekId: string, sessionId: string, updates: { name?: string }) => {
+      if (!weeks) return;
+
+      const updatedWeeks = weeks.map((week) => {
+        if (week.id !== weekId) return week;
+
+        return {
+          ...week,
+          sessions: week.sessions.map((session) => {
+            if (session.id !== sessionId) return session;
+
+            return {
+              ...session,
+              ...updates,
             };
           }),
         };
@@ -389,6 +448,8 @@ export const useWorkoutProgram = () => {
     deleteSet,
     startSession,
     completeSession,
+    deleteSession,
+    updateSession,
     skipExercise,
     unskipExercise,
     updateExerciseNotes,

@@ -9,6 +9,8 @@ interface WorkoutProgramContextType {
   deleteSet: (weekId: string, sessionId: string, exerciseId: string, setNumber: number) => void;
   startSession: (weekId: string, sessionId: string) => void;
   completeSession: (weekId: string, sessionId: string) => void;
+  deleteSession: (weekId: string, sessionId: string) => void;
+  updateSession: (weekId: string, sessionId: string, updates: { name?: string }) => void;
   skipExercise: (weekId: string, sessionId: string, exerciseId: string) => void;
   unskipExercise: (weekId: string, sessionId: string, exerciseId: string) => void;
   updateExerciseNotes: (weekId: string, sessionId: string, exerciseId: string, notes: string) => void;

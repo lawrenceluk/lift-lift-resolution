@@ -474,6 +474,7 @@ function executeCopySession(workoutData: Week[], params: CopySessionParams): Wee
   newSession.exercises.forEach(ex => {
     ex.sets = [];
     ex.skipped = false;
+    ex.userNotes = undefined;
   });
 
   targetWeek!.sessions.splice(insertPosition, 0, newSession);

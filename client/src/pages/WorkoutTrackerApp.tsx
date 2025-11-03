@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CalendarIcon, MoreVerticalIcon, Upload, Download, HelpCircle, ArrowLeft, Search } from 'lucide-react';
+import { CalendarIcon, MoreVerticalIcon, Upload, Download, HelpCircle, ArrowLeft, Search, Menu } from 'lucide-react';
 import { useLocation, useRoute } from 'wouter';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -19,7 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { getWorkoutStatus, parseId } from '@/utils/idHelpers';
 
 export const WorkoutTrackerApp = (): JSX.Element => {
-  const { weeks, addSet, updateSet, deleteSet, startSession, completeSession, skipExercise, unskipExercise, updateExerciseNotes, updateExercise, updateExerciseInAllSessions, importWeeks: importWeeksHook } =
+  const { weeks, addSet, updateSet, deleteSet, startSession, completeSession, deleteSession, updateSession, skipExercise, unskipExercise, updateExerciseNotes, updateExercise, updateExerciseInAllSessions, importWeeks: importWeeksHook } =
     useWorkoutProgramContext();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -153,6 +153,13 @@ export const WorkoutTrackerApp = (): JSX.Element => {
             completeSession(week.id, session.id);
             setLocation(`/${week.id}`);
           }}
+          onDeleteSession={() => {
+            deleteSession(week.id, session.id);
+            setLocation(`/${week.id}`);
+          }}
+          onRenameSession={(newName) => {
+            updateSession(week.id, session.id, { name: newName });
+          }}
         />
       );
     } else if (parsed?.weekNumber) {
@@ -258,7 +265,7 @@ export const WorkoutTrackerApp = (): JSX.Element => {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-9 w-9">
-                <MoreVerticalIcon className="w-6 h-6" />
+                <Menu className="w-6 h-6" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">

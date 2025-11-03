@@ -119,17 +119,19 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
   };
 
   // Reusable action buttons component
-  const ActionButtons = () => {
+  const ActionButtons = ({ showCompact = false }: { showCompact?: boolean }) => {
     return (
       <div className="flex items-center gap-1">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={handleOpenNotesDialog}
-          className={`h-8 w-8 hover:text-gray-600 ${exercise.userNotes ? 'text-blue-500' : 'text-gray-400'}`}
-        >
-          <StickyNote className="w-5 h-5" />
-        </Button>
+        {!showCompact && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleOpenNotesDialog}
+            className={`h-8 w-8 hover:text-gray-600 ${exercise.userNotes ? 'text-blue-500' : 'text-gray-400'}`}
+          >
+            <StickyNote className="w-5 h-5" />
+          </Button>
+        )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -141,6 +143,14 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            {showCompact && (
+              <>
+                <DropdownMenuItem onClick={handleOpenNotesDialog}>
+                  <StickyNote className="w-4 h-4 mr-2" />
+                  {exercise.userNotes ? 'Edit Note' : 'Add Note'}
+                </DropdownMenuItem>
+              </>
+            )}
             {isSkipped ? (
               <DropdownMenuItem onClick={handleToggleSkip}>
                 <CircleSlash2 className="w-4 h-4 mr-2" />
@@ -151,23 +161,6 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
                 <CircleSlash2 className="w-4 h-4 mr-2" />
                 Skip
               </DropdownMenuItem>
-            )}
-            {(isComplete || isSkipped) && (
-              <>
-                <DropdownMenuItem onClick={() => setIsCollapsed(!isCollapsed)}>
-                  {isCollapsed ? (
-                    <>
-                      <ChevronDown className="w-4 h-4 mr-2" />
-                      Expand
-                    </>
-                  ) : (
-                    <>
-                      <ChevronUp className="w-4 h-4 mr-2" />
-                      Collapse
-                    </>
-                  )}
-                </DropdownMenuItem>
-              </>
             )}
             {!isComplete && !isSkipped && (
               <>
@@ -188,6 +181,24 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
                 <DropdownMenuItem onClick={() => setIsHistoryDialogOpen(true)}>
                   <History className="w-4 h-4 mr-2" />
                   History
+                </DropdownMenuItem>
+              </>
+            )}
+            {(isComplete || isSkipped) && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setIsCollapsed(!isCollapsed)}>
+                  {isCollapsed ? (
+                    <>
+                      <ChevronDown className="w-4 h-4 mr-2" />
+                      Expand
+                    </>
+                  ) : (
+                    <>
+                      <ChevronUp className="w-4 h-4 mr-2" />
+                      Collapse
+                    </>
+                  )}
                 </DropdownMenuItem>
               </>
             )}
@@ -215,11 +226,6 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
                 ) : (
                   <Badge className="bg-green-500">Complete</Badge>
                 )}
-                {isSkipped ? (
-                  <Badge variant="destructive" className="bg-gray-500">Skipped</Badge>
-                ) : (
-                  <Badge className="bg-green-500">Complete</Badge>
-                )}
                 <div className="flex flex-col">
                   <h3 className="text-sm font-medium text-gray-700">
                     {exercise.name}
@@ -234,9 +240,14 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
                       }
                     </p>
                   )}
+                  {exercise.userNotes && (
+                    <p className="text-xs text-blue-900 italic mt-0.5">
+                      {exercise.userNotes}
+                    </p>
+                  )}
                 </div>
               </div>
-              <ActionButtons />
+              <ActionButtons showCompact={true} />
             </div>
           </CardHeader>
         </Card>

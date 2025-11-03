@@ -1,11 +1,26 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { WorkoutSession, SetResult, Week, Exercise } from '@/types/workout';
 import { ExerciseView } from './ExerciseView';
 import { ExerciseProgressGrid } from './ExerciseProgressGrid';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, MoreVertical, Trash, Pencil } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 interface SessionViewProps {
   session: WorkoutSession;
@@ -21,6 +36,8 @@ interface SessionViewProps {
   onUpdateExerciseInAllSessions?: (originalName: string, updates: Partial<Exercise>) => void;
   onBack: () => void;
   onCompleteSession: () => void;
+  onDeleteSession: () => void;
+  onRenameSession: (newName: string) => void;
 }
 
 export const SessionView: React.FC<SessionViewProps> = ({
@@ -37,12 +54,35 @@ export const SessionView: React.FC<SessionViewProps> = ({
   onUpdateExerciseInAllSessions,
   onBack,
   onCompleteSession,
+  onDeleteSession,
+  onRenameSession,
 }) => {
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
+  const [newSessionName, setNewSessionName] = useState(session.name);
+
   const allExercisesComplete = session.exercises.every((ex) => {
     const completedSets = (ex.sets || []).filter((s) => s.completed).length;
     const skippedSets = (ex.sets || []).filter((s) => s.skipped).length;
     return ex.skipped || (completedSets + skippedSets) >= ex.workingSets;
   });
+
+  const handleDeleteSession = () => {
+    setIsDeleteDialogOpen(false);
+    onDeleteSession();
+  };
+
+  const handleOpenRenameDialog = () => {
+    setNewSessionName(session.name);
+    setIsRenameDialogOpen(true);
+  };
+
+  const handleRenameSession = () => {
+    if (newSessionName.trim() && newSessionName !== session.name) {
+      onRenameSession(newSessionName.trim());
+    }
+    setIsRenameDialogOpen(false);
+  };
 
   return (
     <div className="min-h-screen bg-white pb-24 flex flex-col items-center">
@@ -53,12 +93,26 @@ export const SessionView: React.FC<SessionViewProps> = ({
           </Button>
           <div className="flex-1">
             <h1 className="text-lg font-semibold text-gray-900">{session.name}</h1>
-            <p className="text-sm text-gray-500">Week {weekNumber} • Session {Number(session.id.split('-').pop())}</p>
-          </div>
-          <div className="flex flex-col items-end gap-2">
+            <p className="text-sm text-gray-500 mb-2">Week {weekNumber} • Session {Number(session.id.split('-').pop())}</p>
             <ExerciseProgressGrid exercises={session.exercises} />
-            {session.completed && <Badge className="bg-green-500 text-xs">Completed</Badge>}
           </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-9 w-9 text-gray-400 hover:text-gray-600">
+                <MoreVertical className="w-5 h-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleOpenRenameDialog}>
+                <Pencil className="w-4 h-4 mr-2" />
+                Rename
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setIsDeleteDialogOpen(true)} className="text-red-600">
+                <Trash className="w-4 h-4 mr-2" />
+                Delete Session
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </header>
 
@@ -138,6 +192,54 @@ export const SessionView: React.FC<SessionViewProps> = ({
           </Button>
         </div>
       )}
+
+      <Dialog open={isRenameDialogOpen} onOpenChange={setIsRenameDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rename Session</DialogTitle>
+            <DialogDescription>
+              Enter a new name for this workout session.
+            </DialogDescription>
+          </DialogHeader>
+          <Input
+            value={newSessionName}
+            onChange={(e) => setNewSessionName(e.target.value)}
+            placeholder="Session name"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                handleRenameSession();
+              }
+            }}
+          />
+          <DialogFooter className="flex gap-2">
+            <Button variant="outline" onClick={() => setIsRenameDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleRenameSession} disabled={!newSessionName.trim()}>
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Session</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete "{session.name}" and all its exercise data? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2">
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteSession}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
