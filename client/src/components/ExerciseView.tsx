@@ -188,8 +188,8 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
 
   return (
     <>
-      {isCollapsed && isComplete ? (
-        // Compact collapsed view for completed exercises
+      {isCollapsed && (isComplete || isSkipped) ? (
+        // Compact collapsed view for completed or skipped exercises
         <Card className="mb-4 bg-gray-50 border-gray-200">
           <CardHeader className="py-3">
             <div className="flex items-center justify-between gap-2">
@@ -199,13 +199,19 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
                     {exercise.groupLabel}
                   </Badge>
                 )}
-                <Badge className="bg-green-500">Complete</Badge>
+                {isSkipped ? (
+                  <Badge variant="destructive" className="bg-gray-500">Skipped</Badge>
+                ) : (
+                  <Badge className="bg-green-500">Complete</Badge>
+                )}
                 <div className="flex flex-col">
                   <h3 className="text-sm font-medium text-gray-700">
                     {exercise.name}
                   </h3>
                   <p className="text-xs text-gray-500">
-                    {completedSets > 0 && skippedSets > 0
+                    {isSkipped
+                      ? `${totalSets} sets - skipped`
+                      : completedSets > 0 && skippedSets > 0
                       ? `${completedSets}/${totalSets} sets completed, ${skippedSets} skipped`
                       : skippedSets > 0
                       ? `${skippedSets}/${totalSets} sets skipped`
