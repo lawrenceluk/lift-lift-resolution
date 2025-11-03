@@ -3,6 +3,7 @@ import { Server as SocketIOServer, Socket } from 'socket.io';
 import { AIService, ChatRequest } from './ai-service';
 import { categorizeToolCalls } from './chat-handler';
 import { executeReadTool } from './read-tools';
+import { hashWorkoutData } from './hash-helpers';
 
 /**
  * Handle incoming chat message with AI service
@@ -71,6 +72,18 @@ async function handleChatMessage(socket: Socket, payload: SendMessagePayload): P
         }
       }
 
+      // Compute data hash for cache invalidation
+      const dataHash = chatRequest.context?.fullProgram
+        ? hashWorkoutData(chatRequest.context.fullProgram)
+        : '';
+
+      // Build cache metadata for deduplication
+      const cacheMetadata = readToolCalls.length > 0 ? {
+        toolName: readToolCalls[0].function.name,
+        toolParams: readToolCalls[0].function.arguments,
+        dataHash,
+      } : undefined;
+
       // Add tool results as a new message and make follow-up request
       const messagesWithToolResults = [
         ...chatRequest.messages,
@@ -83,8 +96,9 @@ async function handleChatMessage(socket: Socket, payload: SendMessagePayload): P
         {
           id: `data-${Date.now()}`,
           role: 'user' as const,
-          content: toolResults.join('\n\n'), // Simple join, no wrappers
+          content: toolResults.join('\n\n'),
           timestamp: new Date().toISOString(),
+          toolResultCache: cacheMetadata, // Add cache metadata
         },
       ];
 

@@ -1,6 +1,7 @@
 import { AIService, ChatRequest } from './ai-service';
 import { toolSchemasByName } from '../../client/src/lib/tools/schemas';
 import { executeReadTool } from './read-tools';
+import { hashWorkoutData } from './hash-helpers';
 import type { ToolCall } from './openrouter';
 
 /**
@@ -103,6 +104,19 @@ export async function processChatRequest(request: ChatRequest): Promise<Processe
       }
     }
 
+    // Compute data hash for cache invalidation
+    const dataHash = request.context?.fullProgram
+      ? hashWorkoutData(request.context.fullProgram)
+      : '';
+
+    // Build cache metadata for deduplication
+    // Use first tool call info (in practice, there's usually only one read tool per turn)
+    const cacheMetadata = readToolCalls.length > 0 ? {
+      toolName: readToolCalls[0].function.name,
+      toolParams: readToolCalls[0].function.arguments,
+      dataHash,
+    } : undefined;
+
     // Add tool results as a new message and make follow-up request
     const messagesWithToolResults = [
       ...request.messages,
@@ -115,8 +129,9 @@ export async function processChatRequest(request: ChatRequest): Promise<Processe
       {
         id: `data-${Date.now()}`,
         role: 'user' as const,
-        content: toolResults.join('\n\n'), // Simple join, no wrappers
+        content: toolResults.join('\n\n'),
         timestamp: new Date().toISOString(),
+        toolResultCache: cacheMetadata, // Add cache metadata
       },
     ];
 

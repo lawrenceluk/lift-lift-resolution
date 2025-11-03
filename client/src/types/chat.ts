@@ -13,6 +13,17 @@ export interface Message {
   suggestedReplies?: string[]; // Only relevant for coach messages
   toolCalls?: ToolCall[]; // Tool calls from LLM (coach messages only)
   executionSnapshot?: ToolCallSnapshot[]; // Captured preview of tool calls at execution time
+  toolResultCache?: ToolResultCacheMetadata; // Metadata for cached read tool results
+}
+
+/**
+ * Metadata for cached tool results
+ * Enables smart cache invalidation when workout data changes
+ */
+export interface ToolResultCacheMetadata {
+  toolName: string;        // e.g., "get_current_week_detail"
+  toolParams: string;      // JSON stringified params for cache key
+  dataHash: string;        // Hash of workout data when cached
 }
 
 /**
