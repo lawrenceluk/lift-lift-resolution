@@ -186,6 +186,57 @@ export function executeGetWorkoutData(
   return result;
 }
 
+interface GetCurrentWeekDetailParams {
+  includeSetData?: boolean;
+}
+
+/**
+ * Execute get_current_week_detail tool
+ * Returns detailed data for ALL sessions in the current week only
+ * Much more efficient than fetching full_program when user questions are week-specific
+ */
+export function executeGetCurrentWeekDetail(
+  params: GetCurrentWeekDetailParams,
+  context: WorkoutContext
+): string {
+  const includeSetData = params.includeSetData !== false; // default true
+
+  // Find current week from context
+  if (!context.currentWeek) {
+    return 'Error: No current week in context. User is not viewing a week.';
+  }
+
+  const week = context.currentWeek;
+  let result = '';
+
+  result += `=== CURRENT WEEK DETAILED DATA ===\n`;
+  result += `Week ${week.weekNumber}`;
+  if (week.phase) result += ` - ${week.phase}`;
+  result += `\n`;
+  if (week.startDate && week.endDate) {
+    result += `Period: ${week.startDate} to ${week.endDate}\n`;
+  }
+  if (week.description) {
+    result += `Description: ${week.description}\n`;
+  }
+  result += `Sessions: ${week.sessions?.length || 0}`;
+
+  // Show ALL sessions in the week with full detail
+  week.sessions?.forEach((session: any, idx: number) => {
+    result += `\n\n--- Session ${idx + 1}: ${session.name || 'Unnamed'} (${session.id})`;
+    result += `\nStatus: ${session.completed ? 'Completed ✓' : session.startedAt ? 'In Progress' : 'Not Started'}`;
+    if (session.scheduledDate) result += `\nScheduled: ${session.scheduledDate}`;
+    if (session.completedDate) result += `\nCompleted: ${session.completedDate}`;
+    if (session.duration) result += `\nDuration: ${session.duration} minutes`;
+    if (session.notes) result += `\nNotes: ${session.notes}`;
+
+    result += `\n\nExercises:`;
+    result += formatExerciseDetails(session.exercises, includeSetData);
+  });
+
+  return result;
+}
+
 /**
  * Execute any read tool by name
  */
@@ -197,6 +248,8 @@ export function executeReadTool(
   switch (toolName) {
     case 'get_workout_data':
       return executeGetWorkoutData(params, context);
+    case 'get_current_week_detail':
+      return executeGetCurrentWeekDetail(params, context);
     default:
       return `Error: Unknown read tool: ${toolName}`;
   }

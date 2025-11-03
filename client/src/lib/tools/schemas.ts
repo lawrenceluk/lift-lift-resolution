@@ -335,6 +335,22 @@ export const getWorkoutDataSchema: ToolSchema = {
   },
 };
 
+export const getCurrentWeekDetailSchema: ToolSchema = {
+  name: 'get_current_week_detail',
+  description: 'Fetch detailed set-by-set data for ALL sessions in the current week only. More efficient than full_program when questions are week-specific.',
+  category: 'read',
+  input_schema: {
+    type: 'object',
+    properties: {
+      includeSetData: {
+        type: 'boolean',
+        description: 'Include detailed set-by-set data (default: true)',
+      },
+    },
+    required: [],
+  },
+};
+
 // ============================================================================
 // UI Tools
 // ============================================================================
@@ -375,6 +391,7 @@ export const allToolSchemas: ToolSchema[] = [
   addWeekSchema,
   removeWeekSchema,
   getWorkoutDataSchema,
+  getCurrentWeekDetailSchema,
   suggestRepliesSchema,
 ];
 
@@ -391,5 +408,6 @@ export const toolSchemasByName: Record<string, ToolSchema> = {
   add_week: addWeekSchema,
   remove_week: removeWeekSchema,
   get_workout_data: getWorkoutDataSchema,
+  get_current_week_detail: getCurrentWeekDetailSchema,
   suggest_replies: suggestRepliesSchema,
 };
