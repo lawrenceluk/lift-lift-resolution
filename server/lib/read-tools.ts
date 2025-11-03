@@ -5,74 +5,13 @@
  */
 
 import type { WorkoutContext } from './ai-service';
+import { formatExerciseDetails } from './formatters';
 
 interface GetWorkoutDataParams {
   scope: 'full_program' | 'specific_week' | 'specific_session';
   weekNumber?: number;
   sessionNumber?: number;
   includeSetData?: boolean;
-}
-
-/**
- * Format exercise details with set-by-set progress
- */
-function formatExerciseDetails(exercises: any[], includeSetData: boolean = true): string {
-  let output = '';
-
-  exercises?.forEach((ex: any, idx: number) => {
-    output += `\n${idx + 1}. ${ex.name}`;
-    if (ex.groupLabel) output += ` [${ex.groupLabel}]`;
-
-    if (ex.skipped) {
-      output += ` - ${ex.workingSets} sets × ${ex.reps} @ ${ex.targetLoad} [SKIPPED]`;
-    } else {
-      output += ` - Target: ${ex.workingSets} sets × ${ex.reps} @ ${ex.targetLoad}`;
-
-      // Show detailed set-by-set data if requested and available
-      if (includeSetData && ex.sets && ex.sets.length > 0) {
-        const completedSets = ex.sets.filter((s: any) => s.completed).length;
-        output += ` [${completedSets}/${ex.workingSets} logged]`;
-
-        // Add detailed set information
-        ex.sets.forEach((set: any) => {
-          if (set.completed) {
-            output += `\n   Set ${set.setNumber}: ${set.reps} reps`;
-            if (set.weight !== undefined) {
-              output += ` @ ${set.weight} ${set.weightUnit}`;
-            }
-            if (set.rir !== undefined) {
-              output += `, RIR ${set.rir}`;
-            }
-            if (set.notes) {
-              output += ` (${set.notes})`;
-            }
-            output += ` ✓`;
-          }
-        });
-
-        // Show which sets are pending
-        const pendingSets = ex.workingSets - ex.sets.length;
-        if (pendingSets > 0) {
-          const nextSetNum = ex.sets.length + 1;
-          output += `\n   Set ${nextSetNum}`;
-          if (pendingSets > 1) {
-            output += `-${ex.workingSets}`;
-          }
-          output += `: [pending]`;
-        }
-      } else if (!includeSetData && ex.sets && ex.sets.length > 0) {
-        const completedSets = ex.sets.filter((s: any) => s.completed).length;
-        output += ` [${completedSets}/${ex.workingSets} logged]`;
-      } else {
-        output += ` [no sets logged yet]`;
-      }
-    }
-
-    if (ex.notes) output += `\n   Exercise notes: ${ex.notes}`;
-    if (ex.userNotes) output += `\n   User notes: ${ex.userNotes}`;
-  });
-
-  return output;
 }
 
 /**
@@ -186,21 +125,16 @@ export function executeGetWorkoutData(
   return result;
 }
 
-interface GetCurrentWeekDetailParams {
-  includeSetData?: boolean;
-}
-
 /**
  * Execute get_current_week_detail tool
  * Returns detailed data for ALL sessions in the current week only
  * Much more efficient than fetching full_program when user questions are week-specific
+ * Always includes full set-by-set data (that's the purpose of this tool)
  */
 export function executeGetCurrentWeekDetail(
-  params: GetCurrentWeekDetailParams,
+  params: Record<string, never>, // No parameters needed
   context: WorkoutContext
 ): string {
-  const includeSetData = params.includeSetData !== false; // default true
-
   // Find current week from context
   if (!context.currentWeek) {
     return 'Error: No current week in context. User is not viewing a week.';
@@ -221,7 +155,7 @@ export function executeGetCurrentWeekDetail(
   }
   result += `Sessions: ${week.sessions?.length || 0}`;
 
-  // Show ALL sessions in the week with full detail
+  // Show ALL sessions in the week with full detail (always include set data)
   week.sessions?.forEach((session: any, idx: number) => {
     result += `\n\n--- Session ${idx + 1}: ${session.name || 'Unnamed'} (${session.id})`;
     result += `\nStatus: ${session.completed ? 'Completed ✓' : session.startedAt ? 'In Progress' : 'Not Started'}`;
@@ -231,7 +165,7 @@ export function executeGetCurrentWeekDetail(
     if (session.notes) result += `\nNotes: ${session.notes}`;
 
     result += `\n\nExercises:`;
-    result += formatExerciseDetails(session.exercises, includeSetData);
+    result += formatExerciseDetails(session.exercises, true); // Always include set details
   });
 
   return result;

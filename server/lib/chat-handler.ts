@@ -95,11 +95,11 @@ export async function processChatRequest(request: ChatRequest): Promise<Processe
       try {
         const params = JSON.parse(toolCall.function.arguments);
         const result = executeReadTool(toolCall.function.name, params, request.context!);
-        toolResults.push(`Tool: ${toolCall.function.name}\nResult:\n${result}`);
+        toolResults.push(result); // Just the result, no wrapper
         console.log(`[chat-handler] Executed ${toolCall.function.name}:`, result.substring(0, 200) + '...');
       } catch (error) {
         console.error(`[chat-handler] Error executing read tool ${toolCall.function.name}:`, error);
-        toolResults.push(`Tool: ${toolCall.function.name}\nError: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        toolResults.push(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     }
 
@@ -113,9 +113,9 @@ export async function processChatRequest(request: ChatRequest): Promise<Processe
         timestamp: new Date().toISOString(),
       },
       {
-        id: `tool-results-${Date.now()}`,
+        id: `data-${Date.now()}`,
         role: 'user' as const,
-        content: `[Tool Results]\n\n${toolResults.join('\n\n---\n\n')}`,
+        content: toolResults.join('\n\n'), // Simple join, no wrappers
         timestamp: new Date().toISOString(),
       },
     ];

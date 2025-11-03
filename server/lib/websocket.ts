@@ -63,11 +63,11 @@ async function handleChatMessage(socket: Socket, payload: SendMessagePayload): P
         try {
           const params = JSON.parse(toolCall.function.arguments);
           const result = executeReadTool(toolCall.function.name, params, chatRequest.context!);
-          toolResults.push(`Tool: ${toolCall.function.name}\nResult:\n${result}`);
+          toolResults.push(result); // Just the result, no wrapper
           console.log(`[WebSocket] Executed ${toolCall.function.name}`);
         } catch (error) {
           console.error(`[WebSocket] Error executing read tool ${toolCall.function.name}:`, error);
-          toolResults.push(`Tool: ${toolCall.function.name}\nError: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          toolResults.push(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
       }
 
@@ -81,9 +81,9 @@ async function handleChatMessage(socket: Socket, payload: SendMessagePayload): P
           timestamp: new Date().toISOString(),
         },
         {
-          id: `tool-results-${Date.now()}`,
+          id: `data-${Date.now()}`,
           role: 'user' as const,
-          content: `[Tool Results]\n\n${toolResults.join('\n\n---\n\n')}`,
+          content: toolResults.join('\n\n'), // Simple join, no wrappers
           timestamp: new Date().toISOString(),
         },
       ];

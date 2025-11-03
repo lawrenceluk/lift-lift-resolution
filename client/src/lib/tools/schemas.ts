@@ -341,12 +341,7 @@ export const getCurrentWeekDetailSchema: ToolSchema = {
   category: 'read',
   input_schema: {
     type: 'object',
-    properties: {
-      includeSetData: {
-        type: 'boolean',
-        description: 'Include detailed set-by-set data (default: true)',
-      },
-    },
+    properties: {},
     required: [],
   },
 };
