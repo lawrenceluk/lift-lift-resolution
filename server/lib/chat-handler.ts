@@ -1,5 +1,6 @@
 import { AIService, ChatRequest } from './ai-service';
 import { toolSchemasByName } from '../../client/src/lib/tools/schemas';
+import { executeReadTool } from './read-tools';
 import type { ToolCall } from './openrouter';
 
 /**
@@ -8,6 +9,7 @@ import type { ToolCall } from './openrouter';
 export interface CategorizedToolCalls {
   uiToolCalls: ToolCall[];
   writeToolCalls: ToolCall[];
+  readToolCalls: ToolCall[];
   suggestedReplies: string[];
 }
 
@@ -21,12 +23,13 @@ export interface ProcessedChatResponse {
 }
 
 /**
- * Categorize tool calls into ui and write categories
+ * Categorize tool calls into ui, write, and read categories
  * Extract suggested replies from ui tools
  */
 export function categorizeToolCalls(toolCalls: ToolCall[]): CategorizedToolCalls {
   const uiToolCalls: ToolCall[] = [];
   const writeToolCalls: ToolCall[] = [];
+  const readToolCalls: ToolCall[] = [];
   let suggestedReplies: string[] = [];
 
   for (const toolCall of toolCalls) {
@@ -51,23 +54,26 @@ export function categorizeToolCalls(toolCalls: ToolCall[]): CategorizedToolCalls
       }
     } else if (schema.category === 'write') {
       writeToolCalls.push(toolCall);
+    } else if (schema.category === 'read') {
+      readToolCalls.push(toolCall);
     }
-    // 'read' tools would be handled here in the future
   }
 
-  return { uiToolCalls, writeToolCalls, suggestedReplies };
+  return { uiToolCalls, writeToolCalls, readToolCalls, suggestedReplies };
 }
 
 /**
  * Process a chat request with AI service and return complete response
  * This is the non-streaming version - accumulates all chunks before returning
  * Used by HTTP endpoint
+ *
+ * Handles read tools with automatic server-side execution and follow-up requests
  */
 export async function processChatRequest(request: ChatRequest): Promise<ProcessedChatResponse> {
   console.log('[chat-handler] Processing chat request (non-streaming)');
 
   const aiService = new AIService();
-  const { streamGenerator, getToolCalls } = await aiService.processChatRequest(request);
+  let { streamGenerator, getToolCalls } = await aiService.processChatRequest(request);
 
   // Accumulate all streaming chunks
   let fullResponse = '';
@@ -76,8 +82,69 @@ export async function processChatRequest(request: ChatRequest): Promise<Processe
   }
 
   // Get and categorize tool calls
-  const allToolCalls = getToolCalls();
-  const { writeToolCalls, suggestedReplies } = categorizeToolCalls(allToolCalls);
+  let allToolCalls = getToolCalls();
+  let { writeToolCalls, readToolCalls, suggestedReplies } = categorizeToolCalls(allToolCalls);
+
+  // Handle read tools: execute them server-side and make follow-up request
+  if (readToolCalls.length > 0) {
+    console.log(`[chat-handler] Executing ${readToolCalls.length} read tool(s) server-side`);
+
+    // Execute all read tools and collect results
+    const toolResults: string[] = [];
+    for (const toolCall of readToolCalls) {
+      try {
+        const params = JSON.parse(toolCall.function.arguments);
+        const result = executeReadTool(toolCall.function.name, params, request.context!);
+        toolResults.push(`Tool: ${toolCall.function.name}\nResult:\n${result}`);
+        console.log(`[chat-handler] Executed ${toolCall.function.name}:`, result.substring(0, 200) + '...');
+      } catch (error) {
+        console.error(`[chat-handler] Error executing read tool ${toolCall.function.name}:`, error);
+        toolResults.push(`Tool: ${toolCall.function.name}\nError: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
+
+    // Add tool results as a new message and make follow-up request
+    const messagesWithToolResults = [
+      ...request.messages,
+      {
+        id: `coach-${Date.now()}`,
+        role: 'coach' as const,
+        content: fullResponse,
+        timestamp: new Date().toISOString(),
+      },
+      {
+        id: `tool-results-${Date.now()}`,
+        role: 'user' as const,
+        content: `[Tool Results]\n\n${toolResults.join('\n\n---\n\n')}`,
+        timestamp: new Date().toISOString(),
+      },
+    ];
+
+    console.log('[chat-handler] Making follow-up request with tool results');
+    const followUpRequest: ChatRequest = {
+      messages: messagesWithToolResults,
+      context: request.context,
+    };
+
+    const followUp = await aiService.processChatRequest(followUpRequest);
+
+    // Accumulate follow-up response
+    fullResponse = '';
+    for await (const chunk of followUp.streamGenerator) {
+      fullResponse += chunk;
+    }
+
+    // Get tool calls from follow-up (should be write/ui tools now)
+    allToolCalls = followUp.getToolCalls();
+    const categorized = categorizeToolCalls(allToolCalls);
+    writeToolCalls = categorized.writeToolCalls;
+    suggestedReplies = categorized.suggestedReplies;
+
+    // If there are still read tools, we have a problem (infinite loop protection)
+    if (categorized.readToolCalls.length > 0) {
+      console.warn('[chat-handler] LLM requested read tools again after receiving results - ignoring');
+    }
+  }
 
   console.log('[chat-handler] Completed processing:', {
     responseLength: fullResponse.length,

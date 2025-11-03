@@ -215,6 +215,11 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
                 ) : (
                   <Badge className="bg-green-500">Complete</Badge>
                 )}
+                {isSkipped ? (
+                  <Badge variant="destructive" className="bg-gray-500">Skipped</Badge>
+                ) : (
+                  <Badge className="bg-green-500">Complete</Badge>
+                )}
                 <div className="flex flex-col">
                   <h3 className="text-sm font-medium text-gray-700">
                     {exercise.name}

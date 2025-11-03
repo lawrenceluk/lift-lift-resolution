@@ -287,9 +287,33 @@ export const useWorkoutProgram = () => {
               exercises: session.exercises.map((exercise) => {
                 if (exercise.id !== exerciseId) return exercise;
 
+                // Determine if we should clear sets
+                let shouldClearSets = false;
+
+                // Case 1: Exercise name changed
+                if (updates.name && updates.name !== exercise.name) {
+                  shouldClearSets = true;
+                }
+
+                // Case 2: Load type changed (bodyweight <-> weighted)
+                if (updates.targetLoad && updates.targetLoad !== exercise.targetLoad) {
+                  const currentIsBodyweight = exercise.targetLoad.toLowerCase().includes('bodyweight') ||
+                                              exercise.targetLoad.toLowerCase() === 'bw';
+                  const newIsBodyweight = updates.targetLoad.toLowerCase().includes('bodyweight') ||
+                                         updates.targetLoad.toLowerCase() === 'bw';
+
+                  if (currentIsBodyweight !== newIsBodyweight) {
+                    shouldClearSets = true;
+                  }
+                }
+
+                const clearedUpdates = shouldClearSets
+                  ? { ...updates, sets: [] }
+                  : updates;
+
                 return {
                   ...exercise,
-                  ...updates,
+                  ...clearedUpdates,
                 };
               }),
             };
@@ -312,9 +336,33 @@ export const useWorkoutProgram = () => {
           ...session,
           exercises: session.exercises.map((exercise) => {
             if (exercise.name === originalName) {
+              // Determine if we should clear sets
+              let shouldClearSets = false;
+
+              // Case 1: Exercise name changed
+              if (updates.name && updates.name !== exercise.name) {
+                shouldClearSets = true;
+              }
+
+              // Case 2: Load type changed (bodyweight <-> weighted)
+              if (updates.targetLoad && updates.targetLoad !== exercise.targetLoad) {
+                const currentIsBodyweight = exercise.targetLoad.toLowerCase().includes('bodyweight') ||
+                                            exercise.targetLoad.toLowerCase() === 'bw';
+                const newIsBodyweight = updates.targetLoad.toLowerCase().includes('bodyweight') ||
+                                       updates.targetLoad.toLowerCase() === 'bw';
+
+                if (currentIsBodyweight !== newIsBodyweight) {
+                  shouldClearSets = true;
+                }
+              }
+
+              const clearedUpdates = shouldClearSets
+                ? { ...updates, sets: [] }
+                : updates;
+
               return {
                 ...exercise,
-                ...updates,
+                ...clearedUpdates,
               };
             }
             return exercise;
