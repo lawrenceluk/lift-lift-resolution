@@ -3,6 +3,7 @@ import { Server as SocketIOServer, Socket } from 'socket.io';
 import { AIService, ChatRequest } from './ai-service';
 import { categorizeToolCalls } from './chat-handler';
 import { executeReadTool } from './read-tools';
+import { hashWorkoutData } from './hash-helpers';
 
 /**
  * Handle incoming chat message with AI service
@@ -51,10 +52,22 @@ async function handleChatMessage(socket: Socket, payload: SendMessagePayload): P
     if (readToolCalls.length > 0) {
       console.log(`[WebSocket] Executing ${readToolCalls.length} read tool(s) server-side`);
 
+      // Natural, conversational progress messages
+      const naturalMessages = [
+        "Let me check your workout program...",
+        "Let me look at your sessions...",
+        "Let's see...",
+        "Looking at your workouts...",
+        "Checking your progress...",
+        "Let me pull up your data...",
+        "One sec, checking your program...",
+      ];
+      const randomMessage = naturalMessages[Math.floor(Math.random() * naturalMessages.length)];
+
       // Emit progress indicator
       socket.emit(SocketEvents.TOOL_CALL_PROGRESS, {
         status: 'generating',
-        message: `Fetching workout data...`,
+        message: randomMessage,
       } as ToolCallProgressPayload);
 
       // Execute all read tools and collect results
@@ -71,6 +84,18 @@ async function handleChatMessage(socket: Socket, payload: SendMessagePayload): P
         }
       }
 
+      // Compute data hash for cache invalidation
+      const dataHash = chatRequest.context?.fullProgram
+        ? hashWorkoutData(chatRequest.context.fullProgram)
+        : '';
+
+      // Build cache metadata for deduplication
+      const cacheMetadata = readToolCalls.length > 0 ? {
+        toolName: readToolCalls[0].function.name,
+        toolParams: readToolCalls[0].function.arguments,
+        dataHash,
+      } : undefined;
+
       // Add tool results as a new message and make follow-up request
       const messagesWithToolResults = [
         ...chatRequest.messages,
@@ -83,8 +108,9 @@ async function handleChatMessage(socket: Socket, payload: SendMessagePayload): P
         {
           id: `data-${Date.now()}`,
           role: 'user' as const,
-          content: toolResults.join('\n\n'), // Simple join, no wrappers
+          content: toolResults.join('\n\n'),
           timestamp: new Date().toISOString(),
+          toolResultCache: cacheMetadata, // Add cache metadata
         },
       ];
 

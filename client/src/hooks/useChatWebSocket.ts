@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { chatWebSocket } from '@/lib/websocket';
 import { sendChatMessage } from '@/lib/chatApi';
 import type { Message, WorkoutContext } from '@/types/chat';
+import { hashWorkoutData } from '@/utils/hashHelpers';
 
 interface UseChatWebSocketOptions {
   initialMessage?: Message;
@@ -202,8 +203,28 @@ export function useChatWebSocket(options: UseChatWebSocketOptions = {}): UseChat
       timestamp: new Date().toISOString(),
     };
 
+    // Smart cache invalidation: remove stale tool results
+    // Check if workout data has changed since cached tool results
+    const currentDataHash = workoutContextRef.current?.fullProgram
+      ? hashWorkoutData(workoutContextRef.current.fullProgram)
+      : '';
+
+    const cleanedHistory = conversationHistory.filter(msg => {
+      // Keep non-cached messages
+      if (!msg.toolResultCache) return true;
+
+      // Remove cached tool results if data has changed
+      if (msg.toolResultCache.dataHash !== currentDataHash) {
+        console.log('[useChatWebSocket] Invalidating cached tool result:', msg.toolResultCache.toolName);
+        return false;
+      }
+
+      // Keep if data hasn't changed
+      return true;
+    });
+
     // Add user message to conversation
-    const updatedHistory = [...conversationHistory, userMessage];
+    const updatedHistory = [...cleanedHistory, userMessage];
     setConversationHistory(updatedHistory);
 
     try {
