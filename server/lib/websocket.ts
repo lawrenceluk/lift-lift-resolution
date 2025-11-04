@@ -52,10 +52,22 @@ async function handleChatMessage(socket: Socket, payload: SendMessagePayload): P
     if (readToolCalls.length > 0) {
       console.log(`[WebSocket] Executing ${readToolCalls.length} read tool(s) server-side`);
 
+      // Natural, conversational progress messages
+      const naturalMessages = [
+        "Let me check your workout program...",
+        "Let me look at your sessions...",
+        "Let's see...",
+        "Looking at your workouts...",
+        "Checking your progress...",
+        "Let me pull up your data...",
+        "One sec, checking your program...",
+      ];
+      const randomMessage = naturalMessages[Math.floor(Math.random() * naturalMessages.length)];
+
       // Emit progress indicator
       socket.emit(SocketEvents.TOOL_CALL_PROGRESS, {
         status: 'generating',
-        message: `Fetching workout data...`,
+        message: randomMessage,
       } as ToolCallProgressPayload);
 
       // Execute all read tools and collect results
