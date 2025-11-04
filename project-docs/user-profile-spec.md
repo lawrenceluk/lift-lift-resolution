@@ -6,13 +6,29 @@ This specification defines a simple user profile system that allows users to sto
 1. **User reference** - Quick reference for body metrics and training considerations
 2. **AI context** - Provides the coach AI with essential information for personalized programming and advice
 
+## Current State Review
+
+**Existing Export/Import Architecture:**
+- Export: Serializes `Week[]` array directly to JSON (raw array, no wrapper object)
+- Import: Validates and normalizes the array, stores to `localStorage.setItem('workout_weeks', ...)`
+- No user/profile data currently stored or transmitted
+- AI receives context via WebSocket (currentSession, currentWeek, fullProgram)
+- System prompt built dynamically based on user's current view (week vs session level)
+
+**Key Findings:**
+- Export modal: Custom filename + copy-to-clipboard options
+- Import modal: File upload (drag-drop) or paste JSON, with validation
+- Storage key: `'workout_weeks'` only
+- AI tools: 11 modification tools (GUID-based execution) + 2 read tools (server-side)
+- No append_coach_note tool currently exists
+
 ## Goals
 
 - Store minimal, essential user information in a simple format
 - Make this data easily editable through a dedicated Profile UI
-- Include profile data in the export/import workflow for data portability
+- **Minimize disruption**: Keep export/import backward compatible with existing `Week[]` array format
 - Provide free-form context to the AI coach for better personalization
-- Allow the AI coach to append notes to the profile
+- Allow the AI coach to append notes to the profile (via new `append_coach_note` tool)
 - Maintain backward compatibility with existing workout data
 
 ## Data Model
@@ -54,17 +70,33 @@ interface WorkoutProgramData {
 
 ## Storage Strategy
 
+### localStorage Keys
+
 Use separate localStorage keys:
 
 ```typescript
-const STORAGE_KEY_WEEKS = 'workout_weeks'; // existing
-const STORAGE_KEY_PROFILE = 'user_profile'; // new
+const STORAGE_KEY_WEEKS = 'workout_weeks'; // existing - stores Week[] array
+const STORAGE_KEY_PROFILE = 'user_profile'; // new - stores UserProfile object
 ```
+
+### Export Format: IMPORTANT BACKWARD COMPATIBILITY
+
+The export format requires careful handling to maintain compatibility with existing users:
+
+**For users WITH profile data:**
+- Export as object wrapper: `{ profile: {...}, weeks: [...] }`
+- New format clearly indicates profile presence
+
+**For users WITHOUT profile data:**
+- Export as raw array: `[...]` (existing format)
+- Existing users can continue to import/export without changes
+- New users with profile can export the object format
 
 **Rationale:**
 - Maintains backward compatibility - existing `workout_weeks` data unchanged
 - Profile is logically separate from workout planning data
-- Export/import combines both into single JSON
+- Users without profile never see changes - exports remain plain arrays
+- Users can move between devices/sessions seamlessly
 
 ## Data Persistence Functions
 
@@ -199,31 +231,43 @@ Simple, clean form:
 
 ## AI Coach Integration
 
-### Providing Context to AI
+### Current Context Architecture
 
-When user interacts with coach AI, the system prompt includes profile data:
+The AI coach receives context via WebSocket with:
+- `currentSession` - The session user is viewing (with full set-by-set data)
+- `currentWeek` - The week containing current session
+- `fullProgram` - Complete Week[] array
+- System prompt dynamically built in `server/lib/ai-config.ts` based on view level (week vs session)
 
-```typescript
-// Pseudo-code for building AI context
-const buildCoachContext = (profile: UserProfile | null, weeks: Week[]) => {
-  let context = `Current Training Program:\n${summarizeWeeks(weeks)}\n\n`;
+### Providing Profile Context to AI
 
-  if (profile && Object.keys(profile).length > 0) {
-    context += `User Profile:\n`;
-    if (profile.name) context += `Name: ${profile.name}\n`;
-    if (profile.height) context += `Height: ${profile.height}\n`;
-    if (profile.weight) context += `Weight: ${profile.weight}\n`;
-    if (profile.notes) context += `\n${profile.notes}\n`;
-    if (profile.coachNotes) context += `\nPrevious Coach Notes:\n${profile.coachNotes}\n`;
-  }
+Profile data should be added to the system prompt when present, integrated into `buildSystemPrompt()` in `server/lib/ai-config.ts`:
 
-  return context;
-};
+**Logic:**
+1. Fetch profile alongside weeks when context is available
+2. Check if profile exists and has meaningful data
+3. Add profile section to system prompt BEFORE workout context
+4. Include: name, height, weight, notes, coachNotes (if present)
+
+**Placement in System Prompt (high-level):**
 ```
+=== USER PROFILE ===
+[Name if provided]
+[Height/Weight if provided]
+[Free-form notes]
+
+Previous Coach Observations:
+[coachNotes if provided]
+
+=== WORKOUT PROGRAM CONTEXT ===
+[existing week/session context...]
+```
+
+**Benefit:** Coach immediately understands user constraints (injuries, equipment, preferences) when suggesting modifications
 
 ### AI Writing to Profile
 
-The AI coach can call a function to append to coach notes:
+Add new read-only function tool `append_coach_note` that appends to profile:
 
 ```typescript
 // Function tool available to AI
@@ -243,15 +287,21 @@ The AI coach can call a function to append to coach notes:
 }
 ```
 
-**Example AI Interaction:**
+**Tool Behavior:**
+- Single parameter: `note` (string)
+- Server-side execution (no client confirmation needed - read tool)
+- Appends timestamp + note to `profile.coachNotes`
+- Called when coach makes observations about user limitations, preferences, or progress
 
+**Example Interaction:**
 ```
 User: "I have access to a home gym with barbell and dumbbells up to 50lbs"
 
-AI: [Calls append_coach_note: "Home gym setup with barbell and dumbbells to 50lbs"]
-
+AI: [Calls append_coach_note with: "User has home gym: barbell + dumbbells to 50lbs"]
     "Got it! I'll keep that in mind when suggesting exercises..."
 ```
+
+**Implementation:** Add alongside existing read tools in `server/lib/read-tools.ts`
 
 ## Export/Import Workflow
 
@@ -297,45 +347,113 @@ const handleImport = async (file: File) => {
 - If import includes profile: Replace current profile
 - If import has no profile: Keep current profile unchanged
 
-## Implementation Notes
+## Implementation Architecture (KISS + DRY)
 
-### Storage
-- Add new localStorage key `user_profile`
-- Keep existing `workout_weeks` unchanged for backward compatibility
-- Export combines both into single JSON object
+### Component Structure
 
-### UI Components
-- New Profile page at `/profile` route
-- Add "Profile" option to home overflow menu
-- Simple form with 4 fields (name, height, weight, notes) + read-only coach notes
-- Auto-save on blur
+**Core Modules (minimal, reusable):**
 
-### AI Integration
-- Include profile in AI system prompt when present
-- Single function tool `append_coach_note` for AI to write observations
-- Coach notes are append-only (timestamped entries)
+1. **Types** (`client/src/types/profile.ts`)
+   - `UserProfile` interface only
+   - Single source of truth for profile shape
 
-### Import/Export
-- Export: `{ profile?, weeks }`
-- Import: Handle both array (legacy) and object (new) formats
-- No user prompt needed - just replace profile if present in import
+2. **Storage** (`client/src/utils/localStorage.ts` - extend existing)
+   - `saveProfile(profile)` - persist to `'user_profile'` key
+   - `loadProfile()` - retrieve from localStorage
+   - Update existing `exportProgram()` to check if profile exists
+   - Update existing `importProgram()` to handle both array and object formats
+
+3. **State Management** (`client/src/hooks/useUserProfile.ts`)
+   - Single hook: load profile on mount, provide update function
+   - Auto-save on blur (in Profile component, not in hook)
+   - Keep hook minimal - just load/update, no UI logic
+
+4. **API/Tools** (`server/lib/read-tools.ts` - extend existing)
+   - Add `append_coach_note` read tool
+   - Simple: append timestamp + text to profile.coachNotes
+   - Executed server-side when AI calls it
+
+### UI/UX (Single Page)
+
+**Profile Page** (`client/src/pages/ProfilePage.tsx`)
+- Simple form with 5 fields: name, height, weight, notes (textarea), coachNotes (read-only textarea)
+- Auto-save each field on blur
+- No save button needed
+- Accessible via `/profile` route
+
+**Navigation** (in home page menu)
+- Add "Profile" option to existing overflow menu alongside Import/Export
+- Link to `/profile` route
+
+### AI Integration (Minimal)
+
+**System Prompt** (`server/lib/ai-config.ts` - extend existing)
+- Before building workout context, check for profile
+- If profile exists and has data, add USER PROFILE section before WORKOUT CONTEXT
+- Include: name, height, weight, notes, coachNotes (if any)
+
+**Function Tool** (add to existing tools)
+- Add `append_coach_note` to read-tools.ts
+- Signature: `{ note: string }`
+- Logic: Load profile, append `[timestamp] note` to coachNotes, save
+
+### Data Flow
+
+```
+Storage:
+  - localStorage['user_profile'] ← UserProfile object
+  - localStorage['workout_weeks'] ← Week[] array (unchanged)
+
+Export:
+  - Check if profile exists
+  - If yes: export { profile, weeks } (object wrapper)
+  - If no: export weeks (array, legacy format)
+  - Single filename input works for both
+
+Import:
+  - Parse JSON
+  - Check if Array.isArray(data)
+    - If array: load as weeks, keep current profile
+    - If object: extract .weeks and .profile
+  - Save both to localStorage
+
+AI Context:
+  - Load profile from localStorage alongside weeks
+  - Include profile data in buildSystemPrompt() if present
+  - append_coach_note tool persists changes to localStorage
+```
 
 ## Success Criteria
 
-- [ ] Profile page accessible from home menu
-- [ ] Profile persists in localStorage
-- [ ] Profile included in export/import
-- [ ] AI receives profile context
-- [ ] AI can append coach notes
-- [ ] Backward compatible with existing data
+- [ ] Profile persists in localStorage separate from weeks
+- [ ] Profile page editable with auto-save
+- [ ] Export format: object wrapper if profile exists, array if not
+- [ ] Import handles both array (legacy) and object formats
+- [ ] Profile context included in AI system prompt
+- [ ] AI can append coach notes via tool
+- [ ] Zero breaking changes to existing workout data/exports
 
-## Implementation Steps
+## Implementation Phases (High-Level Order)
 
-1. Add `UserProfile` type in `client/src/types/profile.ts`
-2. Add profile storage functions in `client/src/utils/localStorage.ts`
-3. Create `useUserProfile` hook in `client/src/hooks/useUserProfile.ts`
-4. Build Profile page component
-5. Add route and menu navigation
-6. Update export/import to include profile
-7. Update AI coach integration to use profile context
-8. Add `append_coach_note` function tool for AI
+1. **Phase 1: Core Storage & State**
+   - Add UserProfile type
+   - Extend localStorage utils (saveProfile, loadProfile)
+   - Create useUserProfile hook
+
+2. **Phase 2: UI & Navigation**
+   - Build ProfilePage component with auto-save
+   - Add route and menu navigation
+
+3. **Phase 3: Export/Import Compatibility**
+   - Update export logic (profile + conditional wrapper)
+   - Update import logic (array/object detection + both storage paths)
+
+4. **Phase 4: AI Integration**
+   - Extend buildSystemPrompt to include profile
+   - Add append_coach_note tool to read-tools.ts
+   - Register tool in schemas
+
+5. **Phase 5: Testing & Polish**
+   - Test export/import backward compatibility
+   - Verify AI receives profile context
+   - Verify append_coach_note persists

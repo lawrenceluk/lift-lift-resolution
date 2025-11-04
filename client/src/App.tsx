@@ -7,9 +7,13 @@ import NotFound from "@/pages/not-found";
 
 import { WorkoutTrackerApp } from "@/pages/WorkoutTrackerApp";
 import { HowItWorks } from "@/pages/HowItWorks";
+import { AuthPage } from "@/pages/AuthPage";
+import { AuthCallbackPage } from "@/pages/AuthCallbackPage";
+import { ProfilePage } from "@/pages/ProfilePage";
 import { CoachChat } from "@/components/CoachChat";
 import { WorkoutProgramProvider } from "@/contexts/WorkoutProgramContext";
 import { CoachChatProvider } from "@/contexts/CoachChatContext";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 function Router() {
   return (
@@ -17,6 +21,9 @@ function Router() {
       {/* Add pages below */}
       <Route path="/" component={WorkoutTrackerApp} />
       <Route path="/how-it-works" component={HowItWorks} />
+      <Route path="/login" component={AuthPage} />
+      <Route path="/login/callback" component={AuthCallbackPage} />
+      <Route path="/profile" component={ProfilePage} />
       <Route path="/:weekId" component={WorkoutTrackerApp} />
       <Route path="/:sessionId" component={WorkoutTrackerApp} />
       {/* Fallback to 404 */}
@@ -28,16 +35,18 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <WorkoutProgramProvider>
-          <CoachChatProvider>
-            <Toaster />
-            <Router />
-            {/* Global Coach Chat - persists across routes */}
-            <CoachChat />
-          </CoachChatProvider>
-        </WorkoutProgramProvider>
-      </TooltipProvider>
+      <AuthProvider>
+        <TooltipProvider>
+          <WorkoutProgramProvider>
+            <CoachChatProvider>
+              <Toaster />
+              <Router />
+              {/* Global Coach Chat - persists across routes */}
+              <CoachChat />
+            </CoachChatProvider>
+          </WorkoutProgramProvider>
+        </TooltipProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

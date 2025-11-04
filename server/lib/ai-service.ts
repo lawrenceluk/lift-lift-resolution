@@ -37,11 +37,19 @@ export interface ChatMessage {
   timestamp: string;
 }
 
+export interface UserProfileContext {
+  name?: string;
+  height?: string;
+  weight?: string;
+  notes?: string;
+}
+
 export interface WorkoutContext {
   currentSession?: any; // WorkoutSession
   currentWeek?: any; // Week
   fullProgram: any[]; // Week[]
   currentUrl?: string;
+  userProfile?: UserProfileContext; // User profile data for AI context
 }
 
 export interface ChatRequest {

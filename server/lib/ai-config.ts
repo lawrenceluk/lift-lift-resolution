@@ -57,6 +57,20 @@ IMPORTANT - Suggested Replies:
 - Each reply should represent a meaningfully different direction for the conversation
 - You can combine the suggest_replies tool with other tools in a single response`;
 
+  // Add user profile context if available
+  if (context?.userProfile) {
+    const profile = context.userProfile;
+    const profileParts: string[] = [];
+    if (profile.name) profileParts.push(`Name: ${profile.name}`);
+    if (profile.height) profileParts.push(`Height: ${profile.height}`);
+    if (profile.weight) profileParts.push(`Weight: ${profile.weight}`);
+    if (profile.notes) profileParts.push(`Notes: ${profile.notes}`);
+
+    if (profileParts.length > 0) {
+      systemPrompt += `\n\n=== USER PROFILE ===\n${profileParts.join('\n')}`;
+    }
+  }
+
   // Add workout context if available
   if (context) {
     systemPrompt += `\n\n=== WORKOUT PROGRAM CONTEXT ===`;

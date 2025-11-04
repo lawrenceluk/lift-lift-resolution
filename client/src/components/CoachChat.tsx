@@ -7,6 +7,7 @@ import { Badge } from './ui/badge';
 import { useChatWebSocket } from '@/hooks/useChatWebSocket';
 import { useWorkoutProgramContext } from '@/contexts/WorkoutProgramContext';
 import { useCoachChatContext } from '@/contexts/CoachChatContext';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { findSession, findWeek, parseId } from '@/utils/idHelpers';
 import { ToolCallPreview, buildToolCallPreview } from '@/components/ToolCallPreview';
 import { executeToolCalls } from '@/lib/tools/executor';
@@ -36,6 +37,7 @@ export const CoachChat = () => {
 
   // Get workout program data
   const { weeks, updateWeeks } = useWorkoutProgramContext();
+  const { profile } = useUserProfile();
   const [location] = useLocation();
   const [isExecutingTools, setIsExecutingTools] = useState(false);
 
@@ -64,10 +66,19 @@ export const CoachChat = () => {
     const pathParts = location.split('/').filter(Boolean);
     const currentId = pathParts[0]; // e.g., "week-1-session-2" or "week-1"
 
+    // Compress profile data - only include non-empty fields
+    const userProfile = profile ? {
+      ...(profile.name && { name: profile.name }),
+      ...(profile.height && { height: profile.height }),
+      ...(profile.weight && { weight: profile.weight }),
+      ...(profile.notes && { notes: profile.notes }),
+    } : undefined;
+
     if (!currentId) {
       return {
         fullProgram: weeks,
         currentUrl: location,
+        ...(userProfile && { userProfile }),
       };
     }
 
@@ -81,8 +92,9 @@ export const CoachChat = () => {
       currentWeek,
       fullProgram: weeks,
       currentUrl: location,
+      ...(userProfile && { userProfile }),
     };
-  }, [weeks, location]);
+  }, [weeks, location, profile]);
 
   // Use chat WebSocket hook for all conversation management
   const {
@@ -301,6 +313,22 @@ export const CoachChat = () => {
     // User cancelled the proposed changes
     await sendChatMessageViaHook('I changed my mind, please don\'t make those changes.');
   };
+
+  // Determine if coach chat should be visible
+  // Show only on workout pages (main app route with week/session ID)
+  const shouldShowCoachChat = useMemo(() => {
+    // Hide on login, profile, and how-it-works pages
+    if (location === '/login' || location === '/profile' || location === '/how-it-works' || location === '/login/callback') {
+      return false;
+    }
+    // Show on root (/) and any week/session routes
+    return true;
+  }, [location]);
+
+  // Don't render anything if coach chat shouldn't be visible
+  if (!shouldShowCoachChat) {
+    return null;
+  }
 
   return (
     <>

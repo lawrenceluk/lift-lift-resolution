@@ -62,11 +62,19 @@ export interface ToolResult {
   is_error?: boolean;
 }
 
+export interface UserProfileContext {
+  name?: string;
+  height?: string;
+  weight?: string;
+  notes?: string;
+}
+
 export interface WorkoutContext {
   currentSession?: WorkoutSession; // The session user is viewing
   currentWeek?: Week; // The week containing current session
   fullProgram: Week[]; // Complete workout program
   currentUrl?: string; // Current page URL for context
+  userProfile?: UserProfileContext; // User profile data for AI context
 }
 
 export interface ChatApiRequest {
