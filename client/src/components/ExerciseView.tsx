@@ -329,7 +329,7 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
             placeholder="e.g., Used dumbbells instead of barbell..."
             className="min-h-[100px]"
           />
-          <DialogFooter>
+          <DialogFooter className="flex justify-end gap-2">
             <Button variant="outline" onClick={handleCancelNotes}>
               Cancel
             </Button>

@@ -54,20 +54,17 @@ async function handleChatMessage(socket: Socket, payload: SendMessagePayload): P
 
       // Natural, conversational progress messages
       const naturalMessages = [
-        "Let me check your workout program...",
-        "Let me look at your sessions...",
+        "Just a moment...",
+        "Hang on...",
         "Let's see...",
-        "Looking at your workouts...",
-        "Checking your progress...",
-        "Let me pull up your data...",
-        "One sec, checking your program...",
+        "Give me a sec...",
       ];
       const randomMessage = naturalMessages[Math.floor(Math.random() * naturalMessages.length)];
 
       // Emit progress indicator
       socket.emit(SocketEvents.TOOL_CALL_PROGRESS, {
         status: 'generating',
-        message: randomMessage,
+        message: randomMessage + " ",
       } as ToolCallProgressPayload);
 
       // Execute all read tools and collect results

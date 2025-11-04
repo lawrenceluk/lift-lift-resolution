@@ -5,7 +5,7 @@
  * to modify workout programs. All tools follow a confirm-before-execute pattern.
  */
 
-import type { Exercise, WorkoutSession, Week, CardioBlock } from '@/types/workout';
+import type { Exercise, WorkoutSession, Week } from '@/types/workout';
 
 // ============================================================================
 // Exercise Tools
@@ -81,7 +81,6 @@ export interface ModifySessionParams {
     scheduledDate?: string;
     dayOfWeek?: string;
     warmup?: string[];
-    cardio?: CardioBlock | null;
     notes?: string;
   };
 }
@@ -103,7 +102,6 @@ export interface NewSessionData {
   scheduledDate?: string;
   dayOfWeek?: string;
   warmup?: string[];
-  cardio?: CardioBlock;
   notes?: string;
 }
 

@@ -74,16 +74,6 @@ Important guidelines:
 - warmup array is optional but recommended
 - sets array should always be empty [] in the initial program (users log sets during workouts)
 - completed should be false for all sessions initially
-- cardio is optional and can be added to any session with this structure:
-  \`\`\`json
-  "cardio": {
-    "type": "zone2",
-    "duration": 30,
-    "modality": "bike",
-    "instructions": "Stay in zone 2, conversational pace",
-    "completed": false
-  }
-  \`\`\`
 
 Please provide ONLY the JSON output, no additional explanation.`;
 

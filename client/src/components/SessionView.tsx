@@ -3,15 +3,16 @@ import { WorkoutSession, SetResult, Week, Exercise } from '@/types/workout';
 import { ExerciseView } from './ExerciseView';
 import { ExerciseProgressGrid } from './ExerciseProgressGrid';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, CheckCircle2, MoreVertical, Trash, Pencil } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { ArrowLeft, CheckCircle2, MoreVertical, Trash, Pencil, Zap } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { useCoachChatContext } from '@/contexts/CoachChatContext';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import {
   Dialog,
@@ -57,6 +58,7 @@ export const SessionView: React.FC<SessionViewProps> = ({
   onDeleteSession,
   onRenameSession,
 }) => {
+  const { sendMessage } = useCoachChatContext();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
   const [newSessionName, setNewSessionName] = useState(session.name);
@@ -103,13 +105,18 @@ export const SessionView: React.FC<SessionViewProps> = ({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => sendMessage('What stretches should I do for this workout session?')}>
+                <Zap className="w-4 h-4 mr-2" />
+                Suggest stretches
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleOpenRenameDialog}>
                 <Pencil className="w-4 h-4 mr-2" />
                 Rename
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setIsDeleteDialogOpen(true)} className="text-red-600">
                 <Trash className="w-4 h-4 mr-2" />
-                Delete Session
+                Delete session
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -127,11 +134,11 @@ export const SessionView: React.FC<SessionViewProps> = ({
 
       {session.warmup && session.warmup.length > 0 && (
         <div className="px-4 pt-4 w-full max-w-2xl">
-          <Card className="p-4 bg-orange-50 border-orange-200">
-            <h3 className="font-semibold text-orange-900 mb-2">Warmup</h3>
+          <Card className="p-4 border-gray-200">
+            <h3 className="font-semibold text-gray-900 mb-2">Warmup</h3>
             <ul className="space-y-1">
               {session.warmup.map((item, index) => (
-                <li key={index} className="text-sm text-orange-800">
+                <li key={index} className="text-sm text-gray-800">
                   • {item}
                 </li>
               ))}
@@ -159,26 +166,6 @@ export const SessionView: React.FC<SessionViewProps> = ({
             onUpdateExerciseNotesById={onUpdateExerciseNotes}
           />
         ))}
-
-        {session.cardio && (
-          <Card className="p-4 bg-blue-50 border-blue-200 mb-4">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="font-semibold text-blue-900">Cardio Session</h3>
-              {session.cardio.completed && (
-                <Badge className="bg-blue-600">Done</Badge>
-              )}
-            </div>
-            <p className="text-sm text-blue-800">
-              {session.cardio.duration} minutes • {session.cardio.type} •{' '}
-              {session.cardio.modality || 'Any cardio'}
-            </p>
-            {session.cardio.instructions && (
-              <p className="text-sm text-blue-700 mt-2 italic">
-                {session.cardio.instructions}
-              </p>
-            )}
-          </Card>
-        )}
       </main>
 
       {!session.completed && allExercisesComplete && (

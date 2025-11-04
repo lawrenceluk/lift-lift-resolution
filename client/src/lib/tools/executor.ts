@@ -438,7 +438,6 @@ function executeAddSession(workoutData: Week[], params: AddSessionParams): Week[
       sets: [],
       skipped: false,
     })),
-    cardio: params.session.cardio,
     notes: params.session.notes,
     completed: false,
   };
@@ -520,7 +519,6 @@ function executeAddWeek(workoutData: Week[], params: AddWeekParams): Week[] {
         sets: [],
         skipped: false,
       })),
-      cardio: sessData.cardio,
       notes: sessData.notes,
       completed: false,
     })),

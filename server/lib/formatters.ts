@@ -1,6 +1,13 @@
 /**
  * Shared formatting utilities for workout data
  * Used by both context building and read tool results
+ *
+ * COMPACT FORMAT DESIGN:
+ * - Status codes: C=completed, P=in-progress, N=not-started, S=skipped
+ * - Dates compressed: 2025-01-15 → 01-15
+ * - Units abbreviated: lbs→lb, reps→r for RIR notation
+ * - Fields only shown if present (no "n/a" or empty markers)
+ * - Multi-line reduced to single-line where possible
  */
 
 /**
@@ -12,55 +19,51 @@ export function formatExerciseDetails(exercises: any[], includeSetDetails: boole
   let output = '';
 
   exercises?.forEach((ex: any, idx: number) => {
-    output += `\n${idx + 1}. ${ex.name}`;
-    if (ex.groupLabel) output += ` [${ex.groupLabel}]`;
+    // Format: E1:Name[Group] 3×8-10@225lb [3/3|S] Notes
+    output += `\nE${idx + 1}:${ex.name}`;
+    if (ex.groupLabel) output += `[${ex.groupLabel}]`;
+
+    output += ` ${ex.workingSets}×${ex.reps}@${ex.targetLoad}`;
 
     if (ex.skipped) {
-      output += ` - ${ex.workingSets} sets × ${ex.reps} @ ${ex.targetLoad} [SKIPPED]`;
+      output += ' [S]';
     } else {
-      output += ` - Target: ${ex.workingSets} sets × ${ex.reps} @ ${ex.targetLoad}`;
+      const completedCount = ex.sets?.filter((s: any) => s.completed).length || 0;
+      const total = ex.workingSets;
 
-      // Show completion status
-      if (ex.sets && ex.sets.length > 0) {
-        const completedSets = ex.sets.filter((s: any) => s.completed).length;
-        output += ` [${completedSets}/${ex.workingSets} logged]`;
-
-        // Only show detailed set-by-set data if requested
-        if (includeSetDetails) {
-          ex.sets.forEach((set: any) => {
-            if (set.completed) {
-              output += `\n   Set ${set.setNumber}: ${set.reps} reps`;
-              if (set.weight !== undefined) {
-                output += ` @ ${set.weight} ${set.weightUnit}`;
-              }
-              if (set.rir !== undefined) {
-                output += `, RIR ${set.rir}`;
-              }
-              if (set.notes) {
-                output += ` (${set.notes})`;
-              }
-              output += ` ✓`;
-            }
-          });
-
-          // Show which sets are pending
-          const pendingSets = ex.workingSets - ex.sets.length;
-          if (pendingSets > 0) {
-            const nextSetNum = ex.sets.length + 1;
-            output += `\n   Set ${nextSetNum}`;
-            if (pendingSets > 1) {
-              output += `-${ex.workingSets}`;
-            }
-            output += `: [pending]`;
-          }
-        }
+      if (completedCount > 0) {
+        output += ` [${completedCount}/${total}]`;
       } else {
-        output += ` [no sets logged yet]`;
+        output += ' [0]';
+      }
+
+      // Set-by-set data in compact format
+      if (includeSetDetails && ex.sets && ex.sets.length > 0) {
+        const setData = ex.sets
+          .filter((s: any) => s.completed)
+          .map((s: any) => {
+            // Format: 1:10@225r2 (set:reps@weight+RIR)
+            let sd = `${s.setNumber}:${s.reps}`;
+            if (s.weight !== undefined) sd += `@${s.weight}`;
+            if (s.rir !== undefined) sd += `r${s.rir}`;
+            if (s.notes) sd += `"${s.notes}"`;
+            return sd;
+          })
+          .join(' ');
+
+        if (setData) output += `\n  ${setData}`;
+
+        // Show pending sets count
+        const pending = total - ex.sets.length;
+        if (pending > 0) {
+          output += ` +${pending}pending`;
+        }
       }
     }
 
-    if (ex.notes) output += `\n   Exercise notes: ${ex.notes}`;
-    if (ex.userNotes) output += `\n   User notes: ${ex.userNotes}`;
+    // Notes compressed
+    if (ex.notes) output += ` |N:${ex.notes}`;
+    if (ex.userNotes) output += ` |U:${ex.userNotes}`;
   });
 
   return output;
@@ -75,9 +78,30 @@ export function formatExerciseSummary(exercises: any[]): string {
 
   return exercises.map((ex: any) => {
     const completedSets = ex.sets?.filter((s: any) => s.completed).length || 0;
-    const status = ex.skipped ? '[SKIPPED]' :
-                   completedSets > 0 ? `[${completedSets}/${ex.workingSets} logged]` :
-                   '[not started]';
-    return `\n  - ${ex.name}: ${ex.workingSets}×${ex.reps} @ ${ex.targetLoad} ${status}`;
+    const status = ex.skipped ? '[S]' :
+                   completedSets > 0 ? `[${completedSets}/${ex.workingSets}]` :
+                   '[0]';
+    return `\n  ${ex.name} ${ex.workingSets}×${ex.reps}@${ex.targetLoad} ${status}`;
   }).join('');
+}
+
+/**
+ * Compress date string from ISO format
+ * 2025-01-15 → 01-15
+ * 2025-01-15T14:30:00Z → 01-15T14:30
+ */
+export function compressDate(date: string | undefined): string {
+  if (!date) return '';
+  const match = date.match(/\d{4}-(\d{2}-\d{2})(T\d{2}:\d{2})?/);
+  return match ? match[1] + (match[2] || '') : date;
+}
+
+/**
+ * Format session status as single character
+ * completed → C, in-progress → P, not-started → N
+ */
+export function formatSessionStatus(session: any): string {
+  if (session.completed) return 'C';
+  if (session.startedAt) return 'P';
+  return 'N';
 }

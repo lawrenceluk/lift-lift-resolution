@@ -26,17 +26,6 @@ export interface Exercise {
   skipped?: boolean;
 }
 
-export interface CardioBlock {
-  type: 'zone2' | 'intervals' | 'sweetspot' | 'threshold' | 'vo2max';
-  duration: number;
-  modality?: string;
-  instructions?: string;
-  completed: boolean;
-  actualDuration?: number;
-  avgHeartRate?: number;
-  notes?: string;
-}
-
 export interface WorkoutSession {
   id: string;
   guid?: string; // Ephemeral GUID for deterministic operations (not persisted)
@@ -45,7 +34,6 @@ export interface WorkoutSession {
   dayOfWeek?: string;
   warmup?: string[];
   exercises: Exercise[];
-  cardio?: CardioBlock;
   notes?: string;
   startedAt?: string;
   completed: boolean;

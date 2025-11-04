@@ -363,9 +363,6 @@ export const WorkoutTrackerApp = (): JSX.Element => {
                 <div className="flex flex-col">
                   {week.sessions.map((session) => {
                     const totalExercises = session.exercises.length;
-                    const cardioText = session.cardio
-                      ? `${session.cardio.duration} min ${session.cardio.modality || 'cardio'}`
-                      : null;
                     const status = getWorkoutStatus(session);
                     const hasCompletedSets = session.exercises.some((ex) =>
                       ex.sets?.some((set) => set.completed)
@@ -392,18 +389,11 @@ export const WorkoutTrackerApp = (): JSX.Element => {
                               }
                             </p>
                           )}
-                          {(totalExercises > 0 || cardioText) && (
+                          {totalExercises > 0 && (
                             <div className="flex items-center gap-2">
-                              {totalExercises > 0 && (
-                                <span className="font-normal text-[#717182] text-xs leading-4">
-                                  {totalExercises} {totalExercises === 1 ? 'exercise' : 'exercises'}
-                                </span>
-                              )}
-                              {cardioText && (
-                                <span className="font-normal text-[#717182] text-xs leading-4">
-                                  {totalExercises > 0 ? '+' : ''}{cardioText}
-                                </span>
-                              )}
+                              <span className="font-normal text-[#717182] text-xs leading-4">
+                                {totalExercises} {totalExercises === 1 ? 'exercise' : 'exercises'}
+                              </span>
                             </div>
                           )}
                         </div>

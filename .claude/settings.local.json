@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(npm run check:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "WebSearch"
     ],
     "deny": [],
     "ask": []

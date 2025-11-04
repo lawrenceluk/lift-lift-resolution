@@ -88,7 +88,7 @@ Status: ${session.completed ? 'Completed ✓' : session.startedAt ? 'In Progress
         });
       }
     } else if (context.currentSession) {
-      // User is viewing SESSION LEVEL - show detailed current session + compressed others
+      // User is viewing SESSION LEVEL - show detailed current session only
       systemPrompt += `\n\n🎯 USER IS VIEWING SESSION LEVEL SCREEN`;
       if (process.env.NODE_ENV === 'development') {
         console.log('[ai-config] context.currentSession', JSON.stringify(context.currentSession));
@@ -102,49 +102,16 @@ Exercises in this session:`;
       // Include set details ONLY for current session
       systemPrompt += formatExerciseDetails(session.exercises, true);
 
-      // Show other sessions in the week (compressed)
+      // Show minimal week context (just metadata, no other sessions)
       if (context.currentWeek) {
         const week = context.currentWeek;
-        systemPrompt += `\n\n📅 OTHER SESSIONS IN CURRENT WEEK:
+        systemPrompt += `\n\n📅 Week Context:
 Week ${week.weekNumber}`;
         if (week.phase) systemPrompt += ` - ${week.phase}`;
         if (week.startDate && week.endDate) {
           systemPrompt += `\n${week.startDate} to ${week.endDate}`;
         }
-        systemPrompt += `\nTotal sessions: ${week.sessions?.length || 0}`;
-
-        // Show compressed info for other sessions in the week (excluding current session)
-        if (week.sessions && week.sessions.length > 0) {
-          week.sessions.forEach((session: any, idx: number) => {
-            // Skip current session - it's already detailed above
-            if (context.currentSession && session.id === context.currentSession.id) {
-              systemPrompt += `\n\n--- Session ${idx + 1}: ${session.name || 'Unnamed'} - [See current session above]`;
-              return;
-            }
-
-            // Compressed format for other sessions
-            systemPrompt += `\n\n--- Session ${idx + 1}: ${session.name || 'Unnamed'} (${session.id})
-Status: ${session.completed ? 'Completed ✓' : session.startedAt ? 'In Progress' : 'Not Started'}`;
-            if (session.scheduledDate) systemPrompt += `\nScheduled: ${session.scheduledDate}`;
-            if (session.completedDate) systemPrompt += `\nCompleted: ${session.completedDate}`;
-
-            systemPrompt += `\nExercises:`;
-            systemPrompt += formatExerciseSummary(session.exercises);
-          });
-        }
       }
-    }
-
-    // TERTIARY: Full program (ultra-compressed for efficiency)
-    if (context.fullProgram && context.fullProgram.length > 0) {
-      const totalSessions = context.fullProgram.reduce((sum: number, w: any) => sum + (w.sessions?.length || 0), 0);
-      systemPrompt += `\n\nProgram: ${context.fullProgram.length} weeks, ${totalSessions} sessions total`;
-
-      // Ultra-compressed week list with phases
-      const weekSummary = context.fullProgram
-        .map((w: any) => `${w.weekNumber}${w.phase ? `(${w.phase})` : ''}`)
-        .join(', ');
-      systemPrompt += `\nWeeks: ${weekSummary}`;
     }
 
     systemPrompt += `\n\n=== END CONTEXT ===

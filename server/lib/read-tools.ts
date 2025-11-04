@@ -2,10 +2,16 @@
  * Read Tool Executors
  * These tools fetch data from the workout program without modifying it
  * They are executed server-side and results are fed back to the LLM
+ *
+ * COMPACT OUTPUT FORMAT:
+ * - Weeks: W1 PhaseName [MM-DD→MM-DD] Nsess
+ * - Sessions: S1:Name {Status Ndur sch:MM-DD cmp:MM-DD}
+ * - Exercises: E1:Name 3×8@225lb [3/3]
+ * - Sets: 1:10@225r2 (setNum:reps@weight+RIR)
  */
 
 import type { WorkoutContext } from './ai-service';
-import { formatExerciseDetails } from './formatters';
+import { formatExerciseDetails, compressDate, formatSessionStatus } from './formatters';
 
 interface GetWorkoutDataParams {
   scope: 'full_program' | 'specific_week' | 'specific_session';
@@ -26,37 +32,34 @@ export function executeGetWorkoutData(
   let result = '';
 
   if (params.scope === 'full_program') {
-    // Return all weeks with detailed session and exercise data
-    result += '=== FULL WORKOUT PROGRAM DATA ===\n';
-    result += `Total weeks: ${context.fullProgram.length}\n`;
-
+    // Compact header: total weeks & sessions only
     const totalSessions = context.fullProgram.reduce(
       (sum: number, w: any) => sum + (w.sessions?.length || 0),
       0
     );
-    result += `Total sessions: ${totalSessions}\n`;
+    result += `PROGRAM: ${context.fullProgram.length}w ${totalSessions}sess\n`;
 
     context.fullProgram.forEach((week: any) => {
-      result += `\n\n📅 WEEK ${week.weekNumber}`;
-      if (week.phase) result += ` - ${week.phase}`;
+      // Format: W1 PhaseName [01-01→01-07] "Description" 3sess
+      result += `\nW${week.weekNumber}`;
+      if (week.phase) result += ` ${week.phase}`;
       if (week.startDate && week.endDate) {
-        result += `\n${week.startDate} to ${week.endDate}`;
+        result += ` [${compressDate(week.startDate)}→${compressDate(week.endDate)}]`;
       }
-      if (week.description) {
-        result += `\nDescription: ${week.description}`;
-      }
-      result += `\nSessions: ${week.sessions?.length || 0}`;
+      if (week.description) result += ` "${week.description}"`;
+      result += ` ${week.sessions?.length || 0}sess`;
 
       // Show each session in the week
       week.sessions?.forEach((session: any, idx: number) => {
-        result += `\n\n--- Session ${idx + 1}: ${session.name || 'Unnamed'} (${session.id})`;
-        result += `\nStatus: ${session.completed ? 'Completed ✓' : session.startedAt ? 'In Progress' : 'Not Started'}`;
-        if (session.scheduledDate) result += `\nScheduled: ${session.scheduledDate}`;
-        if (session.completedDate) result += `\nCompleted: ${session.completedDate}`;
-        if (session.duration) result += `\nDuration: ${session.duration} minutes`;
-        if (session.notes) result += `\nNotes: ${session.notes}`;
+        // Format: S1:Name {C 60m sch:01-01 cmp:01-01T14:30} "notes"
+        result += `\nS${idx + 1}:${session.name || 'Unnamed'}`;
+        result += ` {${formatSessionStatus(session)}`;
+        if (session.duration) result += ` ${session.duration}m`;
+        if (session.scheduledDate) result += ` sch:${compressDate(session.scheduledDate)}`;
+        if (session.completedDate) result += ` cmp:${compressDate(session.completedDate)}`;
+        result += `}`;
+        if (session.notes) result += ` "${session.notes}"`;
 
-        result += `\n\nExercises:`;
         result += formatExerciseDetails(session.exercises, includeSetData);
       });
     });
@@ -71,25 +74,24 @@ export function executeGetWorkoutData(
       return `Error: Week ${params.weekNumber} not found`;
     }
 
-    result += `=== WEEK ${week.weekNumber} DATA ===\n`;
-    if (week.phase) result += `Phase: ${week.phase}\n`;
+    // Format: W1 PhaseName [01-01→01-07] "Description" 3sess
+    result += `W${week.weekNumber}`;
+    if (week.phase) result += ` ${week.phase}`;
     if (week.startDate && week.endDate) {
-      result += `Period: ${week.startDate} to ${week.endDate}\n`;
+      result += ` [${compressDate(week.startDate)}→${compressDate(week.endDate)}]`;
     }
-    if (week.description) {
-      result += `Description: ${week.description}\n`;
-    }
-    result += `Sessions: ${week.sessions?.length || 0}`;
+    if (week.description) result += ` "${week.description}"`;
+    result += ` ${week.sessions?.length || 0}sess`;
 
     week.sessions?.forEach((session: any, idx: number) => {
-      result += `\n\n--- Session ${idx + 1}: ${session.name || 'Unnamed'} (${session.id})`;
-      result += `\nStatus: ${session.completed ? 'Completed ✓' : session.startedAt ? 'In Progress' : 'Not Started'}`;
-      if (session.scheduledDate) result += `\nScheduled: ${session.scheduledDate}`;
-      if (session.completedDate) result += `\nCompleted: ${session.completedDate}`;
-      if (session.duration) result += `\nDuration: ${session.duration} minutes`;
-      if (session.notes) result += `\nNotes: ${session.notes}`;
+      result += `\nS${idx + 1}:${session.name || 'Unnamed'}`;
+      result += ` {${formatSessionStatus(session)}`;
+      if (session.duration) result += ` ${session.duration}m`;
+      if (session.scheduledDate) result += ` sch:${compressDate(session.scheduledDate)}`;
+      if (session.completedDate) result += ` cmp:${compressDate(session.completedDate)}`;
+      result += `}`;
+      if (session.notes) result += ` "${session.notes}"`;
 
-      result += `\n\nExercises:`;
       result += formatExerciseDetails(session.exercises, includeSetData);
     });
 
@@ -108,17 +110,17 @@ export function executeGetWorkoutData(
       return `Error: Session ${params.sessionNumber} not found in week ${params.weekNumber}`;
     }
 
-    result += `=== SESSION DATA ===\n`;
-    result += `Session: ${session.name || 'Unnamed'} (${session.id})\n`;
-    result += `Week ${week.weekNumber}`;
-    if (week.phase) result += ` - ${week.phase}`;
-    result += `\nStatus: ${session.completed ? 'Completed ✓' : session.startedAt ? 'In Progress' : 'Not Started'}`;
-    if (session.scheduledDate) result += `\nScheduled: ${session.scheduledDate}`;
-    if (session.completedDate) result += `\nCompleted: ${session.completedDate}`;
-    if (session.duration) result += `\nDuration: ${session.duration} minutes`;
-    if (session.notes) result += `\nNotes: ${session.notes}`;
+    // Format: W1.S1:Name {C 60m sch:01-01 cmp:01-01T14:30} "notes"
+    result += `W${week.weekNumber}`;
+    if (week.phase) result += ` ${week.phase}`;
+    result += `\nS${params.sessionNumber}:${session.name || 'Unnamed'}`;
+    result += ` {${formatSessionStatus(session)}`;
+    if (session.duration) result += ` ${session.duration}m`;
+    if (session.scheduledDate) result += ` sch:${compressDate(session.scheduledDate)}`;
+    if (session.completedDate) result += ` cmp:${compressDate(session.completedDate)}`;
+    result += `}`;
+    if (session.notes) result += ` "${session.notes}"`;
 
-    result += `\n\nExercises:`;
     result += formatExerciseDetails(session.exercises, includeSetData);
   }
 
@@ -143,28 +145,25 @@ export function executeGetCurrentWeekDetail(
   const week = context.currentWeek;
   let result = '';
 
-  result += `=== CURRENT WEEK DETAILED DATA ===\n`;
-  result += `Week ${week.weekNumber}`;
-  if (week.phase) result += ` - ${week.phase}`;
-  result += `\n`;
+  // Format: W1 PhaseName [01-01→01-07] "Description" 3sess
+  result += `W${week.weekNumber}`;
+  if (week.phase) result += ` ${week.phase}`;
   if (week.startDate && week.endDate) {
-    result += `Period: ${week.startDate} to ${week.endDate}\n`;
+    result += ` [${compressDate(week.startDate)}→${compressDate(week.endDate)}]`;
   }
-  if (week.description) {
-    result += `Description: ${week.description}\n`;
-  }
-  result += `Sessions: ${week.sessions?.length || 0}`;
+  if (week.description) result += ` "${week.description}"`;
+  result += ` ${week.sessions?.length || 0}sess`;
 
   // Show ALL sessions in the week with full detail (always include set data)
   week.sessions?.forEach((session: any, idx: number) => {
-    result += `\n\n--- Session ${idx + 1}: ${session.name || 'Unnamed'} (${session.id})`;
-    result += `\nStatus: ${session.completed ? 'Completed ✓' : session.startedAt ? 'In Progress' : 'Not Started'}`;
-    if (session.scheduledDate) result += `\nScheduled: ${session.scheduledDate}`;
-    if (session.completedDate) result += `\nCompleted: ${session.completedDate}`;
-    if (session.duration) result += `\nDuration: ${session.duration} minutes`;
-    if (session.notes) result += `\nNotes: ${session.notes}`;
+    result += `\nS${idx + 1}:${session.name || 'Unnamed'}`;
+    result += ` {${formatSessionStatus(session)}`;
+    if (session.duration) result += ` ${session.duration}m`;
+    if (session.scheduledDate) result += ` sch:${compressDate(session.scheduledDate)}`;
+    if (session.completedDate) result += ` cmp:${compressDate(session.completedDate)}`;
+    result += `}`;
+    if (session.notes) result += ` "${session.notes}"`;
 
-    result += `\n\nExercises:`;
     result += formatExerciseDetails(session.exercises, true); // Always include set details
   });
 

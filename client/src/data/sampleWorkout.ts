@@ -55,16 +55,9 @@ export const createSampleWeeks = (): Week[] => [
       },
       {
         id: createSessionId(1, 2),
-        name: 'Upper + Cardio',
+        name: 'Upper',
         warmup: ['5 min cardio', 'Band pull-aparts'],
         completed: false,
-        cardio: {
-          type: 'zone2',
-          duration: 35,
-          modality: 'stairmaster',
-          instructions: 'Conversational pace, stay in zone 2',
-          completed: false,
-        },
         exercises: [
           {
             id: createExerciseId(1, 2, 1),
