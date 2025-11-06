@@ -32,7 +32,29 @@ export class ChatWebSocket {
    */
   connect(): Promise<void> {
     return new Promise((resolve, reject) => {
-      // Determine WebSocket URL based on environment
+      // If already connected, resolve immediately
+      if (this.socket && this.socket.connected) {
+        console.log('[WebSocket] Already connected');
+        resolve();
+        return;
+      }
+
+      // If socket exists but not connected, try to reconnect
+      if (this.socket) {
+        console.log('[WebSocket] Reconnecting existing socket');
+        this.socket.connect();
+
+        // Wait for connection
+        this.socket.once('connect', () => {
+          console.log('[WebSocket] Reconnected to server');
+          this.reconnectAttempts = 0;
+          resolve();
+        });
+
+        return;
+      }
+
+      // Create new socket
       const wsUrl = window.location.origin;
 
       this.socket = io(wsUrl, {

@@ -54,3 +54,14 @@ export interface Week {
   description?: string;
   sessions: WorkoutSession[];
 }
+
+// Database representation of a workout program
+export interface WorkoutProgram {
+  id: string;
+  user_id: string;
+  name?: string;
+  description?: string;
+  weeks: Week[];
+  created_at: string;
+  updated_at: string;
+}

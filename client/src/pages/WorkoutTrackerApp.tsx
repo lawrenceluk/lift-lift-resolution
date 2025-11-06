@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { CalendarIcon, MoreVerticalIcon, Upload, Download, HelpCircle, ArrowLeft, Search, Menu, LogOut, User } from 'lucide-react';
+import { CalendarIcon, MoreVerticalIcon, Upload, Download, HelpCircle, ArrowLeft, Search, Menu, LogOut, User, Trash2, Library } from 'lucide-react';
 import { useLocation, useRoute } from 'wouter';
+import { motion, PanInfo } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -33,6 +34,9 @@ export const WorkoutTrackerApp = (): JSX.Element => {
   // Modal state
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
+
+  // Swipe to delete state
+  const [swipedSessionId, setSwipedSessionId] = useState<string | null>(null);
 
   // Determine current week index from URL or localStorage
   const [currentWeekIndex, setCurrentWeekIndex] = useState(() => {
@@ -245,8 +249,42 @@ export const WorkoutTrackerApp = (): JSX.Element => {
     }
   };
 
+  // Swipe gesture handlers
+  const handleDragEnd = (sessionId: string, _: any, info: PanInfo) => {
+    const offset = info.offset.x;
+
+    // Threshold: -100px
+    if (offset <= -50) {
+      // Show delete button (snap to -100px)
+      setSwipedSessionId(sessionId);
+    } else {
+      // Close the swipe
+      setSwipedSessionId(null);
+    }
+  };
+
+  const handleDeleteSession = (weekId: string, sessionId: string) => {
+    deleteSession(weekId, sessionId);
+    toast({
+      title: 'Session deleted',
+      description: 'The workout session has been removed.',
+    });
+  };
+
+  const closeSwipe = () => {
+    setSwipedSessionId(null);
+  };
+
   return (
-    <div className="bg-white w-full min-h-screen flex flex-col items-center">
+    <div
+      className="bg-white w-full min-h-screen flex flex-col items-center"
+      onClick={(e) => {
+        // Close swipe when clicking outside
+        if (swipedSessionId && !(e.target as HTMLElement).closest('[data-session-item]')) {
+          closeSwipe();
+        }
+      }}
+    >
       <header className="flex flex-col w-full max-w-2xl items-start pt-4 pb-2 px-4 bg-[#fffffff2] border-b-[0.55px] border-solid border-[#0000001a] sticky top-0 z-10">
         <div className="flex h-9 items-center justify-between w-full">
           <div className="flex items-center gap-3">
@@ -287,6 +325,10 @@ export const WorkoutTrackerApp = (): JSX.Element => {
               {user && (
                 <>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setLocation('/library')}>
+                    <Library className="w-4 h-4 mr-2" />
+                    Program Library
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setLocation('/profile')}>
                     <User className="w-4 h-4 mr-2" />
                     Profile
@@ -340,6 +382,19 @@ export const WorkoutTrackerApp = (): JSX.Element => {
 
         {(() => {
           const week = weeks[currentWeekIndex];
+
+          // Safety check: if week doesn't exist (e.g., after program switch), show loading
+          if (!week) {
+            return (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mb-4"></div>
+                  <p className="text-gray-600">Loading week data...</p>
+                </div>
+              </div>
+            );
+          }
+
           const completedSessions = week.sessions.filter((s) => s.completed).length;
           const totalSessions = week.sessions.length;
 
@@ -392,36 +447,81 @@ export const WorkoutTrackerApp = (): JSX.Element => {
                     const hasCompletedSets = session.exercises.some((ex) =>
                       ex.sets?.some((set) => set.completed)
                     );
+                    const isCurrentlySwiped = swipedSessionId === session.id;
 
                     return (
                       <div
                         key={session.id}
-                        onClick={() => handleStartSession(week.id, session.id)}
-                        className="flex items-start justify-between pt-4 pb-4 px-4 border-b-[0.55px] border-solid border-[#0000001a] last:border-b-0 cursor-pointer hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                        className="relative overflow-hidden border-b-[0.55px] border-solid border-[#0000001a] last:border-b-0"
+                        data-session-item
                       >
-                        <div className="flex flex-col items-start gap-[3.99px] flex-1">
-                          <div className="flex items-center justify-between w-full gap-[7.99px]">
-                            <h3 className="font-normal text-neutral-950 text-base leading-6">
-                              {session.name}
-                            </h3>
-                            {getStatusBadge(status)}
-                          </div>
-                          {((session.startedAt && hasCompletedSets) || session.completedDate) && (
-                            <p className="font-normal text-[#717182] text-sm leading-5">
-                              {session.completedDate
-                                ? `Completed ${formatDateTime(session.completedDate)}`
-                                : `Started ${formatDateTime(session.startedAt!)}`
-                              }
-                            </p>
-                          )}
-                          {totalExercises > 0 && (
-                            <div className="flex items-center gap-2">
-                              <span className="font-normal text-[#717182] text-xs leading-4">
-                                {totalExercises} {totalExercises === 1 ? 'exercise' : 'exercises'}
-                              </span>
-                            </div>
-                          )}
+                        {/* Delete button background */}
+                        <div className="absolute inset-x-0 top-0 bottom-[0.55px] bg-red-500 flex items-center justify-end px-6">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteSession(week.id, session.id);
+                            }}
+                            className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-red-600 active:bg-red-700 transition-colors"
+                            aria-label="Delete session"
+                          >
+                            <Trash2 className="w-5 h-5 text-white" />
+                          </button>
                         </div>
+
+                        {/* Session content (swipeable) */}
+                        <motion.div
+                          key={`session-${session.id}-${isCurrentlySwiped ? 'swiped' : 'normal'}`}
+                          drag="x"
+                          dragConstraints={{ left: -120, right: 0 }}
+                          dragElastic={0.1}
+                          dragMomentum={false}
+                          onDragEnd={(e, info) => handleDragEnd(session.id, e, info)}
+                          initial={{ x: isCurrentlySwiped ? -100 : 0 }}
+                          animate={{
+                            x: isCurrentlySwiped ? -100 : 0,
+                          }}
+                          transition={{
+                            type: "spring",
+                            stiffness: 300,
+                            damping: 30,
+                          }}
+                          onClick={(e) => {
+                            // Prevent navigation if swiped open
+                            if (swipedSessionId) {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              closeSwipe();
+                            } else {
+                              handleStartSession(week.id, session.id);
+                            }
+                          }}
+                          className="flex items-start justify-between pt-4 pb-4 px-4 cursor-pointer hover:bg-gray-50 active:bg-gray-100 transition-colors bg-white relative"
+                        >
+                          <div className="flex flex-col items-start gap-[3.99px] flex-1">
+                            <div className="flex items-center justify-between w-full gap-[7.99px]">
+                              <h3 className="font-normal text-neutral-950 text-base leading-6">
+                                {session.name}
+                              </h3>
+                              {getStatusBadge(status)}
+                            </div>
+                            {((session.startedAt && hasCompletedSets) || session.completedDate) && (
+                              <p className="font-normal text-[#717182] text-sm leading-5">
+                                {session.completedDate
+                                  ? `Completed ${formatDateTime(session.completedDate)}`
+                                  : `Started ${formatDateTime(session.startedAt!)}`
+                                }
+                              </p>
+                            )}
+                            {totalExercises > 0 && (
+                              <div className="flex items-center gap-2">
+                                <span className="font-normal text-[#717182] text-xs leading-4">
+                                  {totalExercises} {totalExercises === 1 ? 'exercise' : 'exercises'}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </motion.div>
                       </div>
                     );
                   })}

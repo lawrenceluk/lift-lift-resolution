@@ -370,6 +370,67 @@ export const suggestRepliesSchema: ToolSchema = {
 };
 
 // ============================================================================
+// Program Builder Tools
+// ============================================================================
+
+export const createWorkoutProgramSchema: ToolSchema = {
+  name: 'create_workout_program',
+  description: 'Saves a complete workout program to the database and switches user to it. Maximum 4 weeks per program. Only call this when user explicitly confirms they want to create the program.',
+  category: 'read', // Execute server-side immediately (no client approval needed)
+  input_schema: {
+    type: 'object',
+    properties: {
+      weeks: {
+        type: 'array',
+        description: 'Complete program structure with weeks, sessions, exercises (max 4 weeks)',
+        items: {
+          type: 'object',
+          properties: {
+            weekNumber: { type: 'number' },
+            phase: { type: 'string' },
+            startDate: { type: 'string' },
+            endDate: { type: 'string' },
+            sessions: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string' },
+                  exercises: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        name: { type: 'string' },
+                        workingSets: { type: 'number' },
+                        warmupSets: { type: 'number' },
+                        reps: { type: 'string' },
+                        targetLoad: { type: 'string' },
+                        restSeconds: { type: 'number' },
+                        notes: { type: 'string' },
+                        groupLabel: { type: 'string' },
+                      },
+                      required: ['name', 'workingSets', 'reps', 'targetLoad'],
+                    },
+                  },
+                },
+                required: ['name', 'exercises'],
+              },
+            },
+          },
+          required: ['weekNumber', 'sessions'],
+        },
+      },
+      name: {
+        type: 'string',
+        description: 'Optional program name (will auto-generate if omitted)',
+      },
+    },
+    required: ['weeks'],
+  },
+};
+
+// ============================================================================
 // Export all schemas
 // ============================================================================
 
@@ -388,6 +449,7 @@ export const allToolSchemas: ToolSchema[] = [
   getWorkoutDataSchema,
   getCurrentWeekDetailSchema,
   suggestRepliesSchema,
+  createWorkoutProgramSchema,
 ];
 
 export const toolSchemasByName: Record<string, ToolSchema> = {
@@ -405,4 +467,5 @@ export const toolSchemasByName: Record<string, ToolSchema> = {
   get_workout_data: getWorkoutDataSchema,
   get_current_week_detail: getCurrentWeekDetailSchema,
   suggest_replies: suggestRepliesSchema,
+  create_workout_program: createWorkoutProgramSchema,
 };

@@ -36,6 +36,8 @@ const hashWeeks = (weeks: Week[] | null): string => {
 export const useWorkoutProgram = () => {
   const { user } = useAuth();
   const [weeks, setWeeks] = useState<Week[] | null>(null);
+  const [programName, setProgramName] = useState<string | undefined>(undefined);
+  const [programDescription, setProgramDescription] = useState<string | undefined>(undefined);
   const [isSyncing, setIsSyncing] = useState(false);
   const syncTimeoutRef = useRef<NodeJS.Timeout>();
   const programIdRef = useRef<string>(getProgramId());
@@ -102,6 +104,10 @@ export const useWorkoutProgram = () => {
         const dbWeeks = data.weeks as Week[];
         console.log('Synced workout program from DB:', programId);
 
+        // Update program metadata (name, description)
+        setProgramName(data.name || undefined);
+        setProgramDescription(data.description || undefined);
+
         // Merge: local changes take precedence
         setWeeks((current) => {
           if (!current) return dbWeeks;
@@ -139,6 +145,8 @@ export const useWorkoutProgram = () => {
           {
             id: programId,
             user_id: user.id,
+            name: programName || null,
+            description: programDescription || null,
             weeks: weeks,
             updated_at: new Date().toISOString(),
           },
@@ -155,7 +163,7 @@ export const useWorkoutProgram = () => {
     } finally {
       setIsSyncing(false);
     }
-  }, [user, weeks]);
+  }, [user, weeks, programName, programDescription]);
 
   /**
    * Queue workout data for syncing to database
@@ -614,6 +622,20 @@ export const useWorkoutProgram = () => {
     [updateWeeks]
   );
 
+  const updateProgramMetadata = useCallback(
+    (updates: { name?: string; description?: string }) => {
+      if (updates.name !== undefined) {
+        setProgramName(updates.name || undefined);
+      }
+      if (updates.description !== undefined) {
+        setProgramDescription(updates.description || undefined);
+      }
+      // Queue sync to database if user is logged in
+      queueSync();
+    },
+    [queueSync]
+  );
+
   // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
@@ -625,6 +647,8 @@ export const useWorkoutProgram = () => {
 
   return {
     weeks,
+    programName,
+    programDescription,
     isSyncing,
     addSet,
     updateSet,
@@ -640,5 +664,6 @@ export const useWorkoutProgram = () => {
     updateExerciseInAllSessions,
     importWeeks,
     updateWeeks,
+    updateProgramMetadata,
   };
 };

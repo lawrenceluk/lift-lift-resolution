@@ -13,11 +13,14 @@ export const AuthPage: React.FC = () => {
   const { profile } = useUserProfile();
   const { toast } = useToast();
 
-  // If already authenticated, redirect to home
-  if (user && !authLoading) {
-    setLocation('/');
-    return null;
-  }
+  // Redirect to returnTo or home if already authenticated
+  useEffect(() => {
+    if (user && !authLoading) {
+      const params = new URLSearchParams(window.location.search);
+      const returnTo = params.get('returnTo') || '/';
+      setLocation(returnTo);
+    }
+  }, [user, authLoading, setLocation]);
 
   // Show welcome toast when user logs in (after profile loads)
   useEffect(() => {
@@ -35,8 +38,10 @@ export const AuthPage: React.FC = () => {
   }, [user, profile?.name, toast]);
 
   const handleAuthSuccess = () => {
-    // Redirect to home after successful auth
-    setLocation('/');
+    // Redirect to returnTo or home after successful auth
+    const params = new URLSearchParams(window.location.search);
+    const returnTo = params.get('returnTo') || '/';
+    setLocation(returnTo);
   };
 
   return (

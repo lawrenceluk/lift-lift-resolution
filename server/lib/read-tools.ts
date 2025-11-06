@@ -171,6 +171,29 @@ export function executeGetCurrentWeekDetail(
 }
 
 /**
+ * Execute create_workout_program tool
+ * Returns program data as JSON string for client to handle
+ */
+export function executeCreateWorkoutProgram(params: any): string {
+  // Validate 4-week limit
+  if (params.weeks && params.weeks.length > 4) {
+    return JSON.stringify({
+      success: false,
+      error: "Let's start with a 4-week program. I can add more weeks for you once you get started!",
+    });
+  }
+
+  // Return success with program data
+  // Client will handle actual database creation and switching
+  return JSON.stringify({
+    success: true,
+    weeks: params.weeks,
+    name: params.name || null,
+    message: 'All set! Taking you to your new program...',
+  });
+}
+
+/**
  * Execute any read tool by name
  */
 export function executeReadTool(
@@ -183,6 +206,8 @@ export function executeReadTool(
       return executeGetWorkoutData(params, context);
     case 'get_current_week_detail':
       return executeGetCurrentWeekDetail(params, context);
+    case 'create_workout_program':
+      return executeCreateWorkoutProgram(params);
     default:
       return `Error: Unknown read tool: ${toolName}`;
   }

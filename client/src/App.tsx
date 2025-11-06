@@ -10,6 +10,9 @@ import { HowItWorks } from "@/pages/HowItWorks";
 import { AuthPage } from "@/pages/AuthPage";
 import { AuthCallbackPage } from "@/pages/AuthCallbackPage";
 import { ProfilePage } from "@/pages/ProfilePage";
+import { ProgramLibraryPage } from "@/pages/ProgramLibraryPage";
+import { ProgramBuilderQuestionnairePage } from "@/pages/ProgramBuilderQuestionnaireePage";
+import { ProgramBuilderPage } from "@/pages/ProgramBuilderPage";
 import { CoachChat } from "@/components/CoachChat";
 import { WorkoutProgramProvider } from "@/contexts/WorkoutProgramContext";
 import { CoachChatProvider } from "@/contexts/CoachChatContext";
@@ -24,6 +27,9 @@ function Router() {
       <Route path="/login" component={AuthPage} />
       <Route path="/login/callback" component={AuthCallbackPage} />
       <Route path="/profile" component={ProfilePage} />
+      <Route path="/library/new" component={ProgramBuilderQuestionnairePage} />
+      <Route path="/library" component={ProgramLibraryPage} />
+      <Route path="/builder" component={ProgramBuilderPage} />
       <Route path="/:weekId" component={WorkoutTrackerApp} />
       <Route path="/:sessionId" component={WorkoutTrackerApp} />
       {/* Fallback to 404 */}

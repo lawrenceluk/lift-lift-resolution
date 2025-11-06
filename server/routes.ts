@@ -4,6 +4,8 @@ import { storage } from "./storage";
 import { setupWebSocket } from "./lib/websocket";
 import { processChatRequest } from "./lib/chat-handler";
 import type { ChatRequest } from "./lib/ai-service";
+import { supabase } from "./lib/supabase";
+import { generateProgramMetadata } from "./lib/program-metadata-generator";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Health check endpoint
@@ -44,6 +46,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error('[API] Error processing chat request:', error);
+      res.status(500).json({
+        error: error instanceof Error ? error.message : 'Internal server error'
+      });
+    }
+  });
+
+  // Generate AI metadata for a workout program
+  app.post("/api/programs/:programId/generate-metadata", async (req, res) => {
+    try {
+      const { programId } = req.params;
+      const { userId } = req.body;
+
+      // Debug logging
+      console.log(`[API] Received metadata generation request:`, {
+        programId,
+        userId,
+        bodyKeys: Object.keys(req.body),
+        body: req.body
+      });
+
+      // Validation
+      if (!programId) {
+        return res.status(400).json({
+          error: "Program ID is required"
+        });
+      }
+
+      if (!userId) {
+        return res.status(400).json({
+          error: "User ID is required"
+        });
+      }
+
+      console.log(`[API] Generating metadata for program ${programId}, user ${userId}`);
+
+      // Fetch program from database
+      const { data: program, error: fetchError } = await supabase
+        .from('workout_programs')
+        .select('*')
+        .eq('id', programId)
+        .eq('user_id', userId)
+        .single();
+
+      if (fetchError || !program) {
+        console.error('[API] Program not found:', {
+          programId,
+          userId,
+          fetchError,
+          hasProgram: !!program
+        });
+        return res.status(404).json({
+          error: "Program not found",
+          details: fetchError?.message || 'No program returned from query'
+        });
+      }
+
+      // Generate metadata using AI
+      const metadata = await generateProgramMetadata(program.weeks);
+
+      // Update program in database (don't touch updated_at - this is auto-generated, not a user change)
+      const { error: updateError } = await supabase
+        .from('workout_programs')
+        .update({
+          name: metadata.name,
+          description: metadata.description
+        })
+        .eq('id', programId)
+        .eq('user_id', userId);
+
+      if (updateError) {
+        console.error('[API] Failed to update program:', updateError);
+        return res.status(500).json({
+          error: "Failed to update program"
+        });
+      }
+
+      console.log(`[API] Successfully generated metadata for program ${programId}:`, metadata);
+
+      // Return generated metadata
+      res.json(metadata);
+    } catch (error) {
+      console.error('[API] Error generating program metadata:', error);
       res.status(500).json({
         error: error instanceof Error ? error.message : 'Internal server error'
       });

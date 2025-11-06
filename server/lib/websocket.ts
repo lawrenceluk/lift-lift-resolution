@@ -67,6 +67,16 @@ async function handleChatMessage(socket: Socket, payload: SendMessagePayload): P
         message: randomMessage + " ",
       } as ToolCallProgressPayload);
 
+      // Show friendly loading message for create_workout_program
+      const hasCreateProgramTool = readToolCalls.some(tc => tc.function.name === 'create_workout_program');
+      if (hasCreateProgramTool) {
+        socket.emit(SocketEvents.TOOL_CALL_PROGRESS, {
+          status: 'generating',
+          message: 'Creating your program...',
+        } as ToolCallProgressPayload);
+        await new Promise(resolve => setTimeout(resolve, 150));
+      }
+
       // Execute all read tools and collect results
       const toolResults: string[] = [];
       for (const toolCall of readToolCalls) {
