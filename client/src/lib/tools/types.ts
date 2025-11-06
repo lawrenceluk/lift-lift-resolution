@@ -172,6 +172,19 @@ export interface RemoveWeekParams {
 }
 
 // ============================================================================
+// Program Tools
+// ============================================================================
+
+/**
+ * Parameters for creating a complete workout program
+ * Replaces the entire program with new data
+ */
+export interface CreateWorkoutProgramParams {
+  weeks: Week[];
+  name?: string | null;
+}
+
+// ============================================================================
 // Union Types
 // ============================================================================
 
@@ -189,7 +202,8 @@ export type ToolParams =
   | CopySessionParams
   | ModifyWeekParams
   | AddWeekParams
-  | RemoveWeekParams;
+  | RemoveWeekParams
+  | CreateWorkoutProgramParams;
 
 /**
  * Tool names
@@ -205,4 +219,5 @@ export type ToolName =
   | 'copy_session'
   | 'modify_week'
   | 'add_week'
-  | 'remove_week';
+  | 'remove_week'
+  | 'create_workout_program';

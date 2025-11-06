@@ -114,6 +114,9 @@ export function buildToolCallPreview(toolCall: ToolCall, workoutData: Week[]): P
       case 'remove_week':
         return buildRemoveWeekPreview(params, workoutData);
 
+      case 'create_workout_program':
+        return buildCreateWorkoutProgramPreview(params, workoutData);
+
       default:
         return {
           title: toolName,
@@ -347,6 +350,40 @@ function buildRemoveWeekPreview(params: any, workoutData: Week[]): PreviewResult
       { field: 'Phase', after: weekPhase },
       { field: 'Sessions', after: `${week?.sessions.length || 0} sessions will be removed` }
     ]
+  };
+}
+
+function buildCreateWorkoutProgramPreview(params: any, _workoutData: Week[]): PreviewResult {
+  const { weeks, name } = params;
+
+  const totalWeeks = weeks?.length || 0;
+  const totalSessions = weeks?.reduce((sum: number, week: Week) => sum + (week.sessions?.length || 0), 0) || 0;
+  const totalExercises = weeks?.reduce((sum: number, week: Week) =>
+    sum + week.sessions?.reduce((sessionSum: number, session: any) =>
+      sessionSum + (session.exercises?.length || 0), 0), 0) || 0;
+
+  const changes: PreviewChange[] = [
+    { field: 'Program Name', after: name || 'New Program' },
+    { field: 'Weeks', after: `${totalWeeks} week${totalWeeks !== 1 ? 's' : ''}` },
+    { field: 'Sessions', after: `${totalSessions} session${totalSessions !== 1 ? 's' : ''}` },
+    { field: 'Exercises', after: `${totalExercises} exercise${totalExercises !== 1 ? 's' : ''}` }
+  ];
+
+  // Add week details
+  if (weeks && weeks.length > 0) {
+    weeks.forEach((week: Week, index: number) => {
+      const weekPhase = week.phase || 'Training';
+      const sessionCount = week.sessions?.length || 0;
+      changes.push({
+        field: `Week ${index + 1}`,
+        after: `${weekPhase} - ${sessionCount} session${sessionCount !== 1 ? 's' : ''}`
+      });
+    });
+  }
+
+  return {
+    title: 'Create New Workout Program',
+    changes
   };
 }
 

@@ -376,7 +376,7 @@ export const suggestRepliesSchema: ToolSchema = {
 export const createWorkoutProgramSchema: ToolSchema = {
   name: 'create_workout_program',
   description: 'Saves a complete workout program to the database and switches user to it. Maximum 4 weeks per program. Only call this when user explicitly confirms they want to create the program.',
-  category: 'read', // Execute server-side immediately (no client approval needed)
+  category: 'write', // Requires user approval to preview program before creation
   input_schema: {
     type: 'object',
     properties: {
