@@ -14,6 +14,7 @@ interface UseChatWebSocketReturn {
   isLoading: boolean;
   isStreaming: boolean;
   streamingMessage: string;
+  isWaitingForCompletion: boolean;
   error: string | null;
   isWebSocketConnected: boolean;
   sendMessage: (content: string) => Promise<void>;
@@ -32,6 +33,7 @@ export function useChatWebSocket(options: UseChatWebSocketOptions = {}): UseChat
   const [isLoading, setIsLoading] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingMessage, setStreamingMessage] = useState('');
+  const [isWaitingForCompletion, setIsWaitingForCompletion] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isWebSocketConnected, setIsWebSocketConnected] = useState(false);
   const [useWebSocket, setUseWebSocket] = useState(true);
@@ -69,13 +71,15 @@ export function useChatWebSocket(options: UseChatWebSocketOptions = {}): UseChat
           setError(payload.message);
           setIsLoading(false);
           setIsStreaming(false);
+          setIsWaitingForCompletion(false);
         });
         unsubscribeFns.push(unsubError);
 
         // Subscribe to message chunk events (streaming)
         const unsubChunk = chatWebSocket.onMessageChunk((payload) => {
           if (payload.isComplete) {
-            // Streaming complete, do nothing
+            // Streaming complete, waiting for tool calls or completion
+            setIsWaitingForCompletion(true);
           } else {
             setIsStreaming(true);
             setStreamingMessage(prev => prev + payload.text);
@@ -127,6 +131,7 @@ export function useChatWebSocket(options: UseChatWebSocketOptions = {}): UseChat
           messageCompleteTimeout = setTimeout(() => {
             setIsStreaming(false);
             setIsLoading(false);
+            setIsWaitingForCompletion(false);
 
             // Create the final coach message with the accumulated streaming text
             setStreamingMessage(currentStreamingMessage => {
@@ -277,6 +282,7 @@ export function useChatWebSocket(options: UseChatWebSocketOptions = {}): UseChat
     setIsLoading(false);
     setIsStreaming(false);
     setStreamingMessage('');
+    setIsWaitingForCompletion(false);
     pendingSuggestedRepliesRef.current = [];
     pendingToolCallsRef.current = [];
   }, [options.initialMessage]);
@@ -295,6 +301,7 @@ export function useChatWebSocket(options: UseChatWebSocketOptions = {}): UseChat
     isLoading,
     isStreaming,
     streamingMessage,
+    isWaitingForCompletion,
     error,
     isWebSocketConnected,
     sendMessage,

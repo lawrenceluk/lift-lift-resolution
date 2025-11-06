@@ -21,6 +21,7 @@ import type {
   ModifyWeekParams,
   AddWeekParams,
   RemoveWeekParams,
+  CreateWorkoutProgramParams,
 } from './types';
 
 // ============================================================================
@@ -543,6 +544,50 @@ function executeRemoveWeek(workoutData: Week[], params: RemoveWeekParams): Week[
   return updatedData;
 }
 
+/**
+ * Validate create_workout_program params
+ */
+function validateCreateWorkoutProgram(params: CreateWorkoutProgramParams, _workoutData: Week[]): ValidationResult {
+  const errors: string[] = [];
+
+  if (!params.weeks || !Array.isArray(params.weeks)) {
+    errors.push('weeks must be provided as an array');
+    return { valid: false, errors };
+  }
+
+  if (params.weeks.length === 0) {
+    errors.push('At least one week must be provided');
+  }
+
+  if (params.weeks.length > 4) {
+    errors.push('Maximum 4 weeks allowed per program');
+  }
+
+  // Validate each week has required structure
+  params.weeks.forEach((week, index) => {
+    if (!week.sessions || !Array.isArray(week.sessions)) {
+      errors.push(`Week ${index + 1} must have a sessions array`);
+    } else if (week.sessions.length === 0) {
+      errors.push(`Week ${index + 1} must have at least one session`);
+    }
+  });
+
+  return { valid: errors.length === 0, errors };
+}
+
+/**
+ * Execute create_workout_program
+ * Replaces the entire workout program with new data
+ */
+function executeCreateWorkoutProgram(_workoutData: Week[], params: CreateWorkoutProgramParams): Week[] {
+  const newData = deepClone(params.weeks);
+
+  // Assign proper IDs to all weeks, sessions, and exercises
+  renumberWeeks(newData, 0);
+
+  return newData;
+}
+
 // ============================================================================
 // Tool Registry (reduces switch statement boilerplate)
 // ============================================================================
@@ -564,6 +609,7 @@ const toolRegistry: Record<string, ToolHandler> = {
   modify_week: { validate: validateModifyWeek, execute: executeModifyWeek },
   add_week: { validate: validateAddWeek, execute: executeAddWeek },
   remove_week: { validate: validateRemoveWeek, execute: executeRemoveWeek },
+  create_workout_program: { validate: validateCreateWorkoutProgram, execute: executeCreateWorkoutProgram },
 };
 
 // ============================================================================

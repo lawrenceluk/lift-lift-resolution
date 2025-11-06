@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Minus, Send, RefreshCcwDot, ArrowUpFromLine, ArrowDownFromLine, Minimize2, Maximize2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Minus, Send, RefreshCcwDot, ArrowUpFromLine, ArrowDownFromLine, Minimize2, Maximize2, Loader2 } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -102,6 +102,7 @@ export const CoachChat = () => {
     isLoading,
     isStreaming,
     streamingMessage,
+    isWaitingForCompletion,
     error,
     sendMessage: sendChatMessageViaHook,
     resetConversation,
@@ -451,10 +452,18 @@ export const CoachChat = () => {
                       <div className="gap-2">
                         <Badge variant="outline" className="text-gray-900 mb-2">Coach</Badge>
                         {streamingMessage ? (
-                          <p className="text-gray-900 text-md leading-relaxed">
-                            {formatCoachMessage(streamingMessage)}
-                            <span className="inline-block w-2 h-4 ml-1 bg-gray-900 animate-pulse" />
-                          </p>
+                          <>
+                            <p className="text-gray-900 text-md leading-relaxed">
+                              {formatCoachMessage(streamingMessage)}
+                              <span className="inline-block w-2 h-4 ml-1 bg-gray-900 animate-pulse" />
+                            </p>
+                            {isWaitingForCompletion && (
+                              <div className="mt-3 flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-600">
+                                <Loader2 className="h-4 w-4 animate-spin flex-shrink-0" />
+                                <span>Finalizing response...</span>
+                              </div>
+                            )}
+                          </>
                         ) : (
                           <div className="py-4">
                             <div className="spinner-loader"></div>
