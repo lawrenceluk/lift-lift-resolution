@@ -65,8 +65,8 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
 
   // Memoize exercise history to avoid recalculating on every render
   const exerciseHistory = useMemo(
-    () => findExerciseHistory(allWeeks || null, exercise.name, exercise.id),
-    [allWeeks, exercise.name, exercise.id]
+    () => findExerciseHistory(allWeeks || null, exercise.name),
+    [allWeeks, exercise.name]
   );
 
   // Check if this exercise has historical data (memoized)

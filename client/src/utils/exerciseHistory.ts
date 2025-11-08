@@ -12,16 +12,14 @@ export interface ExerciseHistoryEntry {
 }
 
 /**
- * Find all historical occurrences of an exercise by name (case-insensitive)
+ * Find all occurrences of an exercise by name (case-insensitive)
  * @param weeks All weeks in the program
  * @param exerciseName Name of the exercise to search for
- * @param currentExerciseId ID of the current exercise to exclude from results
- * @returns Array of historical exercise entries, sorted by date (newest first)
+ * @returns Array of exercise history entries, sorted by date (newest first)
  */
 export function findExerciseHistory(
   weeks: Week[] | null,
-  exerciseName: string,
-  currentExerciseId: string
+  exerciseName: string
 ): ExerciseHistoryEntry[] {
   if (!weeks || !exerciseName) return [];
 
@@ -31,9 +29,8 @@ export function findExerciseHistory(
   weeks.forEach((week) => {
     week.sessions.forEach((session) => {
       session.exercises.forEach((exercise, exerciseIndex) => {
-        // Skip the current exercise and only match by name (case-insensitive)
+        // Match by name (case-insensitive) and include current exercise
         if (
-          exercise.id !== currentExerciseId &&
           exercise.name.toLowerCase() === searchName &&
           exercise.sets.length > 0 // Only include if there are logged sets
         ) {
@@ -72,12 +69,11 @@ export function findExerciseHistory(
 }
 
 /**
- * Check if an exercise has any historical occurrences
+ * Check if an exercise has any occurrences with logged sets
  */
 export function hasExerciseHistory(
   weeks: Week[] | null,
-  exerciseName: string,
-  currentExerciseId: string
+  exerciseName: string
 ): boolean {
-  return findExerciseHistory(weeks, exerciseName, currentExerciseId).length > 0;
+  return findExerciseHistory(weeks, exerciseName).length > 0;
 }
