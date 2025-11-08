@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CalendarIcon, MoreVerticalIcon, Upload, Download, HelpCircle, ArrowLeft, Search, Menu, LogOut, User, Trash2, Library } from 'lucide-react';
+import { CalendarIcon, MoreVerticalIcon, Upload, Download, HelpCircle, ArrowLeft, Search, Menu, LogOut, User, Trash2 /* , Library */ } from 'lucide-react';
 import { useLocation, useRoute } from 'wouter';
 import { motion, PanInfo } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
@@ -151,6 +151,7 @@ export const WorkoutTrackerApp = (): JSX.Element => {
           onUpdateExerciseNotes={(exerciseId, notes) =>
             updateExerciseNotes(week.id, session.id, exerciseId, notes)
           }
+          onUpdateExerciseNotesGlobal={updateExerciseNotes}
           onUpdateExercise={(exerciseId, updates) =>
             updateExercise(week.id, session.id, exerciseId, updates)
           }
@@ -325,10 +326,12 @@ export const WorkoutTrackerApp = (): JSX.Element => {
               {user && (
                 <>
                   <DropdownMenuSeparator />
+                  {/* TODO: Temporarily hidden while building out program library functionality
                   <DropdownMenuItem onClick={() => setLocation('/library')}>
                     <Library className="w-4 h-4 mr-2" />
                     Program Library
                   </DropdownMenuItem>
+                  */}
                   <DropdownMenuItem onClick={() => setLocation('/profile')}>
                     <User className="w-4 h-4 mr-2" />
                     Profile

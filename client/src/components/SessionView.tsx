@@ -3,10 +3,11 @@ import { WorkoutSession, SetResult, Week, Exercise } from '@/types/workout';
 import { ExerciseView } from './ExerciseView';
 import { ExerciseProgressGrid } from './ExerciseProgressGrid';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, CheckCircle2, MoreVertical, Trash, Pencil, Zap } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, MoreVertical, Trash, Pencil, Zap, Timer } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useCoachChatContext } from '@/contexts/CoachChatContext';
+import { useWorkoutTimerContext } from '@/contexts/WorkoutTimerContext';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,6 +34,7 @@ interface SessionViewProps {
   onSkipExercise: (exerciseId: string) => void;
   onUnskipExercise: (exerciseId: string) => void;
   onUpdateExerciseNotes: (exerciseId: string, notes: string) => void;
+  onUpdateExerciseNotesGlobal?: (weekId: string, sessionId: string, exerciseId: string, notes: string) => void;
   onUpdateExercise: (exerciseId: string, updates: Partial<Exercise>) => void;
   onUpdateExerciseInAllSessions?: (originalName: string, updates: Partial<Exercise>) => void;
   onBack: () => void;
@@ -51,6 +53,7 @@ export const SessionView: React.FC<SessionViewProps> = ({
   onSkipExercise,
   onUnskipExercise,
   onUpdateExerciseNotes,
+  onUpdateExerciseNotesGlobal,
   onUpdateExercise,
   onUpdateExerciseInAllSessions,
   onBack,
@@ -59,6 +62,7 @@ export const SessionView: React.FC<SessionViewProps> = ({
   onRenameSession,
 }) => {
   const { sendMessage } = useCoachChatContext();
+  const { openTimer } = useWorkoutTimerContext();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
   const [newSessionName, setNewSessionName] = useState(session.name);
@@ -86,6 +90,33 @@ export const SessionView: React.FC<SessionViewProps> = ({
     setIsRenameDialogOpen(false);
   };
 
+  // Sort exercises by group label (A1, A2, B1, C1, C2, etc.)
+  const sortedExercises = [...session.exercises].sort((a, b) => {
+    const labelA = a.groupLabel?.trim();
+    const labelB = b.groupLabel?.trim();
+
+    // Exercises without labels go last, maintaining original order
+    if (!labelA && !labelB) return 0;
+    if (!labelA) return 1;
+    if (!labelB) return -1;
+
+    // Parse label into letter and number (e.g., "A1" -> ["A", 1])
+    const parseLabel = (label: string) => {
+      const match = label.match(/^([A-Za-z]+)(\d+)$/);
+      if (!match) return { letter: label, number: 0 };
+      return { letter: match[1].toUpperCase(), number: parseInt(match[2], 10) };
+    };
+
+    const parsedA = parseLabel(labelA);
+    const parsedB = parseLabel(labelB);
+
+    // Sort by letter first, then by number
+    if (parsedA.letter !== parsedB.letter) {
+      return parsedA.letter.localeCompare(parsedB.letter);
+    }
+    return parsedA.number - parsedB.number;
+  });
+
   return (
     <div className="min-h-screen bg-white pb-24 flex flex-col items-center">
       <header className="z-20 bg-white sticky top-0 border-b border-gray-200 px-4 py-4 w-full max-w-2xl">
@@ -105,6 +136,10 @@ export const SessionView: React.FC<SessionViewProps> = ({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={openTimer}>
+                <Timer className="w-4 h-4 mr-2" />
+                Timer
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => sendMessage('What stretches should I do for this workout session?')}>
                 <Zap className="w-4 h-4 mr-2" />
                 Suggest stretches
@@ -148,7 +183,7 @@ export const SessionView: React.FC<SessionViewProps> = ({
       )}
 
       <main className="px-4 pt-4 w-full max-w-2xl">
-        {session.exercises.map((exercise) => (
+        {sortedExercises.map((exercise) => (
           <ExerciseView
             key={exercise.id}
             exercise={exercise}
@@ -163,7 +198,7 @@ export const SessionView: React.FC<SessionViewProps> = ({
             onUpdateNotes={(notes) => onUpdateExerciseNotes(exercise.id, notes)}
             onUpdateExercise={(updates) => onUpdateExercise(exercise.id, updates)}
             onUpdateExerciseInAllSessions={onUpdateExerciseInAllSessions}
-            onUpdateExerciseNotesById={onUpdateExerciseNotes}
+            onUpdateExerciseNotesGlobal={onUpdateExerciseNotesGlobal}
           />
         ))}
       </main>

@@ -32,17 +32,11 @@ async function handleChatMessage(socket: Socket, payload: SendMessagePayload): P
       } as MessageChunkPayload);
     }
 
-    // Force flush any remaining text with explicit delay
-    await new Promise(resolve => setTimeout(resolve, 100));
-
     // Send final chunk marker
     socket.emit(SocketEvents.MESSAGE_CHUNK, {
       text: '',
       isComplete: true,
     } as MessageChunkPayload);
-
-    // Another delay to ensure text is fully rendered on client
-    await new Promise(resolve => setTimeout(resolve, 200));
 
     // Get and categorize tool calls from LLM
     let allToolCalls = getToolCalls();
@@ -74,7 +68,6 @@ async function handleChatMessage(socket: Socket, payload: SendMessagePayload): P
           status: 'generating',
           message: 'Creating your program...',
         } as ToolCallProgressPayload);
-        await new Promise(resolve => setTimeout(resolve, 150));
       }
 
       // Execute all read tools and collect results
@@ -145,8 +138,6 @@ async function handleChatMessage(socket: Socket, payload: SendMessagePayload): P
         isComplete: true,
       } as MessageChunkPayload);
 
-      await new Promise(resolve => setTimeout(resolve, 200));
-
       // Get tool calls from follow-up (should be write/ui tools now)
       allToolCalls = followUp.getToolCalls();
       const categorized = categorizeToolCalls(allToolCalls);
@@ -168,9 +159,6 @@ async function handleChatMessage(socket: Socket, payload: SendMessagePayload): P
           status: 'generating',
           message: `Preparing ${writeToolCalls.length} workout modification${writeToolCalls.length > 1 ? 's' : ''}...`,
         } as ToolCallProgressPayload);
-
-        // Small delay to ensure UI shows the progress message
-        await new Promise(resolve => setTimeout(resolve, 150));
       }
     }
 

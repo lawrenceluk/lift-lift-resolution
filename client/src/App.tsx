@@ -14,8 +14,10 @@ import { ProgramLibraryPage } from "@/pages/ProgramLibraryPage";
 import { ProgramBuilderQuestionnairePage } from "@/pages/ProgramBuilderQuestionnaireePage";
 import { ProgramBuilderPage } from "@/pages/ProgramBuilderPage";
 import { CoachChat } from "@/components/CoachChat";
+import { WorkoutTimer } from "@/components/WorkoutTimer";
 import { WorkoutProgramProvider } from "@/contexts/WorkoutProgramContext";
 import { CoachChatProvider } from "@/contexts/CoachChatContext";
+import { WorkoutTimerProvider } from "@/contexts/WorkoutTimerContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 
 function Router() {
@@ -45,10 +47,13 @@ function App() {
         <TooltipProvider>
           <WorkoutProgramProvider>
             <CoachChatProvider>
-              <Toaster />
-              <Router />
-              {/* Global Coach Chat - persists across routes */}
-              <CoachChat />
+              <WorkoutTimerProvider>
+                <Toaster />
+                <Router />
+                {/* Global components - persist across routes */}
+                <CoachChat />
+                <WorkoutTimer />
+              </WorkoutTimerProvider>
             </CoachChatProvider>
           </WorkoutProgramProvider>
         </TooltipProvider>

@@ -146,6 +146,39 @@
   animation: slide-down 0.2s ease-in;
 }
 
+/* Timer animations - slide from top */
+@keyframes slide-down-from-top {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-up-to-top {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  to {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+}
+
+.animate-slide-down-from-top {
+  animation: slide-down-from-top 0.2s ease-out;
+}
+
+.animate-slide-up-to-top {
+  animation: slide-up-to-top 0.2s ease-in;
+}
+
 /* 3D Spinner for loading state */
 .spinner-loader {
   position: relative;

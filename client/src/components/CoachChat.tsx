@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Minus, Send, RefreshCcwDot, ArrowUpFromLine, ArrowDownFromLine, Minimize2, Maximize2, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Minus, Send, RefreshCcwDot, ArrowUpFromLine, ArrowDownFromLine, Minimize2, Maximize2, Loader2, Signal, SignalMedium, WifiOff } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -104,6 +104,7 @@ export const CoachChat = () => {
     streamingMessage,
     isWaitingForCompletion,
     error,
+    isWebSocketConnected,
     sendMessage: sendChatMessageViaHook,
     resetConversation,
     updateMessage,
@@ -315,6 +316,17 @@ export const CoachChat = () => {
     await sendChatMessageViaHook('I changed my mind, please don\'t make those changes.');
   };
 
+  // Determine connectivity icon based on WebSocket state
+  const getConnectivityIcon = () => {
+    if (error) {
+      return <WifiOff className="h-3 w-3 text-red-500" />;
+    } else if (isWebSocketConnected) {
+      return <Signal className="h-3 w-3 text-green-600" />;
+    } else {
+      return <SignalMedium className="h-3 w-3 text-amber-500" />;
+    }
+  };
+
   // Determine if coach chat should be visible
   // Show only on workout pages (main app route with week/session ID)
   const shouldShowCoachChat = useMemo(() => {
@@ -450,7 +462,10 @@ export const CoachChat = () => {
                         />
                       </div>
                       <div className="gap-2">
-                        <Badge variant="outline" className="text-gray-900 mb-2">Coach</Badge>
+                        <div className="flex items-center gap-1.5 mb-2">
+                          <Badge variant="outline" className="text-gray-900">Coach</Badge>
+                          {getConnectivityIcon()}
+                        </div>
                         {streamingMessage ? (
                           <>
                             <p className="text-gray-900 text-md leading-relaxed">
@@ -487,7 +502,10 @@ export const CoachChat = () => {
                         />
                       </div>
                       <div className="gap-2 flex-1">
-                        <Badge variant="outline" className="text-gray-900 mb-2">Coach</Badge>
+                        <div className="flex items-center gap-1.5 mb-2">
+                          <Badge variant="outline" className="text-gray-900">Coach</Badge>
+                          {!isViewingHistory && getConnectivityIcon()}
+                        </div>
                         <p className="text-gray-900 text-md leading-relaxed">
                           {formatCoachMessage(currentMessage.content)}
                         </p>

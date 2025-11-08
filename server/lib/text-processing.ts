@@ -8,7 +8,7 @@ export async function* simulateStreamingText(
 ): AsyncGenerator<string> {
   let buffer = '';
   const WORD_THRESHOLD = 3; // Emit every 3 words or at sentence boundaries
-  const DELAY_MS = 50; // Delay between emitted chunks
+  const DELAY_MS = 10; // Delay between emitted chunks (reduced from 50ms for faster responses)
 
   // Handle string input (backward compatibility for testing)
   if (typeof input === 'string') {

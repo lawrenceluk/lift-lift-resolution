@@ -19,6 +19,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ExerciseHistoryEntry } from '@/utils/exerciseHistory';
+import { createWeekId, createSessionId } from '@/utils/idHelpers';
 import { MessageSquare, Pencil } from 'lucide-react';
 
 interface ExerciseHistoryDialogProps {
@@ -26,7 +27,7 @@ interface ExerciseHistoryDialogProps {
   history: ExerciseHistoryEntry[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onUpdateNote?: (exerciseId: string, note: string) => void;
+  onUpdateNote?: (weekId: string, sessionId: string, exerciseId: string, notes: string) => void;
 }
 
 export const ExerciseHistoryDialog: React.FC<ExerciseHistoryDialogProps> = ({
@@ -67,7 +68,9 @@ export const ExerciseHistoryDialog: React.FC<ExerciseHistoryDialogProps> = ({
 
   const handleSaveNote = () => {
     if (!selectedEntry || !onUpdateNote) return;
-    onUpdateNote(selectedEntry.exercise.id, editedNote);
+    const weekId = createWeekId(selectedEntry.weekNumber);
+    const sessionId = createSessionId(selectedEntry.weekNumber, selectedEntry.sessionNumber);
+    onUpdateNote(weekId, sessionId, selectedEntry.exercise.id, editedNote);
     setIsEditingNote(false);
   };
 

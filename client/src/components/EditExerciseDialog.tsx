@@ -171,8 +171,14 @@ export const EditExerciseDialog: React.FC<EditExerciseDialogProps> = ({
                 id="workingSets"
                 type="number"
                 min="1"
-                value={formData.workingSets}
-                onChange={(e) => setFormData({ ...formData, workingSets: parseInt(e.target.value) || 1 })}
+                value={formData.workingSets === 0 ? '' : formData.workingSets}
+                onChange={(e) => setFormData({ ...formData, workingSets: parseInt(e.target.value) || 0 })}
+                onBlur={(e) => {
+                  const value = parseInt(e.target.value);
+                  if (!value || value <= 0) {
+                    setFormData({ ...formData, workingSets: 1 });
+                  }
+                }}
               />
             </div>
           </div>
@@ -211,7 +217,20 @@ export const EditExerciseDialog: React.FC<EditExerciseDialogProps> = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="notes">Exercise Notes (optional)</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="notes">Exercise Notes (optional)</Label>
+              {formData.notes && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setFormData({ ...formData, notes: '' })}
+                  className="h-auto py-0 px-2 text-xs underline"
+                >
+                  Clear
+                </Button>
+              )}
+            </div>
             <Textarea
               id="notes"
               value={formData.notes}

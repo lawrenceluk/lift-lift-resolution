@@ -39,7 +39,7 @@ interface ExerciseViewProps {
   onUpdateNotes: (notes: string) => void;
   onUpdateExercise: (updates: Partial<Exercise>) => void;
   onUpdateExerciseInAllSessions?: (originalName: string, updates: Partial<Exercise>) => void;
-  onUpdateExerciseNotesById?: (exerciseId: string, notes: string) => void;
+  onUpdateExerciseNotesGlobal?: (weekId: string, sessionId: string, exerciseId: string, notes: string) => void;
 }
 
 export const ExerciseView: React.FC<ExerciseViewProps> = ({
@@ -53,7 +53,7 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
   onUpdateNotes,
   onUpdateExercise,
   onUpdateExerciseInAllSessions,
-  onUpdateExerciseNotesById,
+  onUpdateExerciseNotesGlobal,
 }) => {
   const [isNotesDialogOpen, setIsNotesDialogOpen] = useState(false);
   const [notesText, setNotesText] = useState(exercise.userNotes || '');
@@ -354,7 +354,7 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
         history={exerciseHistory}
         open={isHistoryDialogOpen}
         onOpenChange={setIsHistoryDialogOpen}
-        onUpdateNote={onUpdateExerciseNotesById}
+        onUpdateNote={onUpdateExerciseNotesGlobal}
       />
     </>
   );
