@@ -302,7 +302,7 @@ export const WorkoutTrackerApp = (): JSX.Element => {
                 <ArrowLeft className="w-5 h-5" />
               </Button>
             )}
-            <img src="/header-logo.png" alt="Lift Lift Resolution" className="h-8" />
+            <span className="text-xl font-semibold text-gray-900">Lift Lift Resolution</span>
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

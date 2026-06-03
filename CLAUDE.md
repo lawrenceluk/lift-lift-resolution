@@ -32,7 +32,6 @@ npm start
 ```
 Runs the production build from `dist/index.js`.
 
-fi
 ## Architecture
 
 ### Monorepo Structure
@@ -46,9 +45,11 @@ fi
   - `src/data/` - Sample data generators
   - `src/lib/` - Utility libraries
 
-- **`server/`** - Express backend (static file serving only)
+- **`server/`** - Express backend (serves the client + REST API + WebSocket)
   - `index.ts` - Main server entry point
   - `vite.ts` - Vite middleware setup for development
+  - `routes.ts` - REST API (`/api/*`), including the AI chat endpoint
+  - `lib/` - Supabase client (service role), AI service (OpenRouter), WebSocket, program-metadata generator
 
 ### Path Aliases
 
@@ -58,12 +59,12 @@ TypeScript is configured with the following path aliases:
 
 ### Data Storage
 
-**LocalStorage-Only Implementation**
-- All data persistence is in browser LocalStorage under the key `workout_weeks`
-- `useWorkoutProgram` hook manages all CRUD operations
-- Data flows: LocalStorage → React state → UI components
-- Export/import functionality allows downloading/uploading JSON files for backup/sharing
-- No backend API or database - this is a client-side only application
+**Local-first, Supabase-backed**
+- The active program persists in browser LocalStorage under the key `workout_weeks` (fast, offline-capable)
+- `useWorkoutProgram` hook manages all CRUD operations against local state
+- Authenticated users get a saved program library and profile via **Supabase** (Postgres + auth)
+- Export/import allows downloading/uploading JSON files for backup/sharing
+- The Express server exposes a REST API (`/api/*`) and WebSocket for the AI coach and program-metadata generation
 
 ### Hierarchical ID System
 
@@ -143,14 +144,24 @@ All mutation functions:
 - **date-fns** for date manipulation
 - **React Hook Form** + **Zod** for form validation
 
-### Server (Static File Serving Only)
+### Server (Client + API + WebSocket)
 
-- **Express.js** server with TypeScript - serves static files only, no API endpoints
+- **Express.js** server with TypeScript - serves the client, the REST API (`/api/*`), and a WebSocket
 - **Development mode**: Vite middleware provides HMR
 - **Production mode**: Serves pre-built static files from `dist/public`
-- **Replit plugins**: Only active in development when `REPL_ID` is set
-  - Cartographer, dev banner, runtime error overlay
-- **No database or backend API** - all data lives in browser localStorage
+- **Supabase**: server uses the service-role key (`SUPABASE_SERVICE_ROLE_KEY`) to bypass RLS for admin operations
+- **AI**: chat + program-metadata generation via OpenRouter (`OPENROUTER_API_KEY`)
+- **Replit plugins**: Only active in development when `REPL_ID` is set (cartographer, dev banner, runtime error overlay)
+
+### Environment Variables
+
+Required at boot (server throws without the Supabase ones):
+- `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` - client (baked into the bundle at build time)
+- `SUPABASE_SERVICE_ROLE_KEY` - server, secret
+- `OPENROUTER_API_KEY` - server, secret (AI features)
+- `PORT` - defaults to 5000; injected by the host in production
+
+The app reads from `process.env` (no dotenv). For local dev, source `.env` first: `set -a && . ./.env && set +a`.
 
 ### Build Process
 

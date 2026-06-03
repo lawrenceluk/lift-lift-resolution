@@ -64,7 +64,8 @@ app.use((req, res, next) => {
   server.listen({
     port,
     host: "0.0.0.0",
-    reusePort: true,
+    // reusePort is unsupported on macOS (ENOTSUP); enable only on Linux (Replit/Railway)
+    reusePort: process.platform !== "darwin",
   }, () => {
     log(`serving on port ${port}`);
   });

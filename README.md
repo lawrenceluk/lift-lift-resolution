@@ -1,18 +1,18 @@
 # Lift Lift Resolution
 
-A lightweight, frontend-only workout tracking PWA designed to be your gym companion. Built with React and TypeScript, this app runs entirely in your browser with local storage - no servers, no accounts, no complexity. Perfect for adding to your iOS home screen for quick access during workouts.
+A workout tracking PWA designed to be your gym companion. Built with React + TypeScript on the front end and an Express server backed by Supabase, it supports accounts, a saved program library, and an AI coach — while still working great added to your iOS home screen for quick access during workouts.
 
-**🌐 Live Demo:** [lift.luk.xyz](https://lift.luk.xyz)
+**🌐 Live Demo:** [lift-lift-resolution-production.up.railway.app](https://lift-lift-resolution-production.up.railway.app)
 
 ## Why This App Exists
 
-Most workout apps are overcomplicated with unnecessary features, slow loading times, and complex data syncing. This app takes a different approach:
+Most workout apps are overcomplicated with unnecessary features, slow loading times, and clunky logging. This app takes a different approach:
 
-- **Ultra-lightweight** - Runs entirely in your browser, loads instantly
-- **No accounts required** - Your data stays private on your device
-- **PWA-ready** - Add to iOS home screen for native app feel
-- **Gym-optimized** - Designed for one-handed use while lifting
-- **AI-powered** - Generate workout programs with ChatGPT/Claude
+- **Gym-optimized** - Clean, mobile-first UI designed for one-handed use while lifting
+- **Accounts + sync** - Supabase auth and a saved program library across devices
+- **AI coach** - Built-in chat (via OpenRouter) and AI-generated workout programs
+- **PWA-ready** - Add to iOS home screen for a native app feel
+- **Fast logging** - Set-by-set logging with weight, reps, and RIR
 
 ## Features
 
@@ -28,7 +28,7 @@ Most workout apps are overcomplicated with unnecessary features, slow loading ti
 
 ## Tech Stack
 
-**Frontend-Only Architecture** - No backend required for production use
+**Full-stack** - React client + Express server, with Supabase for auth/data and OpenRouter for AI features.
 
 ### Core Technologies
 - **React 18** - Modern React with hooks
@@ -39,17 +39,18 @@ Most workout apps are overcomplicated with unnecessary features, slow loading ti
 - **Framer Motion** - Smooth animations
 
 ### Data & Storage
-- **Local Storage** - Browser-based data persistence
+- **Supabase** - Postgres + auth; powers accounts and the saved program library
+- **Local Storage** - Fast local persistence for the active program
 - **JSON Import/Export** - Data portability and backup
-- **No Database** - Everything runs client-side
+
+### Backend & AI
+- **Express** - Node server that serves the client and exposes the API (`/api/*`, WebSocket)
+- **OpenRouter** - LLM provider for the AI coach chat and program-metadata generation
 
 ### Development Tools
 - **Vite** - Fast build tool and dev server
 - **ESBuild** - Fast bundling
 - **PWA Manifest** - iOS home screen support
-
-### Optional Backend (Development Only)
-The repository includes an Express server for development and testing, but the production app runs entirely in the browser.
 
 ## Quick Start
 
@@ -84,17 +85,41 @@ The repository includes an Express server for development and testing, but the p
    npm install
    ```
 
-3. **Start development server**
+3. **Configure environment**
+
+   Copy `.env.example` to `.env` and fill in the values:
+   ```
+   VITE_SUPABASE_URL=...          # Supabase project URL (client + server)
+   VITE_SUPABASE_ANON_KEY=...     # Supabase anon/publishable key (client)
+   SUPABASE_SERVICE_ROLE_KEY=...  # Supabase service role key (server, secret)
+   OPENROUTER_API_KEY=...         # OpenRouter key for AI features (server, secret)
+   ```
+   The app reads these from `process.env`, so for local dev source them before starting:
+   ```bash
+   set -a && . ./.env && set +a
+   ```
+
+4. **Start development server**
    ```bash
    npm run dev
    ```
+   Serves on port `5000` by default (override with `PORT=5050 npm run dev` — macOS reserves 5000 for AirPlay).
 
-4. **Build for production**
+5. **Build for production**
    ```bash
-   npm run build
+   npm run build   # builds the client to dist/public and bundles the server to dist/index.js
+   npm start       # runs the production server
    ```
 
-The built files in `dist/` can be deployed to any static hosting service (Vercel, Netlify, GitHub Pages, etc.).
+## Deployment (Railway)
+
+The app deploys to [Railway](https://railway.com) as a single Node service:
+
+```bash
+railway up
+```
+
+Set the four env vars above as Railway service variables **before** deploying — the `VITE_*` values are baked into the client bundle at build time. Railway injects its own `PORT`, which the server respects automatically; Nixpacks runs `npm install && npm run build`, then `npm start`.
 
 ## Project Structure
 
@@ -152,25 +177,19 @@ Visit the "How it works" page (accessible from the menu) to create your program:
 
 ## Design Philosophy
 
-### Why Frontend-Only?
+### Local-First, Cloud-Backed
 
-**Simplicity First**
-- No server maintenance or hosting costs
-- No database migrations or backups
-- No user accounts or authentication complexity
-- No API rate limits or downtime
+**Local-First**
+- The active program lives in browser Local Storage, so logging is instant and works offline
+- No round-trip to the server for the core tracking loop
 
-**Privacy & Control**
-- Your data stays on your device
-- No tracking or analytics
-- No data mining or selling
-- Complete control over your information
+**Cloud Sync When You Want It**
+- Sign in with Supabase to save programs to a library and access them across devices
+- JSON export/import for portability and backup
 
 **Performance**
-- Instant loading (no network requests)
-- Works offline
-- No server latency
-- Minimal resource usage
+- Fast loading and minimal resource usage
+- The gym logging loop stays responsive even on flaky connections
 
 **Mobile-First PWA**
 - Add to iOS home screen for native feel
@@ -198,12 +217,11 @@ This project follows strict TypeScript practices:
 
 ### Deployment
 
-The app is designed to be deployed as a static site:
+The app deploys as a single Node service (client + API). See the [Deployment (Railway)](#deployment-railway) section above:
 
-1. **Build the app**: `npm run build`
-2. **Deploy the `dist/` folder** to any static hosting service
-3. **Configure PWA** (optional): Ensure proper manifest.json and service worker
-4. **No server required** - just serve the static files
+1. **Set env vars** on the host (`VITE_*` are baked in at build time, so set them first)
+2. **Build**: `npm run build` (client → `dist/public`, server → `dist/index.js`)
+3. **Start**: `npm start` (serves the built client and the API on `PORT`)
 
 ## Contributing
 
