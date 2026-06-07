@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CalendarIcon, MoreVerticalIcon, Upload, Download, HelpCircle, ArrowLeft, Search, Menu, LogOut, User, Trash2 /* , Library */ } from 'lucide-react';
+import { CalendarIcon, MoreVerticalIcon, Upload, Download, HelpCircle, ArrowLeft, Search, Menu, Trash2 } from 'lucide-react';
 import { useLocation, useRoute } from 'wouter';
 import { motion, PanInfo } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
@@ -10,10 +10,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { useWorkoutProgramContext } from '@/contexts/WorkoutProgramContext';
-import { useAuth } from '@/hooks/useAuth';
 import { SessionView } from '@/components/SessionView';
 import { ImportModal } from '@/components/ImportModal';
 import { ExportModal } from '@/components/ExportModal';
@@ -24,7 +22,6 @@ import { getWorkoutStatus, parseId } from '@/utils/idHelpers';
 export const WorkoutTrackerApp = (): JSX.Element => {
   const { weeks, addSet, updateSet, deleteSet, startSession, completeSession, deleteSession, updateSession, skipExercise, unskipExercise, updateExerciseNotes, updateExercise, updateExerciseInAllSessions, importWeeks: importWeeksHook } =
     useWorkoutProgramContext();
-  const { user, signOut } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
@@ -323,34 +320,6 @@ export const WorkoutTrackerApp = (): JSX.Element => {
                 <Upload className="w-4 h-4 mr-2" />
                 Import Program
               </DropdownMenuItem>
-              {user && (
-                <>
-                  <DropdownMenuSeparator />
-                  {/* TODO: Temporarily hidden while building out program library functionality
-                  <DropdownMenuItem onClick={() => setLocation('/library')}>
-                    <Library className="w-4 h-4 mr-2" />
-                    Program Library
-                  </DropdownMenuItem>
-                  */}
-                  <DropdownMenuItem onClick={() => setLocation('/profile')}>
-                    <User className="w-4 h-4 mr-2" />
-                    Profile
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={signOut}>
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Sign out
-                  </DropdownMenuItem>
-                </>
-              )}
-              {!user && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => setLocation('/login')}>
-                    <User className="w-4 h-4 mr-2" />
-                    Profile
-                  </DropdownMenuItem>
-                </>
-              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

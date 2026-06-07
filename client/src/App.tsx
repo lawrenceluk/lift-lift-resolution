@@ -7,18 +7,9 @@ import NotFound from "@/pages/not-found";
 
 import { WorkoutTrackerApp } from "@/pages/WorkoutTrackerApp";
 import { HowItWorks } from "@/pages/HowItWorks";
-import { AuthPage } from "@/pages/AuthPage";
-import { AuthCallbackPage } from "@/pages/AuthCallbackPage";
-import { ProfilePage } from "@/pages/ProfilePage";
-import { ProgramLibraryPage } from "@/pages/ProgramLibraryPage";
-import { ProgramBuilderQuestionnairePage } from "@/pages/ProgramBuilderQuestionnaireePage";
-import { ProgramBuilderPage } from "@/pages/ProgramBuilderPage";
-import { CoachChat } from "@/components/CoachChat";
 import { WorkoutTimer } from "@/components/WorkoutTimer";
 import { WorkoutProgramProvider } from "@/contexts/WorkoutProgramContext";
-import { CoachChatProvider } from "@/contexts/CoachChatContext";
 import { WorkoutTimerProvider } from "@/contexts/WorkoutTimerContext";
-import { AuthProvider } from "@/contexts/AuthContext";
 
 function Router() {
   return (
@@ -26,12 +17,6 @@ function Router() {
       {/* Add pages below */}
       <Route path="/" component={WorkoutTrackerApp} />
       <Route path="/how-it-works" component={HowItWorks} />
-      <Route path="/login" component={AuthPage} />
-      <Route path="/login/callback" component={AuthCallbackPage} />
-      <Route path="/profile" component={ProfilePage} />
-      <Route path="/library/new" component={ProgramBuilderQuestionnairePage} />
-      <Route path="/library" component={ProgramLibraryPage} />
-      <Route path="/builder" component={ProgramBuilderPage} />
       <Route path="/:weekId" component={WorkoutTrackerApp} />
       <Route path="/:sessionId" component={WorkoutTrackerApp} />
       {/* Fallback to 404 */}
@@ -43,21 +28,16 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <TooltipProvider>
-          <WorkoutProgramProvider>
-            <CoachChatProvider>
-              <WorkoutTimerProvider>
-                <Toaster />
-                <Router />
-                {/* Global components - persist across routes */}
-                <CoachChat />
-                <WorkoutTimer />
-              </WorkoutTimerProvider>
-            </CoachChatProvider>
-          </WorkoutProgramProvider>
-        </TooltipProvider>
-      </AuthProvider>
+      <TooltipProvider>
+        <WorkoutProgramProvider>
+          <WorkoutTimerProvider>
+            <Toaster />
+            <Router />
+            {/* Global components - persist across routes */}
+            <WorkoutTimer />
+          </WorkoutTimerProvider>
+        </WorkoutProgramProvider>
+      </TooltipProvider>
     </QueryClientProvider>
   );
 }

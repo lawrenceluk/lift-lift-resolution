@@ -3,10 +3,9 @@ import { WorkoutSession, SetResult, Week, Exercise } from '@/types/workout';
 import { ExerciseView } from './ExerciseView';
 import { ExerciseProgressGrid } from './ExerciseProgressGrid';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, CheckCircle2, MoreVertical, Trash, Pencil, Zap, Timer } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, MoreVertical, Trash, Pencil, Timer } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { useCoachChatContext } from '@/contexts/CoachChatContext';
 import { useWorkoutTimerContext } from '@/contexts/WorkoutTimerContext';
 import {
   DropdownMenu,
@@ -61,7 +60,6 @@ export const SessionView: React.FC<SessionViewProps> = ({
   onDeleteSession,
   onRenameSession,
 }) => {
-  const { sendMessage } = useCoachChatContext();
   const { openTimer } = useWorkoutTimerContext();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
@@ -139,10 +137,6 @@ export const SessionView: React.FC<SessionViewProps> = ({
               <DropdownMenuItem onClick={openTimer}>
                 <Timer className="w-4 h-4 mr-2" />
                 Timer
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => sendMessage('What stretches should I do for this workout session?')}>
-                <Zap className="w-4 h-4 mr-2" />
-                Suggest stretches
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleOpenRenameDialog}>

@@ -7,8 +7,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
-import { CircleSlash2, StickyNote, MoreVertical, Pencil, ChevronDown, ChevronUp, ArrowLeftRight, History } from 'lucide-react';
-import { useCoachChatContext } from '@/contexts/CoachChatContext';
+import { CircleSlash2, StickyNote, MoreVertical, Pencil, ChevronDown, ChevronUp, History } from 'lucide-react';
 import { findExerciseHistory } from '@/utils/exerciseHistory';
 
 import {
@@ -61,7 +60,6 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
   const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
 
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const { sendMessage } = useCoachChatContext();
 
   // Memoize exercise history to avoid recalculating on every render
   const exerciseHistory = useMemo(
@@ -112,10 +110,6 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
   const handleCancelNotes = () => {
     setNotesText(exercise.userNotes || '');
     setIsNotesDialogOpen(false);
-  };
-  
-  const handleReplaceExercise = () => {
-    sendMessage(`I want to replace ${exercise.name} in this workout`);
   };
 
   // Reusable action buttons component
@@ -168,10 +162,6 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
                 <DropdownMenuItem onClick={() => setIsEditDialogOpen(true)}>
                   <Pencil className="w-4 h-4 mr-2" />
                   Modify
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleReplaceExercise}>
-                  <ArrowLeftRight className="w-4 h-4 mr-2" />
-                  Replace
                 </DropdownMenuItem>
               </>
             )}
