@@ -1,6 +1,6 @@
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useWorkoutProgram } from '@/hooks/useWorkoutProgram';
-import type { Week, SetResult, Exercise } from '@/types/workout';
+import type { Week, SetResult, Exercise, WorkoutSession } from '@/types/workout';
 
 interface WorkoutProgramContextType {
   weeks: Week[] | null;
@@ -8,7 +8,7 @@ interface WorkoutProgramContextType {
   updateSet: (weekId: string, sessionId: string, exerciseId: string, setNumber: number, updates: Partial<SetResult>) => void;
   deleteSet: (weekId: string, sessionId: string, exerciseId: string, setNumber: number) => void;
   startSession: (weekId: string, sessionId: string) => void;
-  completeSession: (weekId: string, sessionId: string) => void;
+  completeSession: (weekId: string, sessionId: string) => WorkoutSession | undefined;
   deleteSession: (weekId: string, sessionId: string) => void;
   updateSession: (weekId: string, sessionId: string, updates: { name?: string }) => void;
   skipExercise: (weekId: string, sessionId: string, exerciseId: string) => void;
@@ -18,6 +18,10 @@ interface WorkoutProgramContextType {
   updateExerciseInAllSessions: (originalName: string, updates: Partial<Exercise>) => void;
   importWeeks: (weeks: Week[]) => void;
   updateWeeks: (weeks: Week[]) => void;
+  // Git seam wiring
+  pullProgram: () => Promise<{ replaced: boolean; error?: string }>;
+  hasUnsyncedActuals: () => boolean;
+  syncSession: (session: WorkoutSession) => Promise<boolean>;
 }
 
 const WorkoutProgramContext = createContext<WorkoutProgramContextType | undefined>(undefined);

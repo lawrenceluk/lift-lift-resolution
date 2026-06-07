@@ -10,6 +10,7 @@ import { HowItWorks } from "@/pages/HowItWorks";
 import { WorkoutTimer } from "@/components/WorkoutTimer";
 import { WorkoutProgramProvider } from "@/contexts/WorkoutProgramContext";
 import { WorkoutTimerProvider } from "@/contexts/WorkoutTimerContext";
+import { SecretGate } from "@/components/SecretGate";
 
 function Router() {
   return (
@@ -29,14 +30,18 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <WorkoutProgramProvider>
-          <WorkoutTimerProvider>
-            <Toaster />
-            <Router />
-            {/* Global components - persist across routes */}
-            <WorkoutTimer />
-          </WorkoutTimerProvider>
-        </WorkoutProgramProvider>
+        {/* Shell-level access gate: everything below requires the code. The gate
+            sits outside the workout module providers — it gates the whole app. */}
+        <SecretGate>
+          <WorkoutProgramProvider>
+            <WorkoutTimerProvider>
+              <Toaster />
+              <Router />
+              {/* Global components - persist across routes */}
+              <WorkoutTimer />
+            </WorkoutTimerProvider>
+          </WorkoutProgramProvider>
+        </SecretGate>
       </TooltipProvider>
     </QueryClientProvider>
   );

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CalendarIcon, MoreVerticalIcon, Upload, Download, HelpCircle, ArrowLeft, Search, Menu, Trash2 } from 'lucide-react';
+import { CalendarIcon, MoreVerticalIcon, Upload, Download, HelpCircle, ArrowLeft, Search, Menu, Trash2, RefreshCw, LogOut } from 'lucide-react';
 import { useLocation, useRoute } from 'wouter';
 import { motion, PanInfo } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useWorkoutProgramContext } from '@/contexts/WorkoutProgramContext';
+import { useSecretGate } from '@/components/SecretGate';
 import { SessionView } from '@/components/SessionView';
 import { ImportModal } from '@/components/ImportModal';
 import { ExportModal } from '@/components/ExportModal';
@@ -20,8 +21,9 @@ import { useToast } from '@/hooks/use-toast';
 import { getWorkoutStatus, parseId } from '@/utils/idHelpers';
 
 export const WorkoutTrackerApp = (): JSX.Element => {
-  const { weeks, addSet, updateSet, deleteSet, startSession, completeSession, deleteSession, updateSession, skipExercise, unskipExercise, updateExerciseNotes, updateExercise, updateExerciseInAllSessions, importWeeks: importWeeksHook } =
+  const { weeks, addSet, updateSet, deleteSet, startSession, completeSession, deleteSession, updateSession, skipExercise, unskipExercise, updateExerciseNotes, updateExercise, updateExerciseInAllSessions, importWeeks: importWeeksHook, pullProgram, hasUnsyncedActuals, syncSession } =
     useWorkoutProgramContext();
+  const { forgetCode } = useSecretGate();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
@@ -103,6 +105,56 @@ export const WorkoutTrackerApp = (): JSX.Element => {
     });
   };
 
+  const handlePullProgram = async () => {
+    // If there are locally logged sets, replacing the program loses them — confirm.
+    if (hasUnsyncedActuals()) {
+      const ok = window.confirm(
+        'Pulling the latest program from Point One will replace your current ' +
+          'program. Any logged sets not yet synced will be lost. Continue?'
+      );
+      if (!ok) return;
+    }
+    const result = await pullProgram();
+    if (result.replaced) {
+      setCurrentWeekIndex(0);
+      setLocation('/');
+      toast({
+        title: 'Program updated',
+        description: 'Pulled the latest program from Point One.',
+      });
+    } else {
+      toast({
+        title: 'Could not pull program',
+        description: result.error ?? 'Point One was unreachable. Your current program is unchanged.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleForgetCode = () => {
+    const ok = window.confirm(
+      'Forget the access code on this device? You will need to re-enter it to use the app.'
+    );
+    if (ok) forgetCode();
+  };
+
+  // Fire the seam sync for a completed session. Never blocks the UI: local state
+  // is already saved by completeSession; we only toast on failure so the data
+  // (still in localStorage) is known to need a re-sync.
+  const handleCompleteSession = (weekId: string, sessionId: string) => {
+    const completed = completeSession(weekId, sessionId);
+    setLocation(`/${weekId}`);
+    if (!completed) return;
+    void syncSession(completed).then((ok) => {
+      if (!ok) {
+        toast({
+          title: 'Saved locally',
+          description: 'Session saved on this device; will sync to Point One when reachable.',
+        });
+      }
+    });
+  };
+
   // Handle workout route (either week or session)
   if (matchWorkout && workoutParams?.id) {
     const id = workoutParams.id;
@@ -155,8 +207,7 @@ export const WorkoutTrackerApp = (): JSX.Element => {
           onUpdateExerciseInAllSessions={updateExerciseInAllSessions}
           onBack={() => setLocation(`/${week.id}`)}
           onCompleteSession={() => {
-            completeSession(week.id, session.id);
-            setLocation(`/${week.id}`);
+            handleCompleteSession(week.id, session.id);
           }}
           onDeleteSession={() => {
             deleteSession(week.id, session.id);
@@ -319,6 +370,14 @@ export const WorkoutTrackerApp = (): JSX.Element => {
               <DropdownMenuItem onClick={() => setImportModalOpen(true)}>
                 <Upload className="w-4 h-4 mr-2" />
                 Import Program
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handlePullProgram}>
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Pull latest program from Point One
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleForgetCode}>
+                <LogOut className="w-4 h-4 mr-2" />
+                Forget access code
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
