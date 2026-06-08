@@ -30,9 +30,34 @@ The store is behind an interface (`PointOneStore`). `LocalGitPointOneStore` (fs 
 3. Complete the session → `POST /api/session` fires (non-blocking; if offline, data stays local and a toast says it'll sync). The hydrated session lands as a commit in the Point One repo.
 4. "Pull latest program from Point One" (header menu) re-fetches `program.json` when the brain has progressed the block (confirms first if there are unsynced logged sets).
 
+## Deploy to Railway (durable, phone-accessible)
+
+A deployed instance can't see your local repo, so it uses the **GitHub-API store** (`POINT_ONE_STORE=github`) — it reads `program.json` from and commits session logs to `lawrenceluk/point-one@main` over the GitHub contents API.
+
+**Env vars on the Railway service:**
+
+| Var | Value |
+|---|---|
+| `POINT_ONE_STORE` | `github` |
+| `GITHUB_TOKEN` | a GitHub PAT with **Contents: Read and write** on `lawrenceluk/point-one` (secret — set only in Railway) |
+| `GITHUB_REPO` | `lawrenceluk/point-one` |
+| `GITHUB_BRANCH` | `main` |
+| `POINT_ONE_WORKOUT_PATH` | `point-one/workout` (optional; this is the default) |
+| `APP_SECRET` | your gym access code (you'll type this in the app once per device) |
+| `PORT` | injected by Railway — leave unset |
+
+Stale Supabase/OpenRouter vars from the old app are now ignored; remove them if you like.
+
+**Steps (the credential/deploy parts are yours — I can't touch tokens or Railway auth):**
+1. **Create the GitHub PAT** — github.com → Settings → Developer settings → Fine-grained tokens → repo `lawrenceluk/point-one`, permission **Contents: Read and write**. Copy it. (A classic token with `repo` scope also works.)
+2. **Point the Railway service at the branch** `point-one-fitness-frontend` (already pushed to GitHub) — or merge it to `main` of the LLR repo. Nixpacks runs `npm install && npm run build`, then `npm start`.
+3. **Set the env vars** above (esp. `GITHUB_TOKEN` + `APP_SECRET`).
+4. **Deploy**, then open the Railway URL, enter your `APP_SECRET`, confirm the program loads, log a session, and check a `point-one/workout/log/<date>-<slug>.json` commit appears in `lawrenceluk/point-one@main`.
+
+`program.json` is already committed to `point-one@main`, so the read path works as soon as the token + env are set.
+
 ## Deferred (not built)
 
-- `GitHubApiPointOneStore` for remote (Railway) deploy — interface seam is ready.
 - Real PWA / service worker — "local-first" is localStorage only today; true offline-install would be net-new.
 - In-gym "text the trainer" coach (spec's v2) — v1 is deviate-and-log (modify/log freely; the brain reconciles after).
 - Brain-side auto-progression of `program.json` from the logged sessions (currently the program is authored interactively via `/workout`).
