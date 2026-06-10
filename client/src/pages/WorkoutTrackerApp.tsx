@@ -63,7 +63,7 @@ const statusText = (status: SessionStatus): string | null => {
 };
 
 /** 'today' / 'yesterday' / 'Sat' for a YYYY-MM-DD calendar date. */
-const dayWord = (dateStr: string): string => {
+const dayWord = (dateStr: string, weekday: 'short' | 'long' = 'short'): string => {
   const today = todayPT();
   if (dateStr === today) return 'today';
   const noon = new Date(`${dateStr}T12:00:00`);
@@ -71,9 +71,17 @@ const dayWord = (dateStr: string): string => {
   if (dateStr === ptDate(new Date(new Date(`${today}T12:00:00`).getTime() - dayMs))) return 'yesterday';
   const diff = new Date(`${today}T12:00:00`).getTime() - noon.getTime();
   if (Math.abs(diff) < 7 * dayMs) {
-    return noon.toLocaleDateString('en-US', { weekday: 'short' });
+    return noon.toLocaleDateString('en-US', { weekday });
   }
   return noon.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
+
+/** "today's" / "yesterday's" / "Monday's" / "your Jun 3" — for prose like "<X> workout". */
+const dayPossessive = (dateStr: string): string => {
+  const word = dayWord(dateStr, 'long');
+  return word === 'today' || word === 'yesterday' || /^[A-Z][a-z]+day$/.test(word)
+    ? `${word}'s`
+    : `your ${word}`;
 };
 
 const themeLabel = (theme: string) =>
@@ -120,9 +128,9 @@ export const WorkoutTrackerApp = (): JSX.Element => {
     }
   };
 
-  const handleForgetCode = () => {
+  const handleSignOut = () => {
     const ok = window.confirm(
-      'Forget the access code on this device? You will need to re-enter it to use the app.'
+      'Sign out on this device? You will need the access code to get back in.'
     );
     if (ok) forgetCode();
   };
@@ -231,23 +239,20 @@ export const WorkoutTrackerApp = (): JSX.Element => {
     );
   }
 
-  // Freshness (D12): one line, always true. Quiet is the success state —
-  // staleness is acceptable, unknown staleness is not.
+  // Freshness (D12): one line, always true, plain words. Quiet is the success
+  // state — delivery status appears only when something is actually pending
+  // (steady-state "all delivered" is noise; Lawrence's review 2026-06-10).
   const freshnessLine = (() => {
     if (fetchError) {
       const asOf = lastFetchedAt ? dayWord(ptDate(new Date(lastFetchedAt))) : 'an earlier visit';
-      return `program as of ${asOf}`;
+      return `offline — program as of ${asOf}`;
     }
-    const parts: string[] = [];
-    if (program.block?.focus) parts.push(program.block.focus);
-    const builtDay = dayWord(ptDate(new Date(program.generatedAt)));
     const lastBasedOn = program.basedOn[program.basedOn.length - 1];
     const basedDate = lastBasedOn?.match(/^\d{4}-\d{2}-\d{2}/)?.[0];
-    parts.push(
-      `built ${builtDay}${basedDate ? ` off your ${dayWord(basedDate)} session` : ''}`
-    );
-    parts.push(hasUndelivered ? 'a session is waiting to deliver' : 'all sessions delivered');
-    return parts.join(' · ');
+    let line = `Updated ${dayWord(ptDate(new Date(program.generatedAt)))}`;
+    if (basedDate) line += ` from ${dayPossessive(basedDate)} workout`;
+    if (hasUndelivered) line += ' · a workout is waiting to send';
+    return line;
   })();
 
   // "While you were away" (D3/D5): only when the generation moved under us.
@@ -308,15 +313,11 @@ export const WorkoutTrackerApp = (): JSX.Element => {
     </div>
   );
 
-  const upcomingRows = themes.map(({ theme, next, later }, i) =>
+  const upcomingRows = themes.map(({ theme, next }, i) =>
     timelineRow(
       next,
       'planned',
-      [
-        themeLabel(theme),
-        next.plannedDate ? `maybe ${dayWord(next.plannedDate)}` : null,
-        later.length > 0 ? `+${later.length} queued after` : null,
-      ]
+      [themeLabel(theme), next.plannedDate ? `maybe ${dayWord(next.plannedDate)}` : null]
         .filter(Boolean)
         .join(' · '),
       i === themes.length - 1 && active.length === 0 && past.length === 0
@@ -352,9 +353,9 @@ export const WorkoutTrackerApp = (): JSX.Element => {
                 <HelpCircle className="w-4 h-4 mr-2" />
                 How it works
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleForgetCode}>
+              <DropdownMenuItem onClick={handleSignOut}>
                 <LogOut className="w-4 h-4 mr-2" />
-                Forget access code
+                Sign out
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuLabel className="text-xs text-gray-400">Debug</DropdownMenuLabel>
