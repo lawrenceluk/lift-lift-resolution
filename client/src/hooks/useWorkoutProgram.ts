@@ -193,23 +193,59 @@ export const useWorkoutProgram = () => {
   /** Manual pull (debug action — D1 demotes it; the sync loop is the real path). */
   const pullProgram = fetchAndApply;
 
-  // ----- init: seal stale days, retry deliveries, hydrate -------------------
+  /** Acknowledge the current generation — dismisses the "while you were away" card. */
+  const markGenerationSeen = useCallback(() => {
+    update((s) =>
+      s.program ? { ...s, lastSeenGeneration: s.program.generation } : s
+    );
+  }, [update]);
+
+  // ----- the sync loop (D1: no sync verb) ------------------------------------
+  //
+  // Fetch on open, focus, and coming back online; auto-apply — applyEnvelope is
+  // merge-safe by construction (D2): it never touches a device-truth record,
+  // it only replaces brain-owned queue state and drops local copies the brain
+  // has ingested. Each boundary also seals yesterday's sessions and retries
+  // undelivered records (D7/D11).
+
+  const lastSyncAt = useRef(0);
+  const SYNC_THROTTLE_MS = 30_000;
+
+  const syncTick = useCallback(
+    async (opts: { force?: boolean } = {}) => {
+      const now = Date.now();
+      if (!opts.force && now - lastSyncAt.current < SYNC_THROTTLE_MS) return;
+      lastSyncAt.current = now;
+      sealStale();
+      void deliverPending();
+      await fetchAndApply();
+    },
+    [sealStale, deliverPending, fetchAndApply]
+  );
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      sealStale();
-      void deliverPending();
       // No sample fallback (D13): a fresh device hydrates from the seam or
       // fails visibly. A cached program renders immediately; fetch errors on
       // top of a cache are non-blocking staleness, not failures.
-      if (!stateRef.current.program) {
-        await fetchAndApply();
-      }
+      await syncTick({ force: true });
       if (!cancelled) setInitializing(false);
     })();
+
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void syncTick();
+    };
+    const onFocus = () => void syncTick();
+    const onOnline = () => void syncTick({ force: true });
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onFocus);
+    window.addEventListener('online', onOnline);
     return () => {
       cancelled = true;
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('online', onOnline);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -445,6 +481,8 @@ export const useWorkoutProgram = () => {
     fetchError,
     program,
     lastFetchedAt: state.lastFetchedAt,
+    lastSeenGeneration: state.lastSeenGeneration,
+    markGenerationSeen,
     queueView,
     performedRecords,
     getSession,

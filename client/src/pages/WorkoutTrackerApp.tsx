@@ -1,13 +1,26 @@
 import React from 'react';
-import { HelpCircle, Search, Menu, RefreshCw, LogOut, WifiOff } from 'lucide-react';
+import {
+  HelpCircle,
+  Search,
+  Menu,
+  RefreshCw,
+  LogOut,
+  WifiOff,
+  CheckCheck,
+  CheckCircle2,
+  UploadCloud,
+  PlayCircle,
+  CircleDashed,
+  X,
+} from 'lucide-react';
 import { useLocation, useRoute } from 'wouter';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -16,36 +29,51 @@ import { useSecretGate } from '@/components/SecretGate';
 import { SessionView } from '@/components/SessionView';
 import { useToast } from '@/hooks/use-toast';
 import { PrescribedSession, PerformedSession, SessionStatus } from '@/types/workout';
-import { todayPT } from '@/utils/timeHelpers';
+import { todayPT, ptDate } from '@/utils/timeHelpers';
 
-const statusBadge = (status: SessionStatus) => {
+/** The state ladder (D16): planned · in progress · logged (saved/delivered) · ingested. */
+const StatusIcon = ({ status }: { status: SessionStatus }) => {
   switch (status) {
     case 'ingested':
-      return <Badge className="bg-blue-600 hover:bg-blue-700 text-white text-xs">Ingested ✓</Badge>;
+      return <CheckCheck className="w-5 h-5 text-blue-600" />;
     case 'delivered':
-      return <Badge className="bg-green-600 hover:bg-green-700 text-white text-xs">Delivered ✓</Badge>;
+      return <CheckCircle2 className="w-5 h-5 text-green-600" />;
     case 'departed':
-      return (
-        <Badge variant="outline" className="border-amber-400 text-amber-700 text-xs">
-          Saved on device
-        </Badge>
-      );
+      return <UploadCloud className="w-5 h-5 text-amber-500" />;
     case 'in-progress':
-      return <Badge className="bg-orange-500 hover:bg-orange-600 text-white text-xs">In progress</Badge>;
+      return <PlayCircle className="w-5 h-5 text-orange-500" />;
     case 'planned':
-      return (
-        <Badge variant="outline" className="border-gray-300 text-gray-600 text-xs">
-          On tap
-        </Badge>
-      );
+      return <CircleDashed className="w-5 h-5 text-gray-400" />;
   }
 };
 
-const formatDay = (dateStr: string) => {
+const statusText = (status: SessionStatus): string | null => {
+  switch (status) {
+    case 'ingested':
+      return 'Ingested ✓';
+    case 'delivered':
+      return 'Delivered ✓';
+    case 'departed':
+      return 'Saved on device';
+    case 'in-progress':
+      return 'In progress';
+    case 'planned':
+      return null;
+  }
+};
+
+/** 'today' / 'yesterday' / 'Sat' for a YYYY-MM-DD calendar date. */
+const dayWord = (dateStr: string): string => {
   const today = todayPT();
-  if (dateStr === today) return 'Today';
-  const date = new Date(`${dateStr}T12:00:00`);
-  return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  if (dateStr === today) return 'today';
+  const noon = new Date(`${dateStr}T12:00:00`);
+  const dayMs = 24 * 60 * 60 * 1000;
+  if (dateStr === ptDate(new Date(new Date(`${today}T12:00:00`).getTime() - dayMs))) return 'yesterday';
+  const diff = new Date(`${today}T12:00:00`).getTime() - noon.getTime();
+  if (Math.abs(diff) < 7 * dayMs) {
+    return noon.toLocaleDateString('en-US', { weekday: 'short' });
+  }
+  return noon.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 };
 
 const themeLabel = (theme: string) =>
@@ -56,10 +84,14 @@ export const WorkoutTrackerApp = (): JSX.Element => {
     initializing,
     fetchError,
     program,
+    lastFetchedAt,
+    lastSeenGeneration,
+    markGenerationSeen,
     queueView,
     performedRecords,
     getSession,
     statusOf,
+    hasUndelivered,
     addSet,
     updateSet,
     deleteSet,
@@ -99,6 +131,7 @@ export const WorkoutTrackerApp = (): JSX.Element => {
     const { delivered } = await departSession(sessionId, note);
     setLocation('/');
     if (delivered) {
+      // Honest tempo (D12): delivery is real, the brain's reply is async.
       toast({
         title: 'Done for today',
         description: 'Delivered ✓ — Point One picks this up on its next pass.',
@@ -141,8 +174,7 @@ export const WorkoutTrackerApp = (): JSX.Element => {
     // Device-truth sessions are editable until they seal; a sealed session can
     // still amend on its performedDate (D9). Ingested history is read-only —
     // corrections go through the Point One chat.
-    const editable =
-      status !== 'ingested' && (!sealed || performedDate === todayPT());
+    const editable = status !== 'ingested' && (!sealed || performedDate === todayPT());
 
     return (
       <SessionView
@@ -199,16 +231,45 @@ export const WorkoutTrackerApp = (): JSX.Element => {
     );
   }
 
-  // In progress / amendable today: local records still open for logging.
+  // Freshness (D12): one line, always true. Quiet is the success state —
+  // staleness is acceptable, unknown staleness is not.
+  const freshnessLine = (() => {
+    if (fetchError) {
+      const asOf = lastFetchedAt ? dayWord(ptDate(new Date(lastFetchedAt))) : 'an earlier visit';
+      return `program as of ${asOf}`;
+    }
+    const parts: string[] = [];
+    if (program.block?.focus) parts.push(program.block.focus);
+    const builtDay = dayWord(ptDate(new Date(program.generatedAt)));
+    const lastBasedOn = program.basedOn[program.basedOn.length - 1];
+    const basedDate = lastBasedOn?.match(/^\d{4}-\d{2}-\d{2}/)?.[0];
+    parts.push(
+      `built ${builtDay}${basedDate ? ` off your ${dayWord(basedDate)} session` : ''}`
+    );
+    parts.push(hasUndelivered ? 'a session is waiting to deliver' : 'all sessions delivered');
+    return parts.join(' · ');
+  })();
+
+  // "While you were away" (D3/D5): only when the generation moved under us.
+  const showWhileAway =
+    lastSeenGeneration !== null && program.generation > lastSeenGeneration;
+
+  // Today / amendable: device-truth records still open for logging today.
   const active = performedRecords.filter(({ session, editable }) => {
     if (!editable) return false;
     const st = statusOf(session.id);
-    return st === 'in-progress' || ((st === 'departed' || st === 'delivered') && session.performedDate === todayPT());
+    return (
+      st === 'in-progress' ||
+      ((st === 'departed' || st === 'delivered') && session.performedDate === todayPT())
+    );
   });
 
-  const recent = performedRecords.filter(({ session }) => !active.some((a) => a.session.id === session.id));
+  const past = performedRecords.filter(
+    ({ session }) => !active.some((a) => a.session.id === session.id)
+  );
 
-  // The queue, next-per-theme first.
+  // The upcoming lane: next session per theme (the queue is the structure,
+  // plannedDate is decoration on it — D15).
   const themes: { theme: string; next: PrescribedSession; later: PrescribedSession[] }[] = [];
   for (const q of queueView) {
     const existing = themes.find((t) => t.theme === q.theme);
@@ -216,27 +277,63 @@ export const WorkoutTrackerApp = (): JSX.Element => {
     else themes.push({ theme: q.theme, next: q, later: [] });
   }
 
-  const renderSessionRow = (
+  const timelineRow = (
     session: PrescribedSession | PerformedSession,
+    status: SessionStatus,
     subtitle: string | null,
-    status: SessionStatus
+    isLast: boolean
   ) => (
     <div
       key={session.id}
-      className="flex items-start justify-between pt-4 pb-4 px-4 cursor-pointer hover:bg-gray-50 active:bg-gray-100 transition-colors bg-white border-b-[0.55px] border-solid border-[#0000001a] last:border-b-0"
+      className="relative flex gap-3 cursor-pointer group"
       onClick={() => setLocation(`/${session.id}`)}
     >
-      <div className="flex flex-col items-start gap-1 flex-1">
-        <div className="flex items-center justify-between w-full gap-2">
-          <h3 className="font-normal text-neutral-950 text-base leading-6">{session.name}</h3>
-          {statusBadge(status)}
+      <div className="flex flex-col items-center">
+        <div className="pt-0.5 bg-white z-10">
+          <StatusIcon status={status} />
         </div>
-        {subtitle && <p className="font-normal text-[#717182] text-sm leading-5">{subtitle}</p>}
-        <span className="font-normal text-[#717182] text-xs leading-4">
-          {session.exercises.length} {session.exercises.length === 1 ? 'exercise' : 'exercises'}
-        </span>
+        {!isLast && <div className="w-px flex-1 bg-gray-200" />}
+      </div>
+      <div className="flex-1 pb-5 min-w-0">
+        <div className="flex items-baseline justify-between gap-2">
+          <h3 className="font-medium text-neutral-950 text-base leading-6 truncate group-hover:underline">
+            {session.name}
+          </h3>
+          {statusText(status) && (
+            <span className="text-xs text-gray-500 whitespace-nowrap">{statusText(status)}</span>
+          )}
+        </div>
+        {subtitle && <p className="text-sm text-[#717182] leading-5">{subtitle}</p>}
       </div>
     </div>
+  );
+
+  const upcomingRows = themes.map(({ theme, next, later }, i) =>
+    timelineRow(
+      next,
+      'planned',
+      [
+        themeLabel(theme),
+        next.plannedDate ? `maybe ${dayWord(next.plannedDate)}` : null,
+        later.length > 0 ? `+${later.length} queued after` : null,
+      ]
+        .filter(Boolean)
+        .join(' · '),
+      i === themes.length - 1 && active.length === 0 && past.length === 0
+    )
+  );
+
+  const activeRows = active.map(({ session }, i) =>
+    timelineRow(
+      session,
+      statusOf(session.id),
+      dayWord(session.performedDate),
+      i === active.length - 1 && past.length === 0
+    )
+  );
+
+  const pastRows = past.map(({ session }, i) =>
+    timelineRow(session, statusOf(session.id), dayWord(session.performedDate), i === past.length - 1)
   );
 
   return (
@@ -255,73 +352,67 @@ export const WorkoutTrackerApp = (): JSX.Element => {
                 <HelpCircle className="w-4 h-4 mr-2" />
                 How it works
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handlePullProgram}>
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Pull latest program
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={handleForgetCode}>
                 <LogOut className="w-4 h-4 mr-2" />
                 Forget access code
               </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-xs text-gray-400">Debug</DropdownMenuLabel>
+              <DropdownMenuItem onClick={handlePullProgram}>
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Pull program now
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+        <p className="text-xs text-[#717182] pb-1">{freshnessLine}</p>
       </header>
 
-      <main className="flex flex-col w-full max-w-2xl items-start pt-6 px-4 pb-8 gap-6">
-        {active.length > 0 && (
-          <section className="w-full">
-            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">Today</h2>
-            <Card className="w-full bg-white rounded-[14px] border-[0.55px] border-solid border-[#0000001a]">
-              <CardContent className="p-0">
-                {active.map(({ session }) =>
-                  renderSessionRow(session, formatDay(session.performedDate), statusOf(session.id))
-                )}
-              </CardContent>
-            </Card>
-          </section>
+      <main className="flex flex-col w-full max-w-2xl items-start pt-5 px-4 pb-8 gap-5">
+        {showWhileAway && (
+          <Card className="w-full bg-blue-50 border-blue-200 rounded-[14px]">
+            <CardContent className="p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <h2 className="text-sm font-semibold text-blue-900 mb-1">While you were away</h2>
+                  <p className="text-sm text-blue-900">{program.changelog}</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-blue-400 hover:text-blue-600 flex-shrink-0"
+                  onClick={markGenerationSeen}
+                  aria-label="Dismiss"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         <section className="w-full">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">On tap</h2>
+          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+            Up next
+          </h2>
           {themes.length === 0 ? (
-            <p className="text-sm text-gray-500 px-1">
+            <p className="text-sm text-gray-500">
               Nothing queued — Point One is between programs. Check back after its next pass.
             </p>
           ) : (
-            <Card className="w-full bg-white rounded-[14px] border-[0.55px] border-solid border-[#0000001a]">
-              <CardContent className="p-0">
-                {themes.map(({ theme, next, later }) => (
-                  <React.Fragment key={theme}>
-                    {renderSessionRow(
-                      next,
-                      [
-                        themeLabel(theme),
-                        next.plannedDate ? `maybe ${formatDay(next.plannedDate)}` : null,
-                        later.length > 0 ? `+${later.length} queued after` : null,
-                      ]
-                        .filter(Boolean)
-                        .join(' · '),
-                      'planned'
-                    )}
-                  </React.Fragment>
-                ))}
-              </CardContent>
-            </Card>
+            <div>{upcomingRows}</div>
           )}
         </section>
 
-        {recent.length > 0 && (
+        {(active.length > 0 || past.length > 0) && (
           <section className="w-full">
-            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">Logged</h2>
-            <Card className="w-full bg-white rounded-[14px] border-[0.55px] border-solid border-[#0000001a]">
-              <CardContent className="p-0">
-                {recent.map(({ session }) =>
-                  renderSessionRow(session, formatDay(session.performedDate), statusOf(session.id))
-                )}
-              </CardContent>
-            </Card>
+            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+              Logged
+            </h2>
+            <div>
+              {activeRows}
+              {pastRows}
+            </div>
           </section>
         )}
       </main>
