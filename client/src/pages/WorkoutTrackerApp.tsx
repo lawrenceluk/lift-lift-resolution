@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { CalendarIcon, MoreVerticalIcon, Upload, Download, HelpCircle, ArrowLeft, Search, Menu, Trash2, RefreshCw, LogOut } from 'lucide-react';
+import React from 'react';
+import { HelpCircle, Search, Menu, RefreshCw, LogOut, WifiOff } from 'lucide-react';
 import { useLocation, useRoute } from 'wouter';
-import { motion, PanInfo } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,123 +8,81 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useWorkoutProgramContext } from '@/contexts/WorkoutProgramContext';
 import { useSecretGate } from '@/components/SecretGate';
 import { SessionView } from '@/components/SessionView';
-import { ImportModal } from '@/components/ImportModal';
-import { ExportModal } from '@/components/ExportModal';
-import { loadCurrentWeekIndex, saveCurrentWeekIndex } from '@/utils/localStorage';
 import { useToast } from '@/hooks/use-toast';
-import { getWorkoutStatus, parseId } from '@/utils/idHelpers';
+import { PrescribedSession, PerformedSession, SessionStatus } from '@/types/workout';
+import { todayPT } from '@/utils/timeHelpers';
+
+const statusBadge = (status: SessionStatus) => {
+  switch (status) {
+    case 'ingested':
+      return <Badge className="bg-blue-600 hover:bg-blue-700 text-white text-xs">Ingested ✓</Badge>;
+    case 'delivered':
+      return <Badge className="bg-green-600 hover:bg-green-700 text-white text-xs">Delivered ✓</Badge>;
+    case 'departed':
+      return (
+        <Badge variant="outline" className="border-amber-400 text-amber-700 text-xs">
+          Saved on device
+        </Badge>
+      );
+    case 'in-progress':
+      return <Badge className="bg-orange-500 hover:bg-orange-600 text-white text-xs">In progress</Badge>;
+    case 'planned':
+      return (
+        <Badge variant="outline" className="border-gray-300 text-gray-600 text-xs">
+          On tap
+        </Badge>
+      );
+  }
+};
+
+const formatDay = (dateStr: string) => {
+  const today = todayPT();
+  if (dateStr === today) return 'Today';
+  const date = new Date(`${dateStr}T12:00:00`);
+  return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+};
+
+const themeLabel = (theme: string) =>
+  theme ? theme.charAt(0).toUpperCase() + theme.slice(1) : 'Session';
 
 export const WorkoutTrackerApp = (): JSX.Element => {
-  const { weeks, addSet, updateSet, deleteSet, startSession, completeSession, deleteSession, updateSession, skipExercise, unskipExercise, updateExerciseNotes, updateExercise, updateExerciseInAllSessions, importWeeks: importWeeksHook, pullProgram, hasUnsyncedActuals, syncSession } =
-    useWorkoutProgramContext();
+  const {
+    initializing,
+    fetchError,
+    program,
+    queueView,
+    performedRecords,
+    getSession,
+    statusOf,
+    addSet,
+    updateSet,
+    deleteSet,
+    setExerciseSkipped,
+    updateExerciseNotes,
+    updateExercise,
+    departSession,
+    pullProgram,
+  } = useWorkoutProgramContext();
   const { forgetCode } = useSecretGate();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
-  // Check if we're on a workout route (either week or session)
-  const [matchWorkout, workoutParams] = useRoute('/:id');
-
-  // Modal state
-  const [importModalOpen, setImportModalOpen] = useState(false);
-  const [exportModalOpen, setExportModalOpen] = useState(false);
-
-  // Swipe to delete state
-  const [swipedSessionId, setSwipedSessionId] = useState<string | null>(null);
-
-  // Determine current week index from URL or localStorage
-  const [currentWeekIndex, setCurrentWeekIndex] = useState(() => {
-    return loadCurrentWeekIndex();
-  });
-
-  // Sync current week index with URL params
-  useEffect(() => {
-    if (!weeks || !matchWorkout || !workoutParams?.id) return;
-
-    // Parse the ID to determine if it's a week or session
-    const parsed = parseId(workoutParams.id);
-    if (parsed?.weekNumber) {
-      const index = weeks.findIndex(w => w.weekNumber === parsed.weekNumber);
-      if (index !== -1 && index !== currentWeekIndex) {
-        setCurrentWeekIndex(index);
-      }
-    }
-  }, [weeks, matchWorkout, workoutParams, currentWeekIndex]);
-
-  // Save current week index to localStorage whenever it changes
-  useEffect(() => {
-    saveCurrentWeekIndex(currentWeekIndex);
-  }, [currentWeekIndex]);
-
-  // Ensure current week index is valid when weeks are loaded
-  useEffect(() => {
-    if (weeks && currentWeekIndex >= weeks.length) {
-      setCurrentWeekIndex(0);
-    }
-  }, [weeks, currentWeekIndex]);
-
-  const updateCurrentWeekIndex = (newIndex: number) => {
-    if (weeks && newIndex >= 0 && newIndex < weeks.length) {
-      setCurrentWeekIndex(newIndex);
-      // Update URL to reflect the new week
-      const week = weeks[newIndex];
-      setLocation(`/${week.id}`);
-    }
-  };
-
-  const goToHome = () => {
-    setLocation('/');
-  };
-
-  if (!weeks) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <Search className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-          <p className="text-gray-600">Loading workout program...</p>
-        </div>
-      </div>
-    );
-  }
-
-  const handleStartSession = (weekId: string, sessionId: string) => {
-    startSession(weekId, sessionId);
-    setLocation(`/${sessionId}`);
-  };
-
-  const handleImport = (importedWeeks: any[]) => {
-    importWeeksHook(importedWeeks);
-    toast({
-      title: 'Program imported',
-      description: 'Your workout program has been loaded successfully.',
-    });
-  };
+  const [matchSession, sessionParams] = useRoute('/:sessionId');
 
   const handlePullProgram = async () => {
-    // If there are locally logged sets, replacing the program loses them — confirm.
-    if (hasUnsyncedActuals()) {
-      const ok = window.confirm(
-        'Pulling the latest program from Point One will replace your current ' +
-          'program. Any logged sets not yet synced will be lost. Continue?'
-      );
-      if (!ok) return;
-    }
     const result = await pullProgram();
-    if (result.replaced) {
-      setCurrentWeekIndex(0);
-      setLocation('/');
-      toast({
-        title: 'Program updated',
-        description: 'Pulled the latest program from Point One.',
-      });
+    if (result.ok) {
+      toast({ title: 'Program refreshed', description: 'Pulled the latest from Point One.' });
     } else {
       toast({
-        title: 'Could not pull program',
-        description: result.error ?? 'Point One was unreachable. Your current program is unchanged.',
+        title: 'Could not reach Point One',
+        description: result.error ?? 'Your current program is unchanged.',
         variant: 'destructive',
       });
     }
@@ -138,220 +95,155 @@ export const WorkoutTrackerApp = (): JSX.Element => {
     if (ok) forgetCode();
   };
 
-  // Fire the seam sync for a completed session. Never blocks the UI: local state
-  // is already saved by completeSession; we only toast on failure so the data
-  // (still in localStorage) is known to need a re-sync.
-  const handleCompleteSession = (weekId: string, sessionId: string) => {
-    const completed = completeSession(weekId, sessionId);
-    setLocation(`/${weekId}`);
-    if (!completed) return;
-    void syncSession(completed).then((ok) => {
-      if (!ok) {
-        toast({
-          title: 'Saved locally',
-          description: 'Session saved on this device; will sync to Point One when reachable.',
-        });
-      }
-    });
+  const handleDepart = async (sessionId: string, note?: string) => {
+    const { delivered } = await departSession(sessionId, note);
+    setLocation('/');
+    if (delivered) {
+      toast({
+        title: 'Done for today',
+        description: 'Delivered ✓ — Point One picks this up on its next pass.',
+      });
+    } else {
+      toast({
+        title: 'Done for today',
+        description: 'Saved on this device — will deliver when Point One is reachable.',
+      });
+    }
   };
 
-  // Handle workout route (either week or session)
-  if (matchWorkout && workoutParams?.id) {
-    const id = workoutParams.id;
-    const parsed = parseId(id);
+  // ----- session route -------------------------------------------------------
 
-    // Determine if this is a session ID (has sessionNumber) or week ID
-    if (parsed?.sessionNumber) {
-      // This is a session
-      const week = weeks.find((w) => w.weekNumber === parsed.weekNumber);
-      const session = week?.sessions.find((s) => s.id === id);
+  if (matchSession && sessionParams?.sessionId && sessionParams.sessionId !== 'how-it-works') {
+    const id = sessionParams.sessionId;
+    const found = getSession(id);
 
-      if (!week || !session) {
-        return (
-          <div className="flex items-center justify-center min-h-screen px-4">
-            <div className="text-center max-w-md">
-              <Search className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-              <h2 className="text-xl font-semibold text-gray-900 mb-2">Workout Not Found</h2>
-              <p className="text-gray-600 mb-6">
-                The workout session you're looking for doesn't exist in your current program. It may have been removed or the link is outdated.
-              </p>
-              <Button onClick={goToHome} className="w-full sm:w-auto">
-                Go to Home
-              </Button>
-            </div>
-          </div>
-        );
-      }
-
+    if (!found) {
       return (
-        <SessionView
-          session={session}
-          weekNumber={week.weekNumber}
-          allWeeks={weeks}
-          onAddSet={(exerciseId, set) => addSet(week.id, session.id, exerciseId, set)}
-          onUpdateSet={(exerciseId, setNumber, updates) =>
-            updateSet(week.id, session.id, exerciseId, setNumber, updates)
-          }
-          onDeleteSet={(exerciseId, setNumber) =>
-            deleteSet(week.id, session.id, exerciseId, setNumber)
-          }
-          onSkipExercise={(exerciseId) => skipExercise(week.id, session.id, exerciseId)}
-          onUnskipExercise={(exerciseId) => unskipExercise(week.id, session.id, exerciseId)}
-          onUpdateExerciseNotes={(exerciseId, notes) =>
-            updateExerciseNotes(week.id, session.id, exerciseId, notes)
-          }
-          onUpdateExerciseNotesGlobal={updateExerciseNotes}
-          onUpdateExercise={(exerciseId, updates) =>
-            updateExercise(week.id, session.id, exerciseId, updates)
-          }
-          onUpdateExerciseInAllSessions={updateExerciseInAllSessions}
-          onBack={() => setLocation(`/${week.id}`)}
-          onCompleteSession={() => {
-            handleCompleteSession(week.id, session.id);
-          }}
-          onDeleteSession={() => {
-            deleteSession(week.id, session.id);
-            setLocation(`/${week.id}`);
-          }}
-          onRenameSession={(newName) => {
-            updateSession(week.id, session.id, { name: newName });
-          }}
-        />
-      );
-    } else if (parsed?.weekNumber) {
-      // This is a week
-      const week = weeks.find((w) => w.id === id);
-
-      if (!week) {
-        return (
-          <div className="flex items-center justify-center min-h-screen px-4">
-            <div className="text-center max-w-md">
-              <Search className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-              <h2 className="text-xl font-semibold text-gray-900 mb-2">Week Not Found</h2>
-              <p className="text-gray-600 mb-6">
-                The week you're looking for doesn't exist in your current program. It may have been removed or the link is outdated.
-              </p>
-              <Button onClick={goToHome} className="w-full sm:w-auto">
-                Go to Home
-              </Button>
-            </div>
+        <div className="flex items-center justify-center min-h-screen px-4">
+          <div className="text-center max-w-md">
+            <Search className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Workout Not Found</h2>
+            <p className="text-gray-600 mb-6">
+              This session isn't in the current program. It may have been consumed by a newer
+              program, or the link is outdated.
+            </p>
+            <Button onClick={() => setLocation('/')} className="w-full sm:w-auto">
+              Go to Home
+            </Button>
           </div>
-        );
-      }
+        </div>
+      );
     }
+
+    const { session, status, isLocal } = found;
+    const sealed = isLocal && !!(session as PerformedSession).sealed;
+    const performedDate = (session as PerformedSession).performedDate;
+    // Device-truth sessions are editable until they seal; a sealed session can
+    // still amend on its performedDate (D9). Ingested history is read-only —
+    // corrections go through the Point One chat.
+    const editable =
+      status !== 'ingested' && (!sealed || performedDate === todayPT());
+
+    return (
+      <SessionView
+        session={session}
+        status={status}
+        editable={editable}
+        performedRecords={performedRecords}
+        onAddSet={(exerciseId, set) => addSet(id, exerciseId, set)}
+        onUpdateSet={(exerciseId, setNumber, updates) => updateSet(id, exerciseId, setNumber, updates)}
+        onDeleteSet={(exerciseId, setNumber) => deleteSet(id, exerciseId, setNumber)}
+        onSkipExercise={(exerciseId) => setExerciseSkipped(id, exerciseId, true)}
+        onUnskipExercise={(exerciseId) => setExerciseSkipped(id, exerciseId, false)}
+        onUpdateExerciseNotes={(exerciseId, notes) => updateExerciseNotes(id, exerciseId, notes)}
+        onUpdateExerciseNotesById={(sessionId, exerciseId, notes) =>
+          updateExerciseNotes(sessionId, exerciseId, notes)
+        }
+        onUpdateExercise={(exerciseId, updates) => updateExercise(id, exerciseId, updates)}
+        onBack={() => setLocation('/')}
+        onDepart={(note) => handleDepart(id, note)}
+      />
+    );
   }
 
+  // ----- home ------------------------------------------------------------------
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  };
+  if (initializing && !program) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mb-4"></div>
+          <p className="text-gray-600">Loading your program…</p>
+        </div>
+      </div>
+    );
+  }
 
-  const formatDateRange = (start: string, end: string) => {
-    return `${formatDate(start)} - ${formatDate(end)}`;
-  };
+  // No sample fallback (D13): a fresh device either hydrates or fails visibly.
+  if (!program) {
+    return (
+      <div className="flex items-center justify-center min-h-screen px-4">
+        <div className="text-center max-w-md">
+          <WifiOff className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Can't reach Point One</h2>
+          <p className="text-gray-600 mb-2">
+            This device has no cached program and the seam is unreachable.
+          </p>
+          {fetchError && <p className="text-xs text-gray-400 mb-6 break-words">{fetchError}</p>}
+          <Button onClick={handlePullProgram} className="w-full sm:w-auto">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Try again
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
-  const formatDateTime = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const today = new Date();
-    const isToday = date.toDateString() === today.toDateString();
-    
-    if (isToday) {
-      return 'Today';
-    }
-    
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    if (date.toDateString() === yesterday.toDateString()) {
-      return 'Yesterday';
-    }
-    
-    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-  };
+  // In progress / amendable today: local records still open for logging.
+  const active = performedRecords.filter(({ session, editable }) => {
+    if (!editable) return false;
+    const st = statusOf(session.id);
+    return st === 'in-progress' || ((st === 'departed' || st === 'delivered') && session.performedDate === todayPT());
+  });
 
-  const getStatusBadge = (status: 'planned' | 'in-progress' | 'completed') => {
-    switch (status) {
-      case 'completed':
-        return (
-          <Badge className="bg-green-500 hover:bg-green-600">
-            <span className="font-medium text-white text-xs leading-4">
-              Completed
-            </span>
-          </Badge>
-        );
-      case 'in-progress':
-        return (
-          <Badge className="bg-orange-500 hover:bg-orange-600">
-            <span className="font-medium text-white text-xs leading-4">
-              In Progress
-            </span>
-          </Badge>
-        );
-      case 'planned':
-        return (
-          <Badge variant="outline" className="border-gray-300">
-            <span className="font-medium text-gray-600 text-xs leading-4">
-              Planned
-            </span>
-          </Badge>
-        );
-    }
-  };
+  const recent = performedRecords.filter(({ session }) => !active.some((a) => a.session.id === session.id));
 
-  // Swipe gesture handlers
-  const handleDragEnd = (sessionId: string, _: any, info: PanInfo) => {
-    const offset = info.offset.x;
+  // The queue, next-per-theme first.
+  const themes: { theme: string; next: PrescribedSession; later: PrescribedSession[] }[] = [];
+  for (const q of queueView) {
+    const existing = themes.find((t) => t.theme === q.theme);
+    if (existing) existing.later.push(q);
+    else themes.push({ theme: q.theme, next: q, later: [] });
+  }
 
-    // Threshold: -100px
-    if (offset <= -50) {
-      // Show delete button (snap to -100px)
-      setSwipedSessionId(sessionId);
-    } else {
-      // Close the swipe
-      setSwipedSessionId(null);
-    }
-  };
-
-  const handleDeleteSession = (weekId: string, sessionId: string) => {
-    deleteSession(weekId, sessionId);
-    toast({
-      title: 'Session deleted',
-      description: 'The workout session has been removed.',
-    });
-  };
-
-  const closeSwipe = () => {
-    setSwipedSessionId(null);
-  };
+  const renderSessionRow = (
+    session: PrescribedSession | PerformedSession,
+    subtitle: string | null,
+    status: SessionStatus
+  ) => (
+    <div
+      key={session.id}
+      className="flex items-start justify-between pt-4 pb-4 px-4 cursor-pointer hover:bg-gray-50 active:bg-gray-100 transition-colors bg-white border-b-[0.55px] border-solid border-[#0000001a] last:border-b-0"
+      onClick={() => setLocation(`/${session.id}`)}
+    >
+      <div className="flex flex-col items-start gap-1 flex-1">
+        <div className="flex items-center justify-between w-full gap-2">
+          <h3 className="font-normal text-neutral-950 text-base leading-6">{session.name}</h3>
+          {statusBadge(status)}
+        </div>
+        {subtitle && <p className="font-normal text-[#717182] text-sm leading-5">{subtitle}</p>}
+        <span className="font-normal text-[#717182] text-xs leading-4">
+          {session.exercises.length} {session.exercises.length === 1 ? 'exercise' : 'exercises'}
+        </span>
+      </div>
+    </div>
+  );
 
   return (
-    <div
-      className="bg-white w-full min-h-screen flex flex-col items-center"
-      onClick={(e) => {
-        // Close swipe when clicking outside
-        if (swipedSessionId && !(e.target as HTMLElement).closest('[data-session-item]')) {
-          closeSwipe();
-        }
-      }}
-    >
+    <div className="bg-white w-full min-h-screen flex flex-col items-center">
       <header className="flex flex-col w-full max-w-2xl items-start pt-4 pb-2 px-4 bg-[#fffffff2] border-b-[0.55px] border-solid border-[#0000001a] sticky top-0 z-10">
         <div className="flex h-9 items-center justify-between w-full">
-          <div className="flex items-center gap-3">
-            {matchWorkout && workoutParams?.id && parseId(workoutParams.id)?.sessionNumber && (
-              <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => {
-                const parsed = parseId(workoutParams.id);
-                if (parsed?.weekNumber) {
-                  const week = weeks.find((w) => w.weekNumber === parsed.weekNumber);
-                  if (week) {
-                    setLocation(`/${week.id}`);
-                  }
-                }
-              }}>
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-            )}
-            <span className="text-xl font-semibold text-gray-900">Lift Lift Resolution</span>
-          </div>
+          <span className="text-xl font-semibold text-gray-900">Lift Lift Resolution</span>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-9 w-9">
@@ -363,17 +255,10 @@ export const WorkoutTrackerApp = (): JSX.Element => {
                 <HelpCircle className="w-4 h-4 mr-2" />
                 How it works
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setExportModalOpen(true)}>
-                <Download className="w-4 h-4 mr-2" />
-                Export Program
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setImportModalOpen(true)}>
-                <Upload className="w-4 h-4 mr-2" />
-                Import Program
-              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handlePullProgram}>
                 <RefreshCw className="w-4 h-4 mr-2" />
-                Pull latest program from Point One
+                Pull latest program
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleForgetCode}>
                 <LogOut className="w-4 h-4 mr-2" />
@@ -384,198 +269,62 @@ export const WorkoutTrackerApp = (): JSX.Element => {
         </div>
       </header>
 
-      <main className="flex flex-col w-full max-w-2xl items-start pt-[23.54px] px-4 pb-8">
-        {weeks.length > 1 && (
-          <div className="relative flex items-center justify-center w-full mb-4">
-            {currentWeekIndex > 0 && (
-              <Button
-                variant="outline"
-                onClick={() => updateCurrentWeekIndex(currentWeekIndex - 1)}
-                className="h-9 absolute left-0"
-              >
-                ← Previous
-              </Button>
-            )}
-            <span className="text-sm text-gray-600">
-              Week {currentWeekIndex + 1} of {weeks.length}
-            </span>
-            {currentWeekIndex < weeks.length - 1 && (
-              <Button
-                variant="outline"
-                onClick={() => updateCurrentWeekIndex(currentWeekIndex + 1)}
-                className="h-9 absolute right-0"
-              >
-                Next →
-              </Button>
-            )}
-          </div>
-        )}
-
-        {(() => {
-          const week = weeks[currentWeekIndex];
-
-          // Safety check: if week doesn't exist (e.g., after program switch), show loading
-          if (!week) {
-            return (
-              <div className="flex items-center justify-center py-12">
-                <div className="text-center">
-                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mb-4"></div>
-                  <p className="text-gray-600">Loading week data...</p>
-                </div>
-              </div>
-            );
-          }
-
-          const completedSessions = week.sessions.filter((s) => s.completed).length;
-          const totalSessions = week.sessions.length;
-
-          return (
+      <main className="flex flex-col w-full max-w-2xl items-start pt-6 px-4 pb-8 gap-6">
+        {active.length > 0 && (
+          <section className="w-full">
+            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">Today</h2>
             <Card className="w-full bg-white rounded-[14px] border-[0.55px] border-solid border-[#0000001a]">
               <CardContent className="p-0">
-                <div className="flex flex-col w-full bg-[#ececf080] pt-4 pb-0 px-4 gap-[7.99px]">
-                  <div className="flex items-start justify-between w-full">
-                    <div className="flex flex-col items-start gap-[3.99px]">
-                      <div className="flex items-center gap-[7.99px]">
-                        <span className="font-normal text-neutral-950 text-base leading-6">
-                          Week {week.weekNumber}
-                        </span>
-                        <Badge
-                          variant="outline"
-                          className="h-[21.08px] px-2 py-0.5 rounded-lg border-[0.55px] border-solid border-[#0000001a]"
-                        >
-                          <span className="font-medium text-neutral-950 text-xs leading-4">
-                            {week.phase}
-                          </span>
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <CalendarIcon className="w-4 h-4" />
-                        <span className="font-normal text-[#717182] text-sm leading-5">
-                          {formatDateRange(week.startDate, week.endDate)}
-                        </span>
-                      </div>
-                    </div>
-                    <Badge
-                      variant="secondary"
-                      className="h-[21.08px] px-2 py-0.5 bg-[#eceef2] rounded-lg border-[0.55px] border-solid border-transparent"
-                    >
-                      <span className="font-medium text-[#030213] text-xs leading-4">
-                        {completedSessions}/{totalSessions}
-                      </span>
-                    </Badge>
-                  </div>
-                  {week.description && (
-                    <p className="font-normal text-[#717182] text-sm leading-5 pb-4">
-                      {week.description}
-                    </p>
-                  )}
-                </div>
-
-                <div className="flex flex-col">
-                  {week.sessions.map((session) => {
-                    const totalExercises = session.exercises.length;
-                    const status = getWorkoutStatus(session);
-                    const hasCompletedSets = session.exercises.some((ex) =>
-                      ex.sets?.some((set) => set.completed)
-                    );
-                    const isCurrentlySwiped = swipedSessionId === session.id;
-
-                    return (
-                      <div
-                        key={session.id}
-                        className="relative overflow-hidden border-b-[0.55px] border-solid border-[#0000001a] last:border-b-0"
-                        data-session-item
-                      >
-                        {/* Delete button background */}
-                        <div className="absolute inset-x-0 top-0 bottom-[0.55px] bg-red-500 flex items-center justify-end px-6">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteSession(week.id, session.id);
-                            }}
-                            className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-red-600 active:bg-red-700 transition-colors"
-                            aria-label="Delete session"
-                          >
-                            <Trash2 className="w-5 h-5 text-white" />
-                          </button>
-                        </div>
-
-                        {/* Session content (swipeable) */}
-                        <motion.div
-                          key={`session-${session.id}-${isCurrentlySwiped ? 'swiped' : 'normal'}`}
-                          drag="x"
-                          dragConstraints={{ left: -120, right: 0 }}
-                          dragElastic={0.1}
-                          dragMomentum={false}
-                          onDragEnd={(e, info) => handleDragEnd(session.id, e, info)}
-                          initial={{ x: isCurrentlySwiped ? -100 : 0 }}
-                          animate={{
-                            x: isCurrentlySwiped ? -100 : 0,
-                          }}
-                          transition={{
-                            type: "spring",
-                            stiffness: 300,
-                            damping: 30,
-                          }}
-                          onClick={(e) => {
-                            // Prevent navigation if swiped open
-                            if (swipedSessionId) {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              closeSwipe();
-                            } else {
-                              handleStartSession(week.id, session.id);
-                            }
-                          }}
-                          className="flex items-start justify-between pt-4 pb-4 px-4 cursor-pointer hover:bg-gray-50 active:bg-gray-100 transition-colors bg-white relative"
-                        >
-                          <div className="flex flex-col items-start gap-[3.99px] flex-1">
-                            <div className="flex items-center justify-between w-full gap-[7.99px]">
-                              <h3 className="font-normal text-neutral-950 text-base leading-6">
-                                {session.name}
-                              </h3>
-                              {getStatusBadge(status)}
-                            </div>
-                            {((session.startedAt && hasCompletedSets) || session.completedDate) && (
-                              <p className="font-normal text-[#717182] text-sm leading-5">
-                                {session.completedDate
-                                  ? `Completed ${formatDateTime(session.completedDate)}`
-                                  : `Started ${formatDateTime(session.startedAt!)}`
-                                }
-                              </p>
-                            )}
-                            {totalExercises > 0 && (
-                              <div className="flex items-center gap-2">
-                                <span className="font-normal text-[#717182] text-xs leading-4">
-                                  {totalExercises} {totalExercises === 1 ? 'exercise' : 'exercises'}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </motion.div>
-                      </div>
-                    );
-                  })}
-                </div>
+                {active.map(({ session }) =>
+                  renderSessionRow(session, formatDay(session.performedDate), statusOf(session.id))
+                )}
               </CardContent>
             </Card>
-          );
-        })()}
+          </section>
+        )}
+
+        <section className="w-full">
+          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">On tap</h2>
+          {themes.length === 0 ? (
+            <p className="text-sm text-gray-500 px-1">
+              Nothing queued — Point One is between programs. Check back after its next pass.
+            </p>
+          ) : (
+            <Card className="w-full bg-white rounded-[14px] border-[0.55px] border-solid border-[#0000001a]">
+              <CardContent className="p-0">
+                {themes.map(({ theme, next, later }) => (
+                  <React.Fragment key={theme}>
+                    {renderSessionRow(
+                      next,
+                      [
+                        themeLabel(theme),
+                        next.plannedDate ? `maybe ${formatDay(next.plannedDate)}` : null,
+                        later.length > 0 ? `+${later.length} queued after` : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · '),
+                      'planned'
+                    )}
+                  </React.Fragment>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+        </section>
+
+        {recent.length > 0 && (
+          <section className="w-full">
+            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">Logged</h2>
+            <Card className="w-full bg-white rounded-[14px] border-[0.55px] border-solid border-[#0000001a]">
+              <CardContent className="p-0">
+                {recent.map(({ session }) =>
+                  renderSessionRow(session, formatDay(session.performedDate), statusOf(session.id))
+                )}
+              </CardContent>
+            </Card>
+          </section>
+        )}
       </main>
-
-      {/* Modals */}
-      <ImportModal
-        open={importModalOpen}
-        onOpenChange={setImportModalOpen}
-        onImport={handleImport}
-      />
-      <ExportModal
-        open={exportModalOpen}
-        onOpenChange={setExportModalOpen}
-        weeks={weeks}
-      />
-
-      {/* Coach Chat is now rendered globally in App.tsx */}
     </div>
   );
 };

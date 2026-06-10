@@ -1,18 +1,16 @@
 import React, { useState } from 'react';
-import { WorkoutSession, SetResult, Week, Exercise } from '@/types/workout';
+import { PrescribedSession, PerformedSession, SetResult, Exercise, SessionStatus } from '@/types/workout';
 import { ExerciseView } from './ExerciseView';
 import { ExerciseProgressGrid } from './ExerciseProgressGrid';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, CheckCircle2, MoreVertical, Trash, Pencil, Timer } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, MoreVertical, Timer, Send } from 'lucide-react';
 import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { useWorkoutTimerContext } from '@/contexts/WorkoutTimerContext';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import {
   Dialog,
@@ -22,71 +20,73 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 
 interface SessionViewProps {
-  session: WorkoutSession;
-  weekNumber: number;
-  allWeeks?: Week[];
+  session: PrescribedSession | PerformedSession;
+  status: SessionStatus;
+  /** False for ingested history and past sealed sessions — view-only journal. */
+  editable: boolean;
+  /** All performed records (for last-time placeholders + exercise history). */
+  performedRecords: { session: PerformedSession; editable: boolean }[];
   onAddSet: (exerciseId: string, set: SetResult) => void;
   onUpdateSet: (exerciseId: string, setNumber: number, updates: Partial<SetResult>) => void;
   onDeleteSet: (exerciseId: string, setNumber: number) => void;
   onSkipExercise: (exerciseId: string) => void;
   onUnskipExercise: (exerciseId: string) => void;
   onUpdateExerciseNotes: (exerciseId: string, notes: string) => void;
-  onUpdateExerciseNotesGlobal?: (weekId: string, sessionId: string, exerciseId: string, notes: string) => void;
+  /** Cross-session note editing from the history dialog (device-truth records only). */
+  onUpdateExerciseNotesById: (sessionId: string, exerciseId: string, notes: string) => void;
   onUpdateExercise: (exerciseId: string, updates: Partial<Exercise>) => void;
-  onUpdateExerciseInAllSessions?: (originalName: string, updates: Partial<Exercise>) => void;
   onBack: () => void;
-  onCompleteSession: () => void;
-  onDeleteSession: () => void;
-  onRenameSession: (newName: string) => void;
+  /** "Done for today" — seal with an optional felt-note; delivery is eager. */
+  onDepart: (note?: string) => void;
 }
 
 export const SessionView: React.FC<SessionViewProps> = ({
   session,
-  weekNumber,
-  allWeeks,
+  status,
+  editable,
+  performedRecords,
   onAddSet,
   onUpdateSet,
   onDeleteSet,
   onSkipExercise,
   onUnskipExercise,
   onUpdateExerciseNotes,
-  onUpdateExerciseNotesGlobal,
+  onUpdateExerciseNotesById,
   onUpdateExercise,
-  onUpdateExerciseInAllSessions,
   onBack,
-  onCompleteSession,
-  onDeleteSession,
-  onRenameSession,
+  onDepart,
 }) => {
   const { openTimer } = useWorkoutTimerContext();
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
-  const [newSessionName, setNewSessionName] = useState(session.name);
+  const [isDepartDialogOpen, setIsDepartDialogOpen] = useState(false);
+  const [departNote, setDepartNote] = useState('');
 
-  const allExercisesComplete = session.exercises.every((ex) => {
-    const completedSets = (ex.sets || []).filter((s) => s.completed).length;
-    const skippedSets = (ex.sets || []).filter((s) => s.skipped).length;
-    return ex.skipped || (completedSets + skippedSets) >= ex.workingSets;
-  });
+  const performed = session as PerformedSession;
+  const hasLoggedSets = session.exercises.some((ex) => (ex.sets || []).length > 0);
+  const sealed = !!performed.sealed;
 
-  const handleDeleteSession = () => {
-    setIsDeleteDialogOpen(false);
-    onDeleteSession();
+  const handleDepart = () => {
+    setIsDepartDialogOpen(false);
+    onDepart(departNote);
+    setDepartNote('');
   };
 
-  const handleOpenRenameDialog = () => {
-    setNewSessionName(session.name);
-    setIsRenameDialogOpen(true);
-  };
-
-  const handleRenameSession = () => {
-    if (newSessionName.trim() && newSessionName !== session.name) {
-      onRenameSession(newSessionName.trim());
+  const statusLine = (() => {
+    switch (status) {
+      case 'ingested':
+        return `Ingested ✓ · trained ${performed.performedDate}`;
+      case 'delivered':
+        return `Delivered ✓ — Point One picks this up on its next pass`;
+      case 'departed':
+        return `Saved on this device — will deliver when Point One is reachable`;
+      case 'in-progress':
+        return null;
+      case 'planned':
+        return null;
     }
-    setIsRenameDialogOpen(false);
-  };
+  })();
 
   // Sort exercises by group label (A1, A2, B1, C1, C2, etc.)
   const sortedExercises = [...session.exercises].sort((a, b) => {
@@ -124,7 +124,7 @@ export const SessionView: React.FC<SessionViewProps> = ({
           </Button>
           <div className="flex-1">
             <h1 className="text-lg font-semibold text-gray-900">{session.name}</h1>
-            <p className="text-sm text-gray-500 mb-2">Week {weekNumber} • Session {Number(session.id.split('-').pop())}</p>
+            {statusLine && <p className="text-sm text-gray-500 mb-2">{statusLine}</p>}
             <ExerciseProgressGrid exercises={session.exercises} />
           </div>
           <DropdownMenu>
@@ -138,19 +138,24 @@ export const SessionView: React.FC<SessionViewProps> = ({
                 <Timer className="w-4 h-4 mr-2" />
                 Timer
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleOpenRenameDialog}>
-                <Pencil className="w-4 h-4 mr-2" />
-                Rename
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setIsDeleteDialogOpen(true)} className="text-red-600">
-                <Trash className="w-4 h-4 mr-2" />
-                Delete session
-              </DropdownMenuItem>
+              {editable && hasLoggedSets && (
+                <DropdownMenuItem onClick={() => setIsDepartDialogOpen(true)}>
+                  <CheckCircle2 className="w-4 h-4 mr-2" />
+                  Done for today
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </header>
+
+      {performed.note && (
+        <div className="px-4 pt-4 w-full max-w-2xl">
+          <Card className="p-4 bg-amber-50 border-amber-200">
+            <p className="text-sm text-amber-900 italic">“{performed.note}”</p>
+          </Card>
+        </div>
+      )}
 
       {session.notes && (
         <div className="px-4 pt-4 w-full max-w-2xl">
@@ -161,7 +166,7 @@ export const SessionView: React.FC<SessionViewProps> = ({
         </div>
       )}
 
-      {session.warmup && session.warmup.length > 0 && (
+      {session.warmup && session.warmup.length > 0 && !sealed && (
         <div className="px-4 pt-4 w-full max-w-2xl">
           <Card className="p-4 border-gray-200">
             <h3 className="font-semibold text-gray-900 mb-2">Warmup</h3>
@@ -181,77 +186,57 @@ export const SessionView: React.FC<SessionViewProps> = ({
           <ExerciseView
             key={exercise.id}
             exercise={exercise}
-            allWeeks={allWeeks}
+            readOnly={!editable}
+            currentSessionId={session.id}
+            performedRecords={performedRecords}
             onAddSet={(set) => onAddSet(exercise.id, set)}
-            onUpdateSet={(setNumber, updates) =>
-              onUpdateSet(exercise.id, setNumber, updates)
-            }
+            onUpdateSet={(setNumber, updates) => onUpdateSet(exercise.id, setNumber, updates)}
             onDeleteSet={(setNumber) => onDeleteSet(exercise.id, setNumber)}
             onSkip={() => onSkipExercise(exercise.id)}
             onUnskip={() => onUnskipExercise(exercise.id)}
             onUpdateNotes={(notes) => onUpdateExerciseNotes(exercise.id, notes)}
             onUpdateExercise={(updates) => onUpdateExercise(exercise.id, updates)}
-            onUpdateExerciseInAllSessions={onUpdateExerciseInAllSessions}
-            onUpdateExerciseNotesGlobal={onUpdateExerciseNotesGlobal}
+            onUpdateExerciseNotesById={onUpdateExerciseNotesById}
           />
         ))}
       </main>
 
-      {!session.completed && allExercisesComplete && (
+      {/* Departure (D6): always reachable once there's anything to record — no
+          per-set resolution, no certification. The record is a journal. */}
+      {editable && hasLoggedSets && !sealed && (
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200 flex justify-center">
           <Button
-            onClick={onCompleteSession}
-            className="w-full max-w-2xl h-14 text-base bg-green-600 hover:bg-green-700"
+            onClick={() => setIsDepartDialogOpen(true)}
+            className="w-full max-w-2xl h-14 text-base bg-gray-900 hover:bg-gray-800"
           >
-            <CheckCircle2 className="w-5 h-5 mr-2" />
-            Complete Workout
+            <Send className="w-5 h-5 mr-2" />
+            Done for today
           </Button>
         </div>
       )}
 
-      <Dialog open={isRenameDialogOpen} onOpenChange={setIsRenameDialogOpen}>
+      <Dialog open={isDepartDialogOpen} onOpenChange={setIsDepartDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Rename Session</DialogTitle>
+            <DialogTitle>Done for today</DialogTitle>
             <DialogDescription>
-              Enter a new name for this workout session.
+              What you logged is the record — unlogged sets just read as not done. Anything to tell
+              your trainer? (optional)
             </DialogDescription>
           </DialogHeader>
-          <Input
-            value={newSessionName}
-            onChange={(e) => setNewSessionName(e.target.value)}
-            placeholder="Session name"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                handleRenameSession();
-              }
-            }}
+          <Textarea
+            value={departNote}
+            onChange={(e) => setDepartNote(e.target.value)}
+            placeholder="e.g., felt strong, cut it short — knee twinge on lunges"
+            className="min-h-[80px]"
           />
           <DialogFooter className="flex gap-2">
-            <Button variant="outline" onClick={() => setIsRenameDialogOpen(false)}>
-              Cancel
+            <Button variant="outline" onClick={() => setIsDepartDialogOpen(false)}>
+              Keep training
             </Button>
-            <Button onClick={handleRenameSession} disabled={!newSessionName.trim()}>
-              Save
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Session</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete "{session.name}" and all its exercise data? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex gap-2">
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDeleteSession}>
-              Delete
+            <Button onClick={handleDepart} className="bg-gray-900 hover:bg-gray-800">
+              <Send className="w-4 h-4 mr-2" />
+              Done for today
             </Button>
           </DialogFooter>
         </DialogContent>

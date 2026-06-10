@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Exercise, Week } from '@/types/workout';
+import { Exercise } from '@/types/workout';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -9,36 +9,27 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 
 interface EditExerciseDialogProps {
   exercise: Exercise;
-  allWeeks?: Week[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (updates: Partial<Exercise>) => void;
-  onSaveAllSessions?: (originalName: string, updates: Partial<Exercise>) => void;
 }
 
+/**
+ * Deviate-and-log: modify this session's exercise in place. Edits are
+ * device-truth for this record only — the brain sees the deviation when the
+ * session delivers and folds it into the next prescription.
+ */
 export const EditExerciseDialog: React.FC<EditExerciseDialogProps> = ({
   exercise,
-  allWeeks,
   open,
   onOpenChange,
   onSave,
-  onSaveAllSessions,
 }) => {
   const [formData, setFormData] = useState({
     name: exercise.name,
@@ -50,18 +41,6 @@ export const EditExerciseDialog: React.FC<EditExerciseDialogProps> = ({
     restSeconds: exercise.restSeconds,
     notes: exercise.notes || '',
   });
-  const [showBulkUpdateConfirm, setShowBulkUpdateConfirm] = useState(false);
-
-  // Count how many times this exercise appears across all sessions
-  const matchingExercisesCount = allWeeks
-    ? allWeeks.reduce((count, week) => {
-        return count + week.sessions.reduce((sessionCount, session) => {
-          return sessionCount + session.exercises.filter(ex => ex.name === exercise.name).length;
-        }, 0);
-      }, 0)
-    : 0;
-
-  const hasMultipleInstances = matchingExercisesCount > 1;
 
   // Reset form when exercise changes or dialog opens
   useEffect(() => {
@@ -91,31 +70,6 @@ export const EditExerciseDialog: React.FC<EditExerciseDialogProps> = ({
       notes: formData.notes || undefined,
     });
     onOpenChange(false);
-  };
-
-  const handleBulkUpdate = () => {
-    setShowBulkUpdateConfirm(true);
-  };
-
-  const handleConfirmBulkUpdate = () => {
-    if (onSaveAllSessions) {
-      onSaveAllSessions(exercise.name, {
-        name: formData.name,
-        groupLabel: formData.groupLabel || undefined,
-        warmupSets: formData.warmupSets,
-        workingSets: formData.workingSets,
-        reps: formData.reps,
-        targetLoad: formData.targetLoad,
-        restSeconds: formData.restSeconds,
-        notes: formData.notes || undefined,
-      });
-    }
-    setShowBulkUpdateConfirm(false);
-    onOpenChange(false);
-  };
-
-  const handleCancelBulkUpdate = () => {
-    setShowBulkUpdateConfirm(false);
   };
 
   const handleCancel = () => {
@@ -245,41 +199,11 @@ export const EditExerciseDialog: React.FC<EditExerciseDialogProps> = ({
           <Button variant="outline" onClick={handleCancel}>
             Cancel
           </Button>
-          {hasMultipleInstances && onSaveAllSessions && (
-            <Button variant="secondary" onClick={handleBulkUpdate}>
-              Update everywhere
-            </Button>
-          )}
           <Button onClick={handleSave}>
             Save Changes
           </Button>
         </DialogFooter>
       </DialogContent>
-
-      <AlertDialog open={showBulkUpdateConfirm} onOpenChange={setShowBulkUpdateConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Update in all sessions?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will update from <strong>{exercise.name}</strong> to <strong>{formData.name}</strong> in {matchingExercisesCount} session{matchingExercisesCount !== 1 ? 's' : ''}.
-              {exercise.name !== formData.name && (
-                <span className="block mt-2 text-amber-600">
-                  Note: The exercise name will be changed across all sessions.
-                </span>
-              )}
-              <span className="block mt-2">
-                Are you sure you want to make these changes?
-              </span>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={handleCancelBulkUpdate}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmBulkUpdate}>
-              Update all
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </Dialog>
   );
 };

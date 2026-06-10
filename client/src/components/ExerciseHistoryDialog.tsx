@@ -19,7 +19,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ExerciseHistoryEntry } from '@/utils/exerciseHistory';
-import { createWeekId, createSessionId } from '@/utils/idHelpers';
 import { MessageSquare, Pencil } from 'lucide-react';
 
 interface ExerciseHistoryDialogProps {
@@ -27,7 +26,9 @@ interface ExerciseHistoryDialogProps {
   history: ExerciseHistoryEntry[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onUpdateNote?: (weekId: string, sessionId: string, exerciseId: string, notes: string) => void;
+  /** Only device-truth (editable) entries take note edits — ingested history is
+   *  git truth; corrections go through the Point One chat. */
+  onUpdateNote?: (sessionId: string, exerciseId: string, notes: string) => void;
 }
 
 export const ExerciseHistoryDialog: React.FC<ExerciseHistoryDialogProps> = ({
@@ -37,11 +38,10 @@ export const ExerciseHistoryDialog: React.FC<ExerciseHistoryDialogProps> = ({
   onOpenChange,
   onUpdateNote,
 }) => {
-  // Sort history by date descending (most recent first)
-  const sortedHistory = [...history].sort((a, b) => {
-    if (!a.date || !b.date) return 0;
-    return new Date(b.date).getTime() - new Date(a.date).getTime();
-  });
+  // Sort history by performed date descending (most recent first)
+  const sortedHistory = [...history].sort((a, b) =>
+    b.performedDate.localeCompare(a.performedDate)
+  );
 
   // Track which entry is currently displayed in the callout
   const [selectedEntry, setSelectedEntry] = useState<ExerciseHistoryEntry | null>(
@@ -67,10 +67,8 @@ export const ExerciseHistoryDialog: React.FC<ExerciseHistoryDialogProps> = ({
   };
 
   const handleSaveNote = () => {
-    if (!selectedEntry || !onUpdateNote) return;
-    const weekId = createWeekId(selectedEntry.weekNumber);
-    const sessionId = createSessionId(selectedEntry.weekNumber, selectedEntry.sessionNumber);
-    onUpdateNote(weekId, sessionId, selectedEntry.exercise.id, editedNote);
+    if (!selectedEntry || !onUpdateNote || !selectedEntry.editable) return;
+    onUpdateNote(selectedEntry.sessionId, selectedEntry.exercise.id, editedNote);
     setIsEditingNote(false);
   };
 
@@ -82,16 +80,16 @@ export const ExerciseHistoryDialog: React.FC<ExerciseHistoryDialogProps> = ({
   const formatDate = (dateString: string | undefined): string => {
     if (!dateString) return 'N/A';
     try {
-      return format(new Date(dateString), 'MMM d, yyyy');
+      // performedDate is a calendar date — pin to noon so the local render
+      // can't slip a day.
+      return format(new Date(`${dateString}T12:00:00`), 'MMM d, yyyy');
     } catch {
       return 'Invalid date';
     }
   };
 
-  const formatDateWithWeek = (entry: ExerciseHistoryEntry): string => {
-    const dateStr = formatDate(entry.date);
-    return `${dateStr} (W${entry.weekNumber})`;
-  };
+  const formatDateWithWeek = (entry: ExerciseHistoryEntry): string =>
+    formatDate(entry.performedDate);
 
   const calculateVolume = (entry: ExerciseHistoryEntry): string => {
     const completedSets = entry.sets.filter((s) => s.completed);
@@ -213,18 +211,24 @@ export const ExerciseHistoryDialog: React.FC<ExerciseHistoryDialogProps> = ({
                       </div>
                     </div>
                   ) : selectedEntry.exercise.userNotes ? (
-                    <div
-                      className="group cursor-pointer hover:bg-gray-100 -mx-2 px-2 py-1 rounded transition-colors"
-                      onClick={handleStartEditNote}
-                    >
-                      <div className="flex items-start gap-2">
-                        <p className="text-xs text-gray-600 italic flex-1">
-                          {selectedEntry.exercise.userNotes}
-                        </p>
-                        <Pencil className="h-3 w-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-0.5" />
+                    selectedEntry.editable && onUpdateNote ? (
+                      <div
+                        className="group cursor-pointer hover:bg-gray-100 -mx-2 px-2 py-1 rounded transition-colors"
+                        onClick={handleStartEditNote}
+                      >
+                        <div className="flex items-start gap-2">
+                          <p className="text-xs text-gray-600 italic flex-1">
+                            {selectedEntry.exercise.userNotes}
+                          </p>
+                          <Pencil className="h-3 w-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-0.5" />
+                        </div>
                       </div>
-                    </div>
-                  ) : onUpdateNote ? (
+                    ) : (
+                      <p className="text-xs text-gray-600 italic">
+                        {selectedEntry.exercise.userNotes}
+                      </p>
+                    )
+                  ) : onUpdateNote && selectedEntry.editable ? (
                     <button
                       onClick={handleStartEditNote}
                       className="text-xs text-gray-400 hover:text-gray-600 italic flex items-center gap-1"

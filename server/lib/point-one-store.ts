@@ -51,6 +51,7 @@ function sessionFileName(session: SessionLike): string {
 /** A workout session, minimally — only what the store needs to name + date the file. */
 interface SessionLike {
   name: string;
+  performedDate?: string;
   completedAt?: string;
   completedDate?: string;
   date?: string;
@@ -69,16 +70,37 @@ function slugify(name: string): string {
   return slug || "session";
 }
 
-/** Resolve the YYYY-MM-DD date for a session: its completion date, else today. */
+/** YYYY-MM-DD in America/Los_Angeles — the contract's calendar-date rule (D8).
+ *  Never a UTC slice: a session completed after 5pm PT is still today's. */
+function ptDate(d: Date): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Los_Angeles",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(d);
+}
+
+/**
+ * Resolve the YYYY-MM-DD date for a session. The client-stamped
+ * `performedDate` (the PT calendar date of the first logged set) is
+ * authoritative; timestamps are a legacy fallback, interpreted in PT.
+ */
 function sessionDate(session: SessionLike): string {
+  if (
+    typeof session.performedDate === "string" &&
+    /^\d{4}-\d{2}-\d{2}$/.test(session.performedDate)
+  ) {
+    return session.performedDate;
+  }
   const raw = session.completedAt ?? session.completedDate ?? session.date;
   if (raw) {
     const d = new Date(raw);
     if (!Number.isNaN(d.getTime())) {
-      return d.toISOString().slice(0, 10);
+      return ptDate(d);
     }
   }
-  return new Date().toISOString().slice(0, 10);
+  return ptDate(new Date());
 }
 
 /**

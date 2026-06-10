@@ -18,7 +18,7 @@ function Router() {
       {/* Add pages below */}
       <Route path="/" component={WorkoutTrackerApp} />
       <Route path="/how-it-works" component={HowItWorks} />
-      <Route path="/:weekId" component={WorkoutTrackerApp} />
+      {/* Absolute session IDs (s-<date>-<slug>) — opaque tokens, no positional routing */}
       <Route path="/:sessionId" component={WorkoutTrackerApp} />
       {/* Fallback to 404 */}
       <Route component={NotFound} />

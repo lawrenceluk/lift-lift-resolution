@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Exercise, SetResult, Week } from '@/types/workout';
+import { Exercise, SetResult, PerformedSession } from '@/types/workout';
 import { SetLogger } from './SetLogger';
 import { EditExerciseDialog } from './EditExerciseDialog';
 import { ExerciseHistoryDialog } from './ExerciseHistoryDialog';
@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
 import { CircleSlash2, StickyNote, MoreVertical, Pencil, ChevronDown, ChevronUp, History } from 'lucide-react';
-import { findExerciseHistory } from '@/utils/exerciseHistory';
+import { findExerciseHistory, lastPerformance } from '@/utils/exerciseHistory';
 
 import {
   Dialog,
@@ -29,7 +29,11 @@ import { Textarea } from '@/components/ui/textarea';
 
 interface ExerciseViewProps {
   exercise: Exercise;
-  allWeeks?: Week[];
+  /** View-only journal mode (ingested history / past sealed sessions). */
+  readOnly?: boolean;
+  currentSessionId: string;
+  /** All performed records — the exercise-history + last-time source. */
+  performedRecords: { session: PerformedSession; editable: boolean }[];
   onAddSet: (set: SetResult) => void;
   onUpdateSet: (setNumber: number, updates: Partial<SetResult>) => void;
   onDeleteSet: (setNumber: number) => void;
@@ -37,13 +41,14 @@ interface ExerciseViewProps {
   onUnskip: () => void;
   onUpdateNotes: (notes: string) => void;
   onUpdateExercise: (updates: Partial<Exercise>) => void;
-  onUpdateExerciseInAllSessions?: (originalName: string, updates: Partial<Exercise>) => void;
-  onUpdateExerciseNotesGlobal?: (weekId: string, sessionId: string, exerciseId: string, notes: string) => void;
+  onUpdateExerciseNotesById?: (sessionId: string, exerciseId: string, notes: string) => void;
 }
 
 export const ExerciseView: React.FC<ExerciseViewProps> = ({
   exercise,
-  allWeeks,
+  readOnly = false,
+  currentSessionId,
+  performedRecords,
   onAddSet,
   onUpdateSet,
   onDeleteSet,
@@ -51,8 +56,7 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
   onUnskip,
   onUpdateNotes,
   onUpdateExercise,
-  onUpdateExerciseInAllSessions,
-  onUpdateExerciseNotesGlobal,
+  onUpdateExerciseNotesById,
 }) => {
   const [isNotesDialogOpen, setIsNotesDialogOpen] = useState(false);
   const [notesText, setNotesText] = useState(exercise.userNotes || '');
@@ -63,14 +67,20 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
 
   // Memoize exercise history to avoid recalculating on every render
   const exerciseHistory = useMemo(
-    () => findExerciseHistory(allWeeks || null, exercise.name),
-    [allWeeks, exercise.name]
+    () => findExerciseHistory(performedRecords, exercise.name, currentSessionId),
+    [performedRecords, exercise.name, currentSessionId]
   );
 
   // Check if this exercise has historical data (memoized)
   const hasHistory = useMemo(
     () => exerciseHistory.length > 0,
     [exerciseHistory]
+  );
+
+  // The "last time" set shown as placeholders in the set logger.
+  const lastSet = useMemo(
+    () => lastPerformance(exerciseHistory, exercise.targetLoad),
+    [exerciseHistory, exercise.targetLoad]
   );
 
 
@@ -116,7 +126,7 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
   const ActionButtons = ({ showCompact = false }: { showCompact?: boolean }) => {
     return (
       <div className="flex items-center gap-1">
-        {!showCompact && (
+        {!showCompact && !readOnly && (
           <Button
             variant="ghost"
             size="icon"
@@ -137,7 +147,7 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            {showCompact && (
+            {showCompact && !readOnly && (
               <>
                 <DropdownMenuItem onClick={handleOpenNotesDialog}>
                   <StickyNote className="w-4 h-4 mr-2" />
@@ -145,18 +155,21 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
                 </DropdownMenuItem>
               </>
             )}
-            {isSkipped ? (
-              <DropdownMenuItem onClick={handleToggleSkip}>
-                <CircleSlash2 className="w-4 h-4 mr-2" />
-                Unskip
-              </DropdownMenuItem>
-            ) : !isComplete && (
-              <DropdownMenuItem onClick={handleToggleSkip}>
-                <CircleSlash2 className="w-4 h-4 mr-2" />
-                Skip
-              </DropdownMenuItem>
-            )}
-            {!isComplete && !isSkipped && (
+            {!readOnly &&
+              (isSkipped ? (
+                <DropdownMenuItem onClick={handleToggleSkip}>
+                  <CircleSlash2 className="w-4 h-4 mr-2" />
+                  Unskip
+                </DropdownMenuItem>
+              ) : (
+                !isComplete && (
+                  <DropdownMenuItem onClick={handleToggleSkip}>
+                    <CircleSlash2 className="w-4 h-4 mr-2" />
+                    Skip
+                  </DropdownMenuItem>
+                )
+              ))}
+            {!readOnly && !isComplete && !isSkipped && (
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => setIsEditDialogOpen(true)}>
@@ -293,7 +306,8 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
             {!isSkipped && (
               <SetLogger
                 exercise={exercise}
-                allWeeks={allWeeks}
+                lastSet={lastSet}
+                readOnly={readOnly}
                 onAddSet={onAddSet}
                 onUpdateSet={onUpdateSet}
                 onDeleteSet={onDeleteSet}
@@ -332,11 +346,9 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
 
       <EditExerciseDialog
         exercise={exercise}
-        allWeeks={allWeeks}
         open={isEditDialogOpen}
         onOpenChange={setIsEditDialogOpen}
         onSave={onUpdateExercise}
-        onSaveAllSessions={onUpdateExerciseInAllSessions}
       />
 
       <ExerciseHistoryDialog
@@ -344,7 +356,7 @@ export const ExerciseView: React.FC<ExerciseViewProps> = ({
         history={exerciseHistory}
         open={isHistoryDialogOpen}
         onOpenChange={setIsHistoryDialogOpen}
-        onUpdateNote={onUpdateExerciseNotesGlobal}
+        onUpdateNote={onUpdateExerciseNotesById}
       />
     </>
   );

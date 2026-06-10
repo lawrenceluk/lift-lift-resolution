@@ -6,7 +6,7 @@
  * SecretGate (see components/SecretGate.tsx) and lives in localStorage.
  */
 
-import type { Week } from '@/types/workout';
+import type { ProgramEnvelope, PerformedSession } from '@/types/workout';
 
 const SECRET_KEY = 'app_secret';
 
@@ -84,10 +84,10 @@ export async function checkHealth(): Promise<{ status: string; timestamp: string
 }
 
 /**
- * Read path: GET the current program (a Week[]-shaped array) the brain wrote.
+ * Read path: GET the current program envelope (schema 2) the brain wrote.
  */
-export async function fetchProgram(): Promise<Week[]> {
-  return apiRequest<Week[]>('/program');
+export async function fetchProgram(): Promise<ProgramEnvelope> {
+  return apiRequest<ProgramEnvelope>('/program');
 }
 
 /** Backend response shape for a committed session. */
@@ -98,10 +98,11 @@ export interface PostSessionResult {
 }
 
 /**
- * Write path: POST one hydrated session object (actuals). Append-only — the
- * backend writes + commits a single file; never the program/plan.
+ * Write path: POST one performed session record (device-truth actuals). The
+ * backend files it by `performedDate` (D8) and commits that one file — never
+ * the program. Same-day re-delivery overwrites the same file (D9).
  */
-export async function postSession(session: unknown): Promise<PostSessionResult> {
+export async function postSession(session: PerformedSession): Promise<PostSessionResult> {
   return apiRequest<PostSessionResult>('/session', {
     method: 'POST',
     body: JSON.stringify(session),
