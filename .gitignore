@@ -87,7 +87,8 @@ dist
 
 # Gatsby files
 .cache/
-public
+# (bare `public` removed 2026-06-10 — it silently ignored client/public/,
+# the vite publicDir that ships favicons/manifest; build output is `dist`)
 
 # Storybook build outputs
 .out
