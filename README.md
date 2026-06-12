@@ -57,7 +57,7 @@ Most workout apps are overcomplicated with unnecessary features, slow loading ti
 ### For Users
 
 **Option 1: Use the Live App**
-1. Visit [lift.luk.xyz](https://lift.luk.xyz) in your browser
+1. Visit [liftliftresolution.com](https://liftliftresolution.com) in your browser
 2. Add to iOS home screen: Tap Share → Add to Home Screen
 3. Start tracking your workouts!
 
