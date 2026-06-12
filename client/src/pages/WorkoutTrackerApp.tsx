@@ -274,9 +274,12 @@ export const WorkoutTrackerApp = (): JSX.Element => {
   );
 
   // The upcoming lane: next session per theme (the queue is the structure,
-  // plannedDate is decoration on it — D15).
+  // plannedDate is decoration on it — D15). A session with an active local
+  // record has materialized into device-truth — its home is the Today lane.
+  const activeIds = new Set(active.map((a) => a.session.id));
   const themes: { theme: string; next: PrescribedSession; later: PrescribedSession[] }[] = [];
   for (const q of queueView) {
+    if (activeIds.has(q.id)) continue;
     const existing = themes.find((t) => t.theme === q.theme);
     if (existing) existing.later.push(q);
     else themes.push({ theme: q.theme, next: q, later: [] });
@@ -313,13 +316,19 @@ export const WorkoutTrackerApp = (): JSX.Element => {
     </div>
   );
 
+  // plannedDate is a hint (D15) — once it's in the past it has nothing left to
+  // say about timing, so it degrades to "next time" rather than parroting a
+  // stale day word ("maybe yesterday").
+  const plannedHint = (plannedDate: string | undefined): string | null => {
+    if (!plannedDate) return null;
+    return plannedDate < todayPT() ? 'next time' : `maybe ${dayWord(plannedDate)}`;
+  };
+
   const upcomingRows = themes.map(({ theme, next }, i) =>
     timelineRow(
       next,
       'planned',
-      [themeLabel(theme), next.plannedDate ? `maybe ${dayWord(next.plannedDate)}` : null]
-        .filter(Boolean)
-        .join(' · '),
+      [themeLabel(theme), plannedHint(next.plannedDate)].filter(Boolean).join(' · '),
       i === themes.length - 1 && active.length === 0 && past.length === 0
     )
   );
@@ -405,15 +414,21 @@ export const WorkoutTrackerApp = (): JSX.Element => {
           )}
         </section>
 
-        {(active.length > 0 || past.length > 0) && (
+        {active.length > 0 && (
+          <section className="w-full">
+            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+              Today
+            </h2>
+            <div>{activeRows}</div>
+          </section>
+        )}
+
+        {past.length > 0 && (
           <section className="w-full">
             <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
               Logged
             </h2>
-            <div>
-              {activeRows}
-              {pastRows}
-            </div>
+            <div>{pastRows}</div>
           </section>
         )}
       </main>
