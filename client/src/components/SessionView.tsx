@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { PrescribedSession, PerformedSession, SetResult, Exercise, SessionStatus } from '@/types/workout';
 import { ExerciseView } from './ExerciseView';
 import { ExerciseProgressGrid } from './ExerciseProgressGrid';
@@ -63,6 +63,12 @@ export const SessionView: React.FC<SessionViewProps> = ({
   const [isDepartDialogOpen, setIsDepartDialogOpen] = useState(false);
   const [departNote, setDepartNote] = useState('');
 
+  // Anchors for the controlled scroll after a set is logged.
+  const headerRef = useRef<HTMLElement | null>(null);
+  const exerciseRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const finishButtonRef = useRef<HTMLDivElement | null>(null);
+  const lastLoggedExerciseId = useRef<string | null>(null);
+
   const performed = session as PerformedSession;
   const hasLoggedSets = session.exercises.some((ex) => (ex.sets || []).length > 0);
   const sealed = !!performed.sealed;
@@ -115,9 +121,68 @@ export const SessionView: React.FC<SessionViewProps> = ({
     return parsedA.number - parsedB.number;
   });
 
+  // An exercise is "done" once its working sets are all logged/skipped, or the
+  // whole movement was skipped — mirrors the collapse logic in ExerciseView.
+  const isExerciseDone = (ex: Exercise) => {
+    if (ex.skipped) return true;
+    const sets = ex.sets || [];
+    const completed = sets.filter((s) => s.completed).length;
+    const skipped = sets.filter((s) => s.skipped).length;
+    return completed + skipped >= ex.workingSets;
+  };
+
+  // After a set is logged, glide to the next thing that still needs the user:
+  // the same exercise if it has sets left, otherwise the next unfinished
+  // exercise, otherwise the "Done for today" button.
+  const scrollAfterLog = useCallback(() => {
+    const fromId = lastLoggedExerciseId.current;
+    if (!fromId) return;
+
+    const idx = sortedExercises.findIndex((e) => e.id === fromId);
+    let targetEl: HTMLElement | null = null;
+
+    if (idx !== -1) {
+      const fromEx = sortedExercises[idx];
+      if (!isExerciseDone(fromEx)) {
+        targetEl = exerciseRefs.current[fromEx.id];
+      } else {
+        for (let i = idx + 1; i < sortedExercises.length; i++) {
+          if (!isExerciseDone(sortedExercises[i])) {
+            targetEl = exerciseRefs.current[sortedExercises[i].id];
+            break;
+          }
+        }
+      }
+    }
+
+    targetEl = targetEl || finishButtonRef.current;
+    if (!targetEl) return;
+
+    const headerOffset = headerRef.current?.offsetHeight ?? 0;
+    const top = targetEl.getBoundingClientRect().top + window.scrollY - headerOffset - 12;
+    window.scrollTo({ top: Math.max(top, 0), behavior: 'smooth' });
+  }, [sortedExercises]);
+
+  // Drive the scroll off the logged-set count so it fires once the new set has
+  // committed and the just-finished exercise has had its chance to collapse.
+  const loggedSetCount = session.exercises.reduce((n, ex) => n + (ex.sets?.length || 0), 0);
+  const prevLoggedSetCount = useRef(loggedSetCount);
+  useEffect(() => {
+    if (loggedSetCount > prevLoggedSetCount.current) {
+      // Two frames: let the collapse re-render and layout settle first.
+      requestAnimationFrame(() => requestAnimationFrame(scrollAfterLog));
+    }
+    prevLoggedSetCount.current = loggedSetCount;
+  }, [loggedSetCount, scrollAfterLog]);
+
+  const handleAddSet = (exerciseId: string, set: SetResult) => {
+    lastLoggedExerciseId.current = exerciseId;
+    onAddSet(exerciseId, set);
+  };
+
   return (
-    <div className="min-h-screen bg-white pb-24 flex flex-col items-center">
-      <header className="z-20 bg-white sticky top-0 border-b border-gray-200 px-4 py-4 w-full max-w-2xl">
+    <div className="min-h-screen bg-white pb-8 flex flex-col items-center">
+      <header ref={headerRef} className="z-20 bg-white sticky top-0 border-b border-gray-200 px-4 py-4 w-full max-w-2xl">
         <div className="flex items-center gap-3 mb-2">
           <Button variant="ghost" size="icon" onClick={onBack} className="h-9 w-9">
             <ArrowLeft className="w-5 h-5" />
@@ -183,13 +248,18 @@ export const SessionView: React.FC<SessionViewProps> = ({
 
       <main className="px-4 pt-4 w-full max-w-2xl">
         {sortedExercises.map((exercise) => (
-          <ExerciseView
+          <div
             key={exercise.id}
+            ref={(el) => {
+              exerciseRefs.current[exercise.id] = el;
+            }}
+          >
+          <ExerciseView
             exercise={exercise}
             readOnly={!editable}
             currentSessionId={session.id}
             performedRecords={performedRecords}
-            onAddSet={(set) => onAddSet(exercise.id, set)}
+            onAddSet={(set) => handleAddSet(exercise.id, set)}
             onUpdateSet={(setNumber, updates) => onUpdateSet(exercise.id, setNumber, updates)}
             onDeleteSet={(setNumber) => onDeleteSet(exercise.id, setNumber)}
             onSkip={() => onSkipExercise(exercise.id)}
@@ -198,13 +268,17 @@ export const SessionView: React.FC<SessionViewProps> = ({
             onUpdateExercise={(updates) => onUpdateExercise(exercise.id, updates)}
             onUpdateExerciseNotesById={onUpdateExerciseNotesById}
           />
+          </div>
         ))}
       </main>
 
       {/* Departure (D6): always reachable once there's anything to record — no
           per-set resolution, no certification. The record is a journal. */}
       {editable && hasLoggedSets && !sealed && (
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200 flex justify-center">
+        <div
+          ref={finishButtonRef}
+          className="mt-4 px-4 pt-6 pb-8 w-full max-w-2xl flex justify-center"
+        >
           <Button
             onClick={() => setIsDepartDialogOpen(true)}
             className="w-full max-w-2xl h-14 text-base bg-gray-900 hover:bg-gray-800"
