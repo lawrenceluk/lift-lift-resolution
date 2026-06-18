@@ -13,6 +13,8 @@ export interface SetResult {
   completed: boolean;
   skipped?: boolean;
   notes?: string;
+  /** ISO timestamp the set was logged — origin for the rest timer. */
+  loggedAt?: string;
 }
 
 export interface Exercise {

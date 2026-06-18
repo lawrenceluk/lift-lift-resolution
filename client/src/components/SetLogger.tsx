@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { CheckCircle2, X, Check, CircleSlash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { RestTimer } from './RestTimer';
 import { motion } from 'framer-motion';
 
 interface SetLoggerProps {
@@ -93,6 +94,11 @@ export const SetLogger: React.FC<SetLoggerProps> = ({
   const weightValid = parsedWeight === undefined || (Number.isFinite(parsedWeight) && parsedWeight >= 0);
   const canFinishSet = repsValid && weightValid;
 
+  // The most recent set actually logged this session — the rest-timer origin.
+  const lastFinishedSet = [...exercise.sets]
+    .reverse()
+    .find((s) => s.completed && s.loggedAt);
+
   const handleAddSet = () => {
     if (!canFinishSet) return;
     const setNumber = exercise.sets.length + 1;
@@ -107,6 +113,7 @@ export const SetLogger: React.FC<SetLoggerProps> = ({
       weightUnit: 'lbs',
       rir: Number.isFinite(parsedRir as number) ? parsedRir : undefined,
       completed: true,
+      loggedAt: new Date().toISOString(),
     };
 
     // Trigger animation
@@ -205,9 +212,17 @@ export const SetLogger: React.FC<SetLoggerProps> = ({
       {!readOnly && exercise.sets.length < exercise.workingSets && (
         <Card className="p-4 border-2 border-dashed border-gray-300 bg-gray-50">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-sm font-semibold">
-              Set {exercise.sets.length + 1} of {exercise.workingSets}
-            </p>
+            <div className="flex items-center gap-3">
+              <p className="text-sm font-semibold">
+                Set {exercise.sets.length + 1} of {exercise.workingSets}
+              </p>
+              {lastFinishedSet?.loggedAt && (
+                <RestTimer
+                  since={lastFinishedSet.loggedAt}
+                  targetSeconds={exercise.restSeconds}
+                />
+              )}
+            </div>
             <button
               onClick={handleSkipSet}
               className="text-xs text-gray-500 hover:text-gray-700 underline"
