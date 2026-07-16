@@ -111,8 +111,8 @@ export const SwipeToFinish: React.FC<SwipeToFinishProps> = ({
         dragElastic={0}
         dragMomentum={false}
         onDragEnd={handleDragEnd}
-        style={{ x, touchAction: 'none' }}
-        className="absolute top-1 left-1 h-12 w-12 rounded-full bg-white border border-gray-200 shadow-md flex items-center justify-center cursor-grab active:cursor-grabbing"
+        style={{ x, top: '50%', y: '-50%', touchAction: 'none' }}
+        className="absolute left-1 h-12 w-12 rounded-full bg-white border border-gray-200 shadow-md flex items-center justify-center cursor-grab active:cursor-grabbing"
       >
         {completed ? (
           <motion.span
