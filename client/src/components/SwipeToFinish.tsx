@@ -2,9 +2,11 @@ import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { animate, motion, useMotionValue, useTransform } from 'framer-motion';
 import { Check, ChevronsRight, Send } from 'lucide-react';
 
-// Track is h-14 (56px); thumb + 4px inset on each side fills it exactly.
+// Track is h-14 (56px) with a 1px border; the 48px thumb sits 4px from every
+// outer edge. Horizontal offsets are measured from the padding box (inside
+// the border), hence 3px there.
 const THUMB = 48;
-const PAD = 4;
+const INSET = 3;
 
 interface SwipeToFinishProps {
   /** Fires once, after the thumb settles at the end of the track. */
@@ -30,7 +32,7 @@ export const SwipeToFinish: React.FC<SwipeToFinishProps> = ({
   useLayoutEffect(() => {
     const el = trackRef.current;
     if (!el) return;
-    const measure = () => setMaxDrag(Math.max(el.clientWidth - THUMB - PAD * 2, 0));
+    const measure = () => setMaxDrag(Math.max(el.clientWidth - THUMB - INSET * 2, 0));
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
@@ -39,7 +41,7 @@ export const SwipeToFinish: React.FC<SwipeToFinishProps> = ({
 
   // The trail hugs the thumb; it fades in over the first half of the pull so
   // the resting state stays quiet.
-  const fillWidth = useTransform(x, (v) => v + THUMB + PAD);
+  const fillWidth = useTransform(x, (v) => v + THUMB + INSET);
   const fillOpacity = useTransform(x, [0, Math.max(maxDrag * 0.5, 1)], [0, 1]);
   const labelOpacity = useTransform(x, [0, Math.max(maxDrag * 0.6, 1)], [1, 0]);
 
@@ -78,7 +80,7 @@ export const SwipeToFinish: React.FC<SwipeToFinishProps> = ({
     >
       <motion.div
         className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500"
-        style={{ width: fillWidth, opacity: completed ? 1 : fillOpacity }}
+        style={{ width: completed ? '100%' : fillWidth, opacity: completed ? 1 : fillOpacity }}
       />
 
       <motion.span
@@ -112,7 +114,7 @@ export const SwipeToFinish: React.FC<SwipeToFinishProps> = ({
         dragMomentum={false}
         onDragEnd={handleDragEnd}
         style={{ x, top: '50%', y: '-50%', touchAction: 'none' }}
-        className="absolute left-1 h-12 w-12 rounded-full bg-white border border-gray-200 shadow-md flex items-center justify-center cursor-grab active:cursor-grabbing"
+        className="absolute left-[3px] h-12 w-12 rounded-full bg-white border border-gray-200 shadow-md flex items-center justify-center cursor-grab active:cursor-grabbing"
       >
         {completed ? (
           <motion.span
