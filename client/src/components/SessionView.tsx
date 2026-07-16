@@ -296,7 +296,7 @@ export const SessionView: React.FC<SessionViewProps> = ({
               onClick={() => setIsNoteOpen(true)}
               className="text-sm text-gray-500 underline underline-offset-4 hover:text-gray-700"
             >
-              Add a note for your trainer
+              Add a note about this session
             </button>
           )}
           <SwipeToFinish
@@ -305,9 +305,6 @@ export const SessionView: React.FC<SessionViewProps> = ({
               setDepartNote('');
             }}
           />
-          <p className="text-xs text-gray-400">
-            What you log is the record — unlogged sets just read as not done.
-          </p>
         </div>
       )}
 
