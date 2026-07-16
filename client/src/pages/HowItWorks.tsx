@@ -39,11 +39,11 @@ export const HowItWorks = (): JSX.Element => {
             <p className="text-sm text-gray-700">
               Fill in sets as you go. Skip an exercise with one tap, modify anything, stop whenever —
               what you log is the record, and unlogged sets simply read as not done. When you're
-              finished, hit <strong>Done for today</strong> and optionally tell your trainer how it
+              finished, <strong>swipe to finish</strong> and optionally tell your trainer how it
               went. No per-set bookkeeping at the end.
             </p>
             <p className="text-sm text-gray-700">
-              Forget to tap it? The session seals itself at the end of the day and sends on your
+              Forget to swipe? The session seals itself at the end of the day and sends on your
               next open. Same-day edits just update the same record.
             </p>
           </CardContent>

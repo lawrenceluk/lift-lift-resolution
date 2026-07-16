@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { PrescribedSession, PerformedSession, SetResult, Exercise, SessionStatus } from '@/types/workout';
 import { ExerciseView } from './ExerciseView';
 import { ExerciseProgressGrid } from './ExerciseProgressGrid';
+import { SwipeToFinish } from './SwipeToFinish';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, CheckCircle2, MoreVertical, Timer, Send } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -62,6 +63,7 @@ export const SessionView: React.FC<SessionViewProps> = ({
   const { openTimer } = useWorkoutTimerContext();
   const [isDepartDialogOpen, setIsDepartDialogOpen] = useState(false);
   const [departNote, setDepartNote] = useState('');
+  const [isNoteOpen, setIsNoteOpen] = useState(false);
 
   // Anchors for the controlled scroll after a set is logged.
   const headerRef = useRef<HTMLElement | null>(null);
@@ -133,7 +135,7 @@ export const SessionView: React.FC<SessionViewProps> = ({
 
   // After a set is logged, glide to the next thing that still needs the user:
   // the same exercise if it has sets left, otherwise the next unfinished
-  // exercise, otherwise the "Done for today" button.
+  // exercise, otherwise the swipe-to-finish control.
   const scrollAfterLog = useCallback(() => {
     const fromId = lastLoggedExerciseId.current;
     if (!fromId) return;
@@ -273,19 +275,39 @@ export const SessionView: React.FC<SessionViewProps> = ({
       </main>
 
       {/* Departure (D6): always reachable once there's anything to record — no
-          per-set resolution, no certification. The record is a journal. */}
+          per-set resolution, no certification. The record is a journal. The
+          swipe distance is the confirmation, so departure fires directly. */}
       {editable && hasLoggedSets && !sealed && (
         <div
           ref={finishButtonRef}
-          className="mt-4 px-4 pt-6 pb-8 w-full max-w-2xl flex justify-center"
+          className="mt-4 px-4 pt-6 pb-8 w-full max-w-2xl flex flex-col items-center gap-3"
         >
-          <Button
-            onClick={() => setIsDepartDialogOpen(true)}
-            className="w-full max-w-2xl h-14 text-base bg-gray-900 hover:bg-gray-800"
-          >
-            <Send className="w-5 h-5 mr-2" />
-            Done for today
-          </Button>
+          {isNoteOpen ? (
+            <Textarea
+              autoFocus
+              value={departNote}
+              onChange={(e) => setDepartNote(e.target.value)}
+              placeholder="e.g., felt strong, cut it short — knee twinge on lunges"
+              className="min-h-[72px]"
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setIsNoteOpen(true)}
+              className="text-sm text-gray-500 underline underline-offset-4 hover:text-gray-700"
+            >
+              Add a note for your trainer
+            </button>
+          )}
+          <SwipeToFinish
+            onComplete={() => {
+              onDepart(departNote.trim() || undefined);
+              setDepartNote('');
+            }}
+          />
+          <p className="text-xs text-gray-400">
+            What you log is the record — unlogged sets just read as not done.
+          </p>
         </div>
       )}
 
