@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import {
   HelpCircle,
   Search,
@@ -27,6 +28,7 @@ import {
 import { useWorkoutProgramContext } from '@/contexts/WorkoutProgramContext';
 import { useSecretGate } from '@/components/SecretGate';
 import { SessionView } from '@/components/SessionView';
+import { SessionCompleteOverlay } from '@/components/SessionCompleteOverlay';
 import { useToast } from '@/hooks/use-toast';
 import { PrescribedSession, PerformedSession, SessionStatus } from '@/types/workout';
 import { todayPT, ptDate } from '@/utils/timeHelpers';
@@ -135,10 +137,28 @@ export const WorkoutTrackerApp = (): JSX.Element => {
     if (ok) forgetCode();
   };
 
+  // The celebration overlay covers the seal-and-deliver beat: it holds long
+  // enough to read as a moment (MIN_HOLD), and delivery gets at most MAX_WAIT
+  // before we go home anyway — a dead network keeps retrying in the
+  // background (deliverPending) rather than trapping the user here.
+  const [showDepartOverlay, setShowDepartOverlay] = useState(false);
+
   const handleDepart = async (sessionId: string, note?: string) => {
-    const { delivered } = await departSession(sessionId, note);
+    const MIN_HOLD = 1600;
+    const MAX_WAIT = 4000;
+    const wait = (ms: number) => new Promise<void>((r) => window.setTimeout(r, ms));
+
+    setShowDepartOverlay(true);
+    const shownAt = Date.now();
+    const result = await Promise.race([
+      departSession(sessionId, note),
+      wait(MAX_WAIT).then(() => null),
+    ]);
+    await wait(Math.max(0, MIN_HOLD - (Date.now() - shownAt)));
+
     setLocation('/');
-    if (delivered) {
+    setShowDepartOverlay(false);
+    if (result?.delivered) {
       // Honest tempo (D12): delivery is real, the brain's reply is async.
       toast({
         title: 'Done for today',
@@ -152,6 +172,10 @@ export const WorkoutTrackerApp = (): JSX.Element => {
     }
   };
 
+  // The body is computed in a closure so the depart overlay can sit outside
+  // the route branches — its exit fade has to survive the SessionView → home
+  // switch, which means its AnimatePresence must not unmount with the branch.
+  const body = ((): JSX.Element => {
   // ----- session route -------------------------------------------------------
 
   if (matchSession && sessionParams?.sessionId && sessionParams.sessionId !== 'how-it-works') {
@@ -433,5 +457,13 @@ export const WorkoutTrackerApp = (): JSX.Element => {
         )}
       </main>
     </div>
+  );
+  })();
+
+  return (
+    <>
+      {body}
+      <AnimatePresence>{showDepartOverlay && <SessionCompleteOverlay />}</AnimatePresence>
+    </>
   );
 };
