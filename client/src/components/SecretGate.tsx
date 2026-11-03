@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { getAppSecret, setAppSecret, clearAppSecret } from '@/lib/api';
+import { getAppSecret, setAppSecret, clearAppSecret, SECRET_REJECTED_EVENT } from '@/lib/api';
 
 /**
  * Shell-level access-code gate. Wraps the whole app OUTSIDE the workout module
@@ -32,12 +32,22 @@ export function useSecretGate(): SecretGateContextValue {
 export function SecretGate({ children }: { children: ReactNode }) {
   const [hasSecret, setHasSecret] = useState<boolean>(() => !!getAppSecret());
   const [input, setInput] = useState('');
+  const [rejected, setRejected] = useState(false);
 
-  // Keep state in sync if the code is cleared/set in another tab.
+  // Keep state in sync if the code is cleared/set in another tab, and return
+  // to the prompt when the backend rejects the stored code (lib/api.ts).
   useEffect(() => {
     const onStorage = () => setHasSecret(!!getAppSecret());
+    const onRejected = () => {
+      setRejected(true);
+      setHasSecret(false);
+    };
     window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
+    window.addEventListener(SECRET_REJECTED_EVENT, onRejected);
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener(SECRET_REJECTED_EVENT, onRejected);
+    };
   }, []);
 
   const submit = (e?: React.FormEvent) => {
@@ -46,11 +56,13 @@ export function SecretGate({ children }: { children: ReactNode }) {
     if (!code) return;
     setAppSecret(code);
     setInput('');
+    setRejected(false);
     setHasSecret(true);
   };
 
   const forgetCode = () => {
     clearAppSecret();
+    setRejected(false);
     setHasSecret(false);
   };
 
@@ -65,6 +77,11 @@ export function SecretGate({ children }: { children: ReactNode }) {
             <h1 className="text-xl font-semibold text-gray-900">Lift Lift Resolution</h1>
             <p className="text-sm text-gray-500">Enter access code</p>
           </div>
+          {rejected && (
+            <p className="text-sm text-red-600" role="alert">
+              That code didn't work. Try again.
+            </p>
+          )}
           <Input
             type="password"
             value={input}

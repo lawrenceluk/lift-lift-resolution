@@ -44,6 +44,13 @@ export function clearAppSecret(): void {
 }
 
 /**
+ * Same-tab signal that the backend rejected the stored code. The SecretGate
+ * listens for it and returns to the prompt ("storage" events only fire in
+ * other tabs, so this is the in-tab equivalent).
+ */
+export const SECRET_REJECTED_EVENT = 'app-secret-rejected';
+
+/**
  * Make a request to the API.
  * @param endpoint - API endpoint (without /api prefix, e.g. '/health' or '/program')
  * @param options - Fetch options
@@ -66,6 +73,12 @@ export async function apiRequest<T>(
   });
 
   if (!response.ok) {
+    // 401 only comes from the secret gate: a wrong or stale code. Forget it so
+    // a retry or reload lands on the code prompt instead of looping on 401.
+    if (response.status === 401) {
+      clearAppSecret();
+      window.dispatchEvent(new Event(SECRET_REJECTED_EVENT));
+    }
     const errorText = await response.text();
     throw new ApiError(
       response.status,

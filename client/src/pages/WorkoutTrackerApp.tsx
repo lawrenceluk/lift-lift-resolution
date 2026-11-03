@@ -254,10 +254,15 @@ export const WorkoutTrackerApp = (): JSX.Element => {
             This device has no cached program and the seam is unreachable.
           </p>
           {fetchError && <p className="text-xs text-gray-400 mb-6 break-words">{fetchError}</p>}
-          <Button onClick={handlePullProgram} className="w-full sm:w-auto">
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Try again
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2 justify-center">
+            <Button onClick={handlePullProgram} className="w-full sm:w-auto">
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Try again
+            </Button>
+            <Button variant="outline" onClick={forgetCode} className="w-full sm:w-auto">
+              Re-enter access code
+            </Button>
+          </div>
         </div>
       </div>
     );
