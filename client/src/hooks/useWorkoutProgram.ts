@@ -171,7 +171,27 @@ export const useWorkoutProgram = () => {
     [update]
   );
 
-  const fetchAndApply = useCallback(async (): Promise<{ ok: boolean; error?: string }> => {
+  /**
+   * Mid-workout hold (D1 "auto-apply when safe"): true while he's on a session
+   * or has an unsealed record with logged sets. A generation can revise the
+   * session under a new id, so it waits until he finishes or leaves. A device
+   * with no program always hydrates (D13).
+   */
+  const sessionInProgress = useCallback(() => {
+    const { program, local } = stateRef.current;
+    if (!program) return false;
+    const openId = window.location.pathname.slice(1);
+    const open = local[openId];
+    return (
+      Object.values(local).some(
+        (ls) => !ls.record.sealed && ls.record.exercises.some((ex) => (ex.sets || []).length > 0)
+      ) ||
+      (!!open && !open.record.sealed) ||
+      program.queue.some((q) => q.id === openId)
+    );
+  }, []);
+
+  const fetchAndApply = useCallback(async (): Promise<{ ok: boolean; error?: string; held?: boolean }> => {
     try {
       const envelope = await fetchProgram();
       if (!envelope || envelope.schema !== 2 || !Array.isArray(envelope.queue)) {
@@ -180,15 +200,17 @@ export const useWorkoutProgram = () => {
         setFetchError(error);
         return { ok: false, error };
       }
-      applyEnvelope(envelope);
       setFetchError(null);
+      // Checked after the fetch so a session started while it ran is held too.
+      if (sessionInProgress()) return { ok: true, held: true };
+      applyEnvelope(envelope);
       return { ok: true };
     } catch (err) {
       const error = (err as Error).message;
       setFetchError(error);
       return { ok: false, error };
     }
-  }, [applyEnvelope]);
+  }, [applyEnvelope, sessionInProgress]);
 
   /** Manual pull (debug action — D1 demotes it; the sync loop is the real path). */
   const pullProgram = fetchAndApply;
@@ -222,6 +244,9 @@ export const useWorkoutProgram = () => {
     },
     [sealStale, deliverPending, fetchAndApply]
   );
+
+  /** Run a sync now: leaving a session releases any held generation. */
+  const syncNow = useCallback(() => syncTick({ force: true }), [syncTick]);
 
   useEffect(() => {
     let cancelled = false;
@@ -500,6 +525,7 @@ export const useWorkoutProgram = () => {
     hasUndelivered,
     // seam
     pullProgram,
+    syncNow,
     sealStale,
   };
 };

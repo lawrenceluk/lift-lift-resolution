@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import {
   HelpCircle,
@@ -110,6 +110,7 @@ export const WorkoutTrackerApp = (): JSX.Element => {
     updateExercise,
     departSession,
     pullProgram,
+    syncNow,
   } = useWorkoutProgramContext();
   const { forgetCode } = useSecretGate();
   const { toast } = useToast();
@@ -117,9 +118,19 @@ export const WorkoutTrackerApp = (): JSX.Element => {
 
   const [matchSession, sessionParams] = useRoute('/:sessionId');
 
+  // Leaving a session is the moment a held generation can apply.
+  const onSession = matchSession && sessionParams?.sessionId !== 'how-it-works';
+  const wasOnSession = useRef(onSession);
+  useEffect(() => {
+    if (wasOnSession.current && !onSession) void syncNow();
+    wasOnSession.current = onSession;
+  }, [onSession, syncNow]);
+
   const handlePullProgram = async () => {
     const result = await pullProgram();
-    if (result.ok) {
+    if (result.held) {
+      toast({ title: 'Session in progress', description: 'Your new program loads after you finish.' });
+    } else if (result.ok) {
       toast({ title: 'Program refreshed', description: 'Pulled the latest from Point One.' });
     } else {
       toast({

@@ -295,6 +295,7 @@ export const SwipeToFinish: React.FC<SwipeToFinishProps> = ({
       )}
 
       <motion.div
+        data-swipe-thumb
         drag={completed ? false : 'x'}
         dragConstraints={{ left: 0, right: maxDrag }}
         dragElastic={0}
