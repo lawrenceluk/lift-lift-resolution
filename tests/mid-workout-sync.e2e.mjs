@@ -153,6 +153,8 @@ await scenario('after departure the record delivers and the new generation appli
   await page.getByText('Barbell RDL').first().waitFor();
   publish(genTwo());
   await syncTick(page);
+  let posts = 0;
+  page.on('request', (r) => { if (r.url().endsWith('/api/session')) posts++; });
   const thumb = page.locator('[data-swipe-thumb]').first();
   await thumb.scrollIntoViewIfNeeded();
   await page.waitForTimeout(500);
@@ -165,6 +167,8 @@ await scenario('after departure the record delivers and the new generation appli
   await page.waitForFunction((k) => JSON.parse(localStorage.getItem(k)).local['s-gen1-b']?.record.sealed, STORE, { timeout: 5000 }).catch(() => { throw new Error('swipe did not seal'); });
   await page.waitForFunction((k) => JSON.parse(localStorage.getItem(k)).program.generation === 2, STORE, { timeout: 8000 });
   const s = await stored(page);
+  await page.waitForTimeout(1500);
+  check(posts === 1, `delivered ${posts} times`);
   check(s.local['s-gen1-b']?.record.sealed === 'departure', 'record not sealed');
   check(s.local['s-gen1-b']?.record.exercises[0].sets.length === 1, 'sets lost at departure');
 });
